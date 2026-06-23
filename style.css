@@ -887,6 +887,10 @@ html, body {
   text-align: center;
 }
 .tutorial-overlay.hidden { display: none; }
+/* The joystick (110px tall) and action buttons (60px tall, stacked) sit in
+   the same bottom corners on touch devices — lift the tutorial box clear of
+   both instead of letting it sit underneath them. */
+body.touch-active .tutorial-overlay { bottom: 180px; }
 .tutorial-step-count {
   font-size: 11px;
   font-weight: 700;

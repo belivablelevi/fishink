@@ -129,6 +129,7 @@ function createActionButtons() {
 // Called once from main.js's init(), after the canvas element exists.
 function initTouchControls(canvasEl) {
   if (!IS_TOUCH) return;
+  document.body.classList.add('touch-active');
   createJoystick();
   initCanvasTouchPassthrough(canvasEl);
   createActionButtons();
