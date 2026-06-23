@@ -1010,6 +1010,28 @@ function openBlockPopup(kind, c, r, screenX, screenY) {
   blockPopupEl.style.top  = `${screenY}px`;
   blockPopupEl.classList.remove('hidden');
   renderBlockPopup();
+  clampBlockPopupToViewport();
+}
+
+// The popup is centered horizontally and anchored above (screenX, screenY)
+// purely via CSS transform, with no awareness of viewport edges — tapping a
+// machine near a screen edge (common on a small phone viewport, but also
+// reachable on desktop with a narrow window) can render it partly or fully
+// off-screen. Nudges it back on-screen using its actual rendered size,
+// which is only known after layout.
+function clampBlockPopupToViewport() {
+  const margin = 8;
+  const rect = blockPopupEl.getBoundingClientRect();
+  let dx = 0, dy = 0;
+  if (rect.left < margin) dx = margin - rect.left;
+  else if (rect.right > window.innerWidth - margin) dx = (window.innerWidth - margin) - rect.right;
+  if (rect.top < margin) dy = margin - rect.top;
+  else if (rect.bottom > window.innerHeight - margin) dy = (window.innerHeight - margin) - rect.bottom;
+  if (!dx && !dy) return;
+  blockPopup.x += dx;
+  blockPopup.y += dy;
+  blockPopupEl.style.left = `${blockPopup.x}px`;
+  blockPopupEl.style.top  = `${blockPopup.y}px`;
 }
 
 function closeBlockPopup() {
