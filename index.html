@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fish INK</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <div id="loadingScreen" class="loading-screen">
+    <div class="loading-title">FISH INK</div>
+    <div class="loading-bar-track">
+      <div class="loading-bar-fill" id="loadingBarFill"></div>
+    </div>
+  </div>
+
+  <div id="blockPopup" class="block-popup hidden"></div>
+
+  <button id="soundToggleBtn" class="sound-toggle-btn" title="Sound settings"><img src="img/icon-volume.png" alt="Sound"></button>
+  <div id="soundPanel" class="sound-panel hidden">
+    <label class="sound-row"><input type="checkbox" id="soundMusicCheck"> Music</label>
+    <label class="sound-row"><input type="checkbox" id="soundSfxCheck"> Sound Effects</label>
+    <label class="sound-row"><input type="checkbox" id="soundSellCheck"> Selling Sound</label>
+  </div>
+
+  <button id="gameMenuToggleBtn" class="game-menu-toggle-btn" title="Save / Restart"><img src="img/icon-cog.png" alt="Game menu"></button>
+  <div id="gameMenuPanel" class="game-menu-panel hidden">
+    <button class="game-menu-btn" id="saveNowBtn">Save Now</button>
+    <button class="game-menu-btn danger" id="restartGameBtn">Restart Game</button>
+    <div class="game-menu-divider"></div>
+    <label class="sound-row"><input type="checkbox" id="fullNumbersCheck"> Full Numbers</label>
+    <label class="sound-row"><input type="checkbox" id="individualSellToastsCheck"> Show individual fish sold</label>
+  </div>
+
+  <button id="machinesToggleBtn" class="machines-toggle-btn" title="View all upgradable machines"><img src="img/icon-machines.png" alt="Machines"></button>
+  <div id="machinesPanel" class="machines-panel hidden"></div>
+
+  <div id="tutorialOverlay" class="tutorial-overlay hidden">
+    <div class="tutorial-step-count" id="tutorialStepCount"></div>
+    <div class="tutorial-step-text" id="tutorialStepText"></div>
+    <button class="tutorial-skip-btn" onclick="skipTutorial()">Skip tutorial</button>
+  </div>
+
+  <div id="buildMenu" class="build-menu hidden">
+    <div class="menu-header">
+      <div class="menu-title">FISH INK <span>BUILD MENU</span></div>
+      <div class="menu-header-right">
+        <div class="menu-cash" id="menuCash">$0</div>
+        <button class="menu-close" id="menuCloseBtn" title="Close (Esc)">&times;</button>
+      </div>
+    </div>
+    <div class="tab-row">
+      <button class="tab active" data-tab="build">Build</button>
+      <button class="tab" data-tab="upgrades">Upgrades</button>
+      <button class="tab" data-tab="contracts">Contracts</button>
+      <button class="tab" data-tab="fishIndex">Fish Index</button>
+      <button class="tab" data-tab="stats">Stats</button>
+      <button class="tab" data-tab="controls">Controls</button>
+      <button class="tab" data-tab="research">Research</button>
+      <button class="tab" data-tab="blueprints">Blueprints</button>
+      <div class="tab-hint">Tab to switch &middot; Esc to close</div>
+    </div>
+    <div class="panel">
+      <div class="tab-panel" data-panel="build" id="buildPanel"></div>
+      <div class="tab-panel hidden" data-panel="upgrades" id="upgradesPanel"></div>
+      <div class="tab-panel hidden" data-panel="contracts" id="contractsPanel"></div>
+      <div class="tab-panel hidden" data-panel="fishIndex" id="fishIndexPanel"></div>
+      <div class="tab-panel hidden" data-panel="stats" id="statsPanel"></div>
+      <div class="tab-panel hidden" data-panel="controls" id="controlsPanel"></div>
+      <div class="tab-panel hidden" data-panel="research" id="researchPanel"></div>
+      <div class="tab-panel hidden" data-panel="blueprints" id="blueprintsPanel"></div>
+    </div>
+  </div>
+
+  <div id="buildHud" class="build-hud hidden">
+    <div class="hud-row hud-selected">
+      <div class="hud-preview" id="hudPreview"></div>
+      <div class="hud-info">
+        <div class="hud-name" id="hudName"></div>
+        <div class="hud-sub">Q/E cycle &middot; 1-9 select &middot; Tab for menu</div>
+      </div>
+    </div>
+    <div class="hud-row hud-controls">
+      <button class="hud-btn" id="hudRotateBtn" title="Rotate facing (R)">
+        <span class="hud-arrow" id="hudArrow">&#8593;</span> Rotate
+      </button>
+      <button class="hud-btn hud-toggle" id="hudBoxBtn" title="Multi mode (X)">Multi</button>
+    </div>
+    <div class="hud-row hud-blueprint">
+      <button class="hud-btn hud-toggle" id="hudCopyBtn" title="Copy area (C)">Copy</button>
+      <button class="hud-btn hud-toggle" id="hudPasteBtn" title="Paste (V)">Paste</button>
+      <button class="hud-btn" id="hudBpRotateBtn" title="Rotate clipboard (R)">&#9696;</button>
+    </div>
+    <div class="hud-bp-status" id="hudBpStatus"></div>
+  </div>
+
+  <script src="js/audio.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/grid.js"></script>
+  <script src="js/upgrades.js"></script>
+  <script src="js/research.js"></script>
+  <script src="js/contracts.js"></script>
+  <script src="js/achievements.js"></script>
+  <script src="js/sim.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/undo.js"></script>
+  <script src="js/blueprint.js"></script>
+  <script src="js/save.js"></script>
+  <script src="js/tutorial.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
