@@ -32,6 +32,7 @@ html, body {
   height: 100vh;
   cursor: crosshair;
   image-rendering: pixelated;
+  touch-action: none;
 }
 
 /* ─── Build / upgrades menu — Godot-style left-aligned top tabs ───────────── */

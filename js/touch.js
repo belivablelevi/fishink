@@ -70,8 +70,43 @@ function createJoystick() {
   base.addEventListener('touchcancel', endTouch);
 }
 
+// Converts a Touch into the {clientX, clientY, target, button, preventDefault}
+// shape handleMouseMove/handleClick/handleMouseUp already expect from a
+// MouseEvent, so canvas taps reuse all existing targeting logic untouched.
+function synthesizeMouseEvent(touch, canvasEl) {
+  return {
+    clientX: touch.clientX,
+    clientY: touch.clientY,
+    target: canvasEl,
+    button: 0,
+    preventDefault() {},
+  };
+}
+
+function initCanvasTouchPassthrough(canvasEl) {
+  canvasEl.addEventListener('touchstart', e => {
+    const t = e.changedTouches[0];
+    handleMouseMove(synthesizeMouseEvent(t, canvasEl));
+    handleClick(synthesizeMouseEvent(t, canvasEl));
+    e.preventDefault();
+  }, { passive: false });
+
+  canvasEl.addEventListener('touchmove', e => {
+    const t = e.changedTouches[0];
+    handleMouseMove(synthesizeMouseEvent(t, canvasEl));
+    e.preventDefault();
+  }, { passive: false });
+
+  canvasEl.addEventListener('touchend', e => {
+    const t = e.changedTouches[0];
+    handleMouseUp(synthesizeMouseEvent(t, canvasEl));
+    e.preventDefault();
+  }, { passive: false });
+}
+
 // Called once from main.js's init(), after the canvas element exists.
 function initTouchControls(canvasEl) {
   if (!IS_TOUCH) return;
   createJoystick();
+  initCanvasTouchPassthrough(canvasEl);
 }
