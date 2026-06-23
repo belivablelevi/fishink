@@ -31,7 +31,6 @@ function spawnContract() {
   };
   activeContracts.push(contract);
   queueToast(`New contract: ${qty}× ${category} fish for $${reward}`, '#e8a030');
-  if (ZOOM > MACHINE_SFX_ZOOM_THRESHOLD) sfxContractNew();
 }
 
 // Credits a sold fish toward a matching contract on top of its normal sale —

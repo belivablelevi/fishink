@@ -14,6 +14,8 @@ const SFX_FILES = {
   coin:      'audio/sfx-coin.mp3',
   place:     'audio/sfx-place.wav',
   drop:      'audio/sfx-drop.wav',
+  achievement: 'audio/sfx-achievement.wav',
+  teleport:  'audio/sfx-teleport.wav',
   placeholder: 'audio/sfx-placeholder.m4a',
 };
 
@@ -176,41 +178,52 @@ function sfxDrop() {
 }
 
 // ─── Per-machine "processing done" SFX ──────────────────────────────────────
-// TEMP: all eight events below play the shared placeholder recording at 3x
-// volume (playBuffer's target = vol * 0.5 = 1.5, so it plays as two stacked
-// overlapping copies — one at full 1.0, one at 0.5 — since a single <audio>
-// element can't exceed 1.0) until real per-event audio is recorded — swap
-// each call back to a tone or a dedicated SFX_FILES key as that art arrives.
+// All four share one shape — root note + perfect fourth, triangle wave — so
+// they read as one family rather than four unrelated chimes. The root pitch
+// climbs in the same order fish actually flow through a full line (Washer ->
+// Smoker -> Icer -> Stamper), so a multi-stage setup processing top-to-bottom
+// sounds like an ascending scale.
+function machineDing(rootFreq, volMult = 1) {
+  playTone({ freq: rootFreq, dur: 0.12, type: 'triangle', vol: 0.18 * volMult });
+  playTone({ freq: rootFreq * 4 / 3, dur: 0.14, type: 'triangle', vol: 0.16 * volMult, delay: 0.05 });
+}
+
 function sfxWasher(volMult = 1) {
-  playBuffer('placeholder', 3 * volMult);
+  machineDing(261.63, volMult); // C4
 }
 
 function sfxSmoker(volMult = 1) {
-  playBuffer('placeholder', 3 * volMult);
+  machineDing(293.66, volMult); // D4
 }
 
 function sfxIcer(volMult = 1) {
-  playBuffer('placeholder', 3 * volMult);
+  machineDing(329.63, volMult); // E4
 }
 
 function sfxStamper(volMult = 1) {
-  playBuffer('placeholder', 3 * volMult);
+  machineDing(349.23, volMult); // F4
 }
 
 // ─── Event SFX ──────────────────────────────────────────────────────────────
 function sfxAchievement() {
-  playBuffer('placeholder', 3);
-}
-
-function sfxContractNew() {
-  playBuffer('placeholder', 3);
+  playBuffer('achievement');
 }
 
 function sfxContractReady() {
-  playBuffer('placeholder', 3);
+  playTone({ freq: 880, dur: 0.12, type: 'sine', vol: 0.25, slideTo: 1320 });
 }
 
 function sfxTeleport(volMult = 1) {
-  playBuffer('placeholder', 3 * volMult);
+  playBuffer('teleport', volMult);
+}
+
+// Manual machine-upgrade confirmation — only fired from the in-world block
+// popup's Upgrade button (js/ui.js wireUpgradeSection), never from the
+// Machines-tab list, so buying upgrades in bulk from the menu stays quiet.
+// Square wave to read distinct from the triangle-wave machineDing family.
+function sfxUpgrade() {
+  playTone({ freq: 523.25, dur: 0.08, type: 'square', vol: 0.2 });
+  playTone({ freq: 659.25, dur: 0.08, type: 'square', vol: 0.2, delay: 0.07 });
+  playTone({ freq: 784.00, dur: 0.14, type: 'square', vol: 0.22, delay: 0.14 });
 }
 

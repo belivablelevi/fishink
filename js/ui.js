@@ -922,7 +922,10 @@ function wireUpgradeSection(c, r, cost) {
   if (!buyBtn || cost == null) return;
   buyBtn.disabled = game.cash < cost;
   buyBtn.addEventListener('click', () => {
-    if (buyMachineUpgrade(c, r)) renderBlockPopup();
+    if (buyMachineUpgrade(c, r)) {
+      if (ZOOM > MACHINE_SFX_ZOOM_THRESHOLD) sfxUpgrade();
+      renderBlockPopup();
+    }
   });
 }
 
