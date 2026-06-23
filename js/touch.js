@@ -126,6 +126,28 @@ function createActionButtons() {
   document.body.appendChild(buildBtn);
 }
 
+// The joystick and action buttons are sized/positioned for a wide, short
+// viewport — in portrait they'd crowd into a much smaller vertical band
+// alongside the on-screen keyboard-less browser chrome, so instead of
+// cramming controls in, block play until the phone is rotated.
+function createRotateOverlay() {
+  const overlay = document.createElement('div');
+  overlay.id = 'rotateOverlay';
+  overlay.className = 'rotate-overlay hidden';
+  overlay.innerHTML = `
+    <div class="rotate-icon">&#128241;</div>
+    <div class="rotate-text">Rotate your device to landscape to play</div>
+  `;
+  document.body.appendChild(overlay);
+
+  function update() {
+    overlay.classList.toggle('hidden', window.innerWidth >= window.innerHeight);
+  }
+  window.addEventListener('resize', update);
+  window.addEventListener('orientationchange', update);
+  update();
+}
+
 // Called once from main.js's init(), after the canvas element exists.
 function initTouchControls(canvasEl) {
   if (!IS_TOUCH) return;
@@ -133,4 +155,5 @@ function initTouchControls(canvasEl) {
   createJoystick();
   initCanvasTouchPassthrough(canvasEl);
   createActionButtons();
+  createRotateOverlay();
 }

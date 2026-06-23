@@ -891,6 +891,25 @@ html, body {
    the same bottom corners on touch devices — lift the tutorial box clear of
    both instead of letting it sit underneath them. */
 body.touch-active .tutorial-overlay { bottom: 180px; }
+
+.rotate-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(10,18,16,0.97);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+  padding: 24px;
+  font-family: var(--font-ui);
+  color: var(--c-text);
+}
+.rotate-overlay.hidden { display: none; }
+.rotate-icon { font-size: 48px; transform: rotate(90deg); }
+.rotate-text { font-size: 16px; font-weight: 600; max-width: 280px; }
 .tutorial-step-count {
   font-size: 11px;
   font-weight: 700;
