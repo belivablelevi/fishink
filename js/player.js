@@ -93,6 +93,20 @@ function rotateBeltDir() {
   buildMode.beltDir = (buildMode.beltDir + 1) % BELT_DIRS.length;
 }
 
+// Enters build mode and opens the menu on first call; while build mode is
+// already active, just toggles the menu panel — placing stays usable with
+// it closed. Shared by the B key and the mobile Build button.
+function triggerBuildToggle() {
+  if (!buildMode.active) {
+    buildMode.active = true;
+    buildMode.menuOpen = true;
+  } else {
+    buildMode.menuOpen = !buildMode.menuOpen;
+  }
+  setBuildMenuOpen(buildMode.menuOpen);
+  closeBlockPopup();
+}
+
 function handleBuildKey(e) {
   if ((e.ctrlKey || e.metaKey) && !boxDragStart && (e.key === 'z' || e.key === 'Z')) {
     e.preventDefault();
@@ -121,16 +135,7 @@ function handleBuildKey(e) {
     return;
   }
   if (e.key === 'b' || e.key === 'B') {
-    // First press enters build mode and opens the menu. While still active,
-    // B just toggles the menu panel — placing stays usable with it closed.
-    if (!buildMode.active) {
-      buildMode.active = true;
-      buildMode.menuOpen = true;
-    } else {
-      buildMode.menuOpen = !buildMode.menuOpen;
-    }
-    setBuildMenuOpen(buildMode.menuOpen);
-    closeBlockPopup();
+    triggerBuildToggle();
     return;
   }
   if (buildMode.menuOpen && e.key === 'Tab') {
@@ -237,6 +242,29 @@ function playerOccupiesTile(c, r) {
   return corners.some(([cx, cy]) => Math.floor(cx / TILE_SIZE) === c && Math.floor(cy / TILE_SIZE) === r);
 }
 
+// Interacts with whatever block hoverTile currently points at: opens its
+// popup (settings/upgrade), or drops held fish if hovering a belt. Popups
+// (including the per-instance upgrade buy) open from anywhere on the map,
+// no need to stand next to the block — only fish-dropping still requires
+// being in reach, since that's physically handing fish to a belt. Falls
+// back to a small player-radius search for fish-dropping only, so you
+// don't need pixel-precise aim just to unload. Shared by the E key and the
+// mobile Interact button.
+function triggerInteract() {
+  const pc = Math.floor(player.wx / TILE_SIZE);
+  const pr = Math.floor(player.wy / TILE_SIZE);
+  const inReach = hoverTile && Math.abs(hoverTile.c - pc) <= 1 && Math.abs(hoverTile.r - pr) <= 1;
+  const hoveredId = hoverTile ? blockAt(hoverTile.c, hoverTile.r) : B_NONE;
+  const kind = interactionKindFor(hoveredId);
+  if (kind) {
+    toggleBlockPopupAtMouse(kind, hoverTile.c, hoverTile.r);
+  } else if (inReach && IS_TRANSPORT(hoveredId) && heldFish.length > 0) {
+    dropHeldFishOnBelt(hoverTile.c, hoverTile.r);
+  } else if (heldFish.length > 0) {
+    dropNearestBelt();
+  }
+}
+
 function updatePlayer(dt) {
   const dx = manualCast.active ? 0 : ((KEYS['d'] || KEYS['D'] || KEYS['ArrowRight']) ? 1 : 0) - ((KEYS['a'] || KEYS['A'] || KEYS['ArrowLeft'])  ? 1 : 0);
   const dy = manualCast.active ? 0 : ((KEYS['s'] || KEYS['S'] || KEYS['ArrowDown'])  ? 1 : 0) - ((KEYS['w'] || KEYS['W'] || KEYS['ArrowUp'])    ? 1 : 0);
@@ -266,27 +294,12 @@ function updatePlayer(dt) {
 
   updateCamera();
 
-  // E key — interacts with whatever block the mouse is hovering: opens its
-  // popup (settings/upgrade), or drops held fish if hovering a belt. Popups
-  // (including the per-instance upgrade buy) open from anywhere on the map,
-  // no need to stand next to the block — only fish-dropping still requires
-  // being in reach, since that's physically handing fish to a belt. Falls
-  // back to a small player-radius search for fish-dropping only, so you
-  // don't need pixel-precise aim just to unload.
+  // E key — interacts with whatever block the mouse is hovering. See
+  // triggerInteract() for the full behavior; shared with the mobile
+  // Interact button.
   const eDown = !!(KEYS['e'] || KEYS['E']);
   if (eDown && !player._eWas && !buildMode.active) {
-    const pc = Math.floor(player.wx / TILE_SIZE);
-    const pr = Math.floor(player.wy / TILE_SIZE);
-    const inReach = hoverTile && Math.abs(hoverTile.c - pc) <= 1 && Math.abs(hoverTile.r - pr) <= 1;
-    const hoveredId = hoverTile ? blockAt(hoverTile.c, hoverTile.r) : B_NONE;
-    const kind = interactionKindFor(hoveredId);
-    if (kind) {
-      toggleBlockPopupAtMouse(kind, hoverTile.c, hoverTile.r);
-    } else if (inReach && IS_TRANSPORT(hoveredId) && heldFish.length > 0) {
-      dropHeldFishOnBelt(hoverTile.c, hoverTile.r);
-    } else if (heldFish.length > 0) {
-      dropNearestBelt();
-    }
+    triggerInteract();
   }
   player._eWas = eDown;
 }
