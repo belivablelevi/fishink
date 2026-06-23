@@ -218,11 +218,7 @@ function initBuildMenu() {
     tab.addEventListener('click', () => switchMenuTab(tab.dataset.tab));
   });
 
-  document.getElementById('menuCloseBtn').addEventListener('click', () => {
-    buildMode.active = false;
-    buildMode.menuOpen = false;
-    setBuildMenuOpen(false);
-  });
+  document.getElementById('menuCloseBtn').addEventListener('click', exitBuildMode);
 
   renderBuildPanel();
   renderUpgradesPanel();
@@ -1374,6 +1370,7 @@ function initBuildHud() {
 
   document.getElementById('hudRotateBtn').addEventListener('click', rotateBeltDir);
   hudBoxBtnEl.addEventListener('click', toggleBoxMode);
+  document.getElementById('hudExitBtn').addEventListener('click', exitBuildMode);
   hudCopyBtnEl.addEventListener('click', toggleBlueprintSelect);
   hudPasteBtnEl.addEventListener('click', toggleBlueprintPaste);
   hudBpRotateBtnEl.addEventListener('click', rotateBlueprintClipboard);

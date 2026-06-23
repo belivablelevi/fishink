@@ -107,6 +107,24 @@ function triggerBuildToggle() {
   closeBlockPopup();
 }
 
+// Cancels everything build-related at once — box mode, any in-progress
+// blueprint select/paste, and the rotation preview — rather than requiring
+// several separate steps to fully back out. Shared by the Escape key, the
+// build menu's X button, and the mobile Exit button (which has no Escape
+// key to fall back on).
+function exitBuildMode() {
+  buildMode.active = false;
+  buildMode.menuOpen = false;
+  buildMode.boxMode = false;
+  setBuildMenuOpen(false);
+  boxDragStart = null;
+  boxDragButton = null;
+  blueprint.selecting = false;
+  blueprint.pasting = false;
+  bpDragStart = null;
+  blueprint.pasteRotation = 0;
+}
+
 function handleBuildKey(e) {
   if ((e.ctrlKey || e.metaKey) && !boxDragStart && (e.key === 'z' || e.key === 'Z')) {
     e.preventDefault();
@@ -146,19 +164,7 @@ function handleBuildKey(e) {
     return;
   }
   if (buildMode.active && e.key === 'Escape') {
-    // Single Escape cancels everything build-related at once — box mode,
-    // any in-progress blueprint select/paste, and the rotation preview —
-    // rather than requiring a second press to fully back out.
-    buildMode.active = false;
-    buildMode.menuOpen = false;
-    buildMode.boxMode = false;
-    setBuildMenuOpen(false);
-    boxDragStart = null;
-    boxDragButton = null;
-    blueprint.selecting = false;
-    blueprint.pasting = false;
-    bpDragStart = null;
-    blueprint.pasteRotation = 0;
+    exitBuildMode();
     return;
   }
   if (!buildMode.active) return;
