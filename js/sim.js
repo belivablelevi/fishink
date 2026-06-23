@@ -94,7 +94,11 @@ function simUpdate(dt) {
   maybeShowUpgradeTip();
 
   saveAccum += dt;
-  if (saveAccum >= AUTOSAVE_INTERVAL) { saveAccum = 0; saveGame(); }
+  if (saveAccum >= AUTOSAVE_INTERVAL) {
+    saveAccum = 0;
+    saveGame();
+    submitLeaderboardScore();
+  }
 
   // Manual cast countdown
   if (manualCast.active) {
