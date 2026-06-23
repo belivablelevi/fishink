@@ -1,6 +1,6 @@
 // Fish INK Factory — build/upgrades menu (DOM overlay, tabbed Godot-style)
 
-let buildMenuEl, buildPanelEl, upgradesPanelEl, contractsPanelEl, fishIndexPanelEl, statsPanelEl, controlsPanelEl, researchPanelEl, blueprintsPanelEl, menuCashEl;
+let buildMenuEl, buildPanelEl, upgradesPanelEl, contractsPanelEl, fishIndexPanelEl, statsPanelEl, controlsPanelEl, researchPanelEl, blueprintsPanelEl, leaderboardPanelEl, menuCashEl;
 
 // Category metadata for the Build tab's grouped item grid. Order here is the
 // display order; BLOCK_CATS (grid.js) assigns each block id to one of these.
@@ -211,6 +211,7 @@ function initBuildMenu() {
   controlsPanelEl  = document.getElementById('controlsPanel');
   researchPanelEl  = document.getElementById('researchPanel');
   blueprintsPanelEl = document.getElementById('blueprintsPanel');
+  leaderboardPanelEl = document.getElementById('leaderboardPanel');
   menuCashEl       = document.getElementById('menuCash');
 
   buildMenuEl.querySelectorAll('.tab').forEach(tab => {
@@ -230,12 +231,14 @@ function initBuildMenu() {
   renderControlsPanel();
   renderResearchPanel();
   renderBlueprintsPanel();
+  renderLeaderboardPanel();
 }
 
 function switchMenuTab(name) {
   buildMenuEl.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   buildMenuEl.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('hidden', p.dataset.panel !== name));
   if (name === 'stats') renderStatsPanel();
+  if (name === 'leaderboard') renderLeaderboardPanel();
 }
 
 function setBuildMenuOpen(open) {
@@ -248,6 +251,7 @@ function setBuildMenuOpen(open) {
     renderStatsPanel();
     renderResearchPanel();
     renderBlueprintsPanel();
+    renderLeaderboardPanel();
     menuCashEl.textContent = `$${formatMoney(game.cash)}`;
   }
 }
@@ -574,6 +578,117 @@ function renderBlueprintsPanel() {
     row.appendChild(info);
     row.appendChild(btnGroup);
     blueprintsPanelEl.appendChild(row);
+  }
+}
+
+// ─── Leaderboard tab ───────────────────────────────────────────────────────
+function renderLeaderboardPanel() {
+  leaderboardPanelEl.innerHTML = '';
+
+  if (!isLeaderboardConfigured()) {
+    const hint = document.createElement('div');
+    hint.className = 'panel-hint';
+    hint.textContent = 'Leaderboard not set up yet — see leaderboard/SETUP.md';
+    leaderboardPanelEl.appendChild(hint);
+    return;
+  }
+
+  if (!getLeaderboardName()) {
+    renderLeaderboardNamePrompt();
+    return;
+  }
+
+  const hint = document.createElement('div');
+  hint.className = 'panel-hint';
+  hint.innerHTML = `Playing as <strong>${getLeaderboardName()}</strong> — <a href="#" id="lbChangeName">change name</a>`;
+  leaderboardPanelEl.appendChild(hint);
+  hint.querySelector('#lbChangeName').addEventListener('click', (e) => {
+    e.preventDefault();
+    renderLeaderboardNamePrompt();
+  });
+
+  const loading = document.createElement('div');
+  loading.className = 'panel-hint';
+  loading.textContent = 'Loading leaderboard…';
+  leaderboardPanelEl.appendChild(loading);
+
+  fetchLeaderboard().then(result => {
+    if (loading.parentNode === leaderboardPanelEl) leaderboardPanelEl.removeChild(loading);
+    if (result.error) {
+      const err = document.createElement('div');
+      err.className = 'panel-hint';
+      err.textContent = 'Could not reach the leaderboard — check your connection.';
+      leaderboardPanelEl.appendChild(err);
+      return;
+    }
+    renderLeaderboardList(result);
+  });
+}
+
+function renderLeaderboardNamePrompt() {
+  leaderboardPanelEl.innerHTML = '';
+
+  const hint = document.createElement('div');
+  hint.className = 'panel-hint';
+  hint.textContent = 'Pick a name to join the leaderboard';
+  leaderboardPanelEl.appendChild(hint);
+
+  const row = document.createElement('div');
+  row.className = 'upgrade-row';
+
+  const input = document.createElement('input');
+  input.className = 'bp-name-input';
+  input.type = 'text';
+  input.maxLength = 20;
+  input.placeholder = 'Your name';
+  input.value = getLeaderboardName();
+
+  const joinBtn = document.createElement('button');
+  joinBtn.className = 'upgrade-buy';
+  joinBtn.textContent = 'Join leaderboard';
+  joinBtn.addEventListener('click', () => {
+    if (setLeaderboardName(input.value)) {
+      submitLeaderboardScore();
+      renderLeaderboardPanel();
+    }
+  });
+
+  row.appendChild(input);
+  row.appendChild(joinBtn);
+  leaderboardPanelEl.appendChild(row);
+}
+
+function renderLeaderboardList(result) {
+  const { top, me, myRank, clientId } = result;
+
+  const list = document.createElement('div');
+  list.className = 'lb-list';
+
+  top.forEach((row, i) => {
+    const rankRow = document.createElement('div');
+    rankRow.className = 'upgrade-row lb-row';
+    if (row.client_id === clientId) rankRow.classList.add('lb-self');
+    rankRow.innerHTML = `
+      <div class="upgrade-info">
+        <div class="name">#${i + 1} ${row.name}</div>
+      </div>
+      <div class="lb-score">$${formatMoney(Number(row.lifetime_earned))}</div>
+    `;
+    list.appendChild(rankRow);
+  });
+
+  leaderboardPanelEl.appendChild(list);
+
+  if (me) {
+    const footer = document.createElement('div');
+    footer.className = 'upgrade-row lb-row lb-own-row';
+    footer.innerHTML = `
+      <div class="upgrade-info">
+        <div class="name">#${myRank != null ? myRank : '?'} ${me.name} <span class="level-badge">YOU</span></div>
+      </div>
+      <div class="lb-score">$${formatMoney(Number(me.lifetime_earned))}</div>
+    `;
+    leaderboardPanelEl.appendChild(footer);
   }
 }
 
