@@ -305,6 +305,11 @@ html, body {
   gap: 10px;
 }
 .build-hud.hidden { display: none; }
+/* The build HUD and the touch action buttons both anchor to the bottom-right
+   corner — on touch devices the buttons (stacked up to 160px tall) would sit
+   directly on top of the HUD's button rows, including Exit. Lift the HUD
+   clear of them instead. */
+body.touch-active .build-hud { bottom: 170px; }
 
 .hud-row { display: flex; align-items: center; gap: 8px; }
 .hud-selected .hud-preview canvas {
