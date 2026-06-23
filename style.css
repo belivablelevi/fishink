@@ -833,6 +833,42 @@ html, body {
 .machines-panel .upgrade-row { padding: 8px 10px; margin-bottom: 6px; }
 .machines-panel .upgrade-buy { padding: 6px 10px; font-size: 10.5px; }
 
+/* ─── Leaderboard — fixed icon button, top-left (machines button moves away
+   from this initial 106px slot every frame, so it's free for permanent use) */
+.leaderboard-toggle-btn {
+  position: fixed;
+  top: 14px;
+  left: 106px;
+  z-index: 25;
+  width: 38px; height: 38px;
+  appearance: none;
+  border: 1px solid var(--c-border);
+  background: rgba(10,18,16,0.85);
+  color: var(--c-text);
+  border-radius: 8px;
+  font-size: 18px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.leaderboard-toggle-btn:hover { background: rgba(255,255,255,0.1); }
+
+.leaderboard-panel {
+  position: fixed;
+  top: 56px;
+  left: 106px;
+  z-index: 25;
+  width: 280px;
+  max-height: 60vh;
+  overflow-y: auto;
+  font-family: var(--font-ui);
+  background: rgba(10,18,16,0.97);
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  box-shadow: 0 14px 32px rgba(0,0,0,0.5);
+  padding: 10px 12px;
+}
+.leaderboard-panel.hidden { display: none; }
+
 /* ─── First-time tutorial overlay — bottom-center, clear of other UI ───────── */
 .tutorial-overlay {
   position: fixed;
@@ -918,3 +954,69 @@ html, body {
   background: var(--c-mint);
   transition: width 0.25s ease-out;
 }
+
+/* ─── Start-screen queue — one-time screens shown before gameplay begins ──── */
+.start-screen-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--c-bg);
+}
+.start-screen-overlay.hidden { display: none; }
+.start-screen-card {
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  font-family: var(--font-ui);
+  background: rgba(10,18,16,0.97);
+  border: 1px solid var(--c-border);
+  border-radius: 12px;
+  box-shadow: 0 14px 32px rgba(0,0,0,0.5);
+  padding: 28px 24px;
+}
+.start-screen-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--c-text);
+  text-align: center;
+}
+.start-screen-sub {
+  font-size: 12px;
+  color: var(--c-muted);
+  text-align: center;
+  margin-top: -8px;
+}
+.start-screen-input {
+  width: 100%;
+  appearance: none;
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--c-text);
+  background: rgba(255,255,255,0.08);
+  box-sizing: border-box;
+}
+.start-screen-input:focus { outline: 1px solid var(--c-accent); }
+.start-screen-btn {
+  width: 100%;
+  appearance: none;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  background: var(--c-accent);
+  color: #1a1208;
+  transition: filter 0.15s;
+}
+.start-screen-btn:hover { filter: brightness(1.1); }

@@ -1,6 +1,7 @@
 // Fish INK Factory — build/upgrades menu (DOM overlay, tabbed Godot-style)
 
-let buildMenuEl, buildPanelEl, upgradesPanelEl, contractsPanelEl, fishIndexPanelEl, statsPanelEl, controlsPanelEl, researchPanelEl, blueprintsPanelEl, leaderboardPanelEl, menuCashEl;
+let buildMenuEl, buildPanelEl, upgradesPanelEl, contractsPanelEl, fishIndexPanelEl, statsPanelEl, controlsPanelEl, researchPanelEl, blueprintsPanelEl, menuCashEl;
+let leaderboardPanelEl;
 
 // Category metadata for the Build tab's grouped item grid. Order here is the
 // display order; BLOCK_CATS (grid.js) assigns each block id to one of these.
@@ -211,7 +212,6 @@ function initBuildMenu() {
   controlsPanelEl  = document.getElementById('controlsPanel');
   researchPanelEl  = document.getElementById('researchPanel');
   blueprintsPanelEl = document.getElementById('blueprintsPanel');
-  leaderboardPanelEl = document.getElementById('leaderboardPanel');
   menuCashEl       = document.getElementById('menuCash');
 
   buildMenuEl.querySelectorAll('.tab').forEach(tab => {
@@ -231,14 +231,12 @@ function initBuildMenu() {
   renderControlsPanel();
   renderResearchPanel();
   renderBlueprintsPanel();
-  renderLeaderboardPanel();
 }
 
 function switchMenuTab(name) {
   buildMenuEl.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   buildMenuEl.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('hidden', p.dataset.panel !== name));
   if (name === 'stats') renderStatsPanel();
-  if (name === 'leaderboard') renderLeaderboardPanel();
 }
 
 function setBuildMenuOpen(open) {
@@ -251,9 +249,26 @@ function setBuildMenuOpen(open) {
     renderStatsPanel();
     renderResearchPanel();
     renderBlueprintsPanel();
-    renderLeaderboardPanel();
     menuCashEl.textContent = `$${formatMoney(game.cash)}`;
   }
+}
+
+// ─── Leaderboard — standalone top-left icon button + dropdown panel ────────
+function initLeaderboardMenu() {
+  const btn   = document.getElementById('leaderboardToggleBtn');
+  const panel = document.getElementById('leaderboardPanel');
+  leaderboardPanelEl = panel;
+
+  btn.addEventListener('click', () => {
+    panel.classList.toggle('hidden');
+    if (!panel.classList.contains('hidden')) renderLeaderboardPanel();
+  });
+
+  document.addEventListener('click', e => {
+    if (!panel.classList.contains('hidden') && !panel.contains(e.target) && !btn.contains(e.target)) {
+      panel.classList.add('hidden');
+    }
+  });
 }
 
 // ─── Build tab ─────────────────────────────────────────────────────────────

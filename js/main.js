@@ -84,11 +84,15 @@ function init() {
     initSoundMenu();
     initGameMenu();
     initMachinesMenu();
-    if (!game.tutorialDone) startTutorial();
+    initLeaderboardMenu();
     loadingAnim.setProgress(1);
     setTimeout(() => {
       loadingAnim.stop();
-      requestAnimationFrame(loop);
+      runStartScreens(() => {
+        document.getElementById('loadingScreen')?.classList.add('hidden');
+        if (!game.tutorialDone) startTutorial();
+        requestAnimationFrame(loop);
+      });
     }, 200);
   };
 

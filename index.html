@@ -19,6 +19,10 @@
     </div>
   </div>
 
+  <div id="startScreenOverlay" class="start-screen-overlay hidden">
+    <div id="startScreenCard" class="start-screen-card"></div>
+  </div>
+
   <div id="blockPopup" class="block-popup hidden"></div>
 
   <button id="soundToggleBtn" class="sound-toggle-btn" title="Sound settings"><img src="img/icon-volume.png" alt="Sound"></button>
@@ -39,6 +43,9 @@
 
   <button id="machinesToggleBtn" class="machines-toggle-btn" title="View all upgradable machines"><img src="img/icon-machines.png" alt="Machines"></button>
   <div id="machinesPanel" class="machines-panel hidden"></div>
+
+  <button id="leaderboardToggleBtn" class="leaderboard-toggle-btn" title="Leaderboard">&#127942;</button>
+  <div id="leaderboardPanel" class="leaderboard-panel hidden"></div>
 
   <div id="tutorialOverlay" class="tutorial-overlay hidden">
     <div class="tutorial-step-count" id="tutorialStepCount"></div>
@@ -63,7 +70,6 @@
       <button class="tab" data-tab="controls">Controls</button>
       <button class="tab" data-tab="research">Research</button>
       <button class="tab" data-tab="blueprints">Blueprints</button>
-      <button class="tab" data-tab="leaderboard">Leaderboard</button>
       <div class="tab-hint">Tab to switch &middot; Esc to close</div>
     </div>
     <div class="panel">
@@ -75,7 +81,6 @@
       <div class="tab-panel hidden" data-panel="controls" id="controlsPanel"></div>
       <div class="tab-panel hidden" data-panel="research" id="researchPanel"></div>
       <div class="tab-panel hidden" data-panel="blueprints" id="blueprintsPanel"></div>
-      <div class="tab-panel hidden" data-panel="leaderboard" id="leaderboardPanel"></div>
     </div>
   </div>
 
@@ -116,6 +121,7 @@
   <script src="js/blueprint.js"></script>
   <script src="js/save.js"></script>
   <script src="js/leaderboard.js"></script>
+  <script src="js/startscreen.js"></script>
   <script src="js/tutorial.js"></script>
   <script src="js/main.js"></script>
 </body>
