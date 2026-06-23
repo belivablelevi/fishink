@@ -80,7 +80,7 @@ const PLACEABLE_IDS = [B_CONCRETE, B_FISHER, B_BELT, B_SPLITTER, B_SORTER, B_CRA
                        B_SELLER, B_RECYCLER, B_PACKER, B_SMART_ROUTER, B_TELEPORTER,
                        B_DRONE_FISHER, B_DRONE_DELIVERY];
 
-const MENU_TAB_ORDER = ['build', 'upgrades', 'contracts', 'fishIndex', 'stats', 'controls', 'research', 'blueprints'];
+const MENU_TAB_ORDER = ['build', 'upgrades', 'contracts', 'fishIndex', 'stats', 'controls', 'research', 'blueprints', 'leaderboard'];
 
 function toggleBoxMode() {
   buildMode.boxMode = !buildMode.boxMode;
