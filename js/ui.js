@@ -582,6 +582,14 @@ function renderBlueprintsPanel() {
 }
 
 // ─── Leaderboard tab ───────────────────────────────────────────────────────
+// Leaderboard names can come from any client (open-write table, no auth) —
+// escape before interpolating into innerHTML so a hostile name can't inject markup.
+function escapeLeaderboardName(name) {
+  const div = document.createElement('div');
+  div.textContent = name;
+  return div.innerHTML;
+}
+
 function renderLeaderboardPanel() {
   leaderboardPanelEl.innerHTML = '';
 
@@ -600,7 +608,7 @@ function renderLeaderboardPanel() {
 
   const hint = document.createElement('div');
   hint.className = 'panel-hint';
-  hint.innerHTML = `Playing as <strong>${getLeaderboardName()}</strong> — <a href="#" id="lbChangeName">change name</a>`;
+  hint.innerHTML = `Playing as <strong>${escapeLeaderboardName(getLeaderboardName())}</strong> — <a href="#" id="lbChangeName">change name</a>`;
   leaderboardPanelEl.appendChild(hint);
   hint.querySelector('#lbChangeName').addEventListener('click', (e) => {
     e.preventDefault();
@@ -670,7 +678,7 @@ function renderLeaderboardList(result) {
     if (row.client_id === clientId) rankRow.classList.add('lb-self');
     rankRow.innerHTML = `
       <div class="upgrade-info">
-        <div class="name">#${i + 1} ${row.name}</div>
+        <div class="name">#${i + 1} ${escapeLeaderboardName(row.name)}</div>
       </div>
       <div class="lb-score">$${formatMoney(Number(row.lifetime_earned))}</div>
     `;
@@ -684,7 +692,7 @@ function renderLeaderboardList(result) {
     footer.className = 'upgrade-row lb-row lb-own-row';
     footer.innerHTML = `
       <div class="upgrade-info">
-        <div class="name">#${myRank != null ? myRank : '?'} ${me.name} <span class="level-badge">YOU</span></div>
+        <div class="name">#${myRank != null ? myRank : '?'} ${escapeLeaderboardName(me.name)} <span class="level-badge">YOU</span></div>
       </div>
       <div class="lb-score">$${formatMoney(Number(me.lifetime_earned))}</div>
     `;
