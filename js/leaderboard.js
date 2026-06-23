@@ -7,8 +7,8 @@
 // in its own contact.html, so no extra client library is needed.
 
 // ── PASTE YOUR SUPABASE CREDENTIALS HERE ──────────────────────────────
-var SUPABASE_URL  = 'YOUR_SUPABASE_URL';        // e.g. https://xyzxyz.supabase.co
-var SUPABASE_ANON = 'YOUR_SUPABASE_ANON_KEY';   // from Settings -> API
+var SUPABASE_URL  = 'https://dcwaensexoprcpskont.supabase.co';
+var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRjd2FlbnNleG9wcmNwc3drb250Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4OTIxNzcsImV4cCI6MjA5NzQ2ODE3N30.5nr6dPfjzTALnwbKqFvkOLZuq1-7TPQ0B9g9x11xows';
 // ────────────────────────────────────────────────────────────────────
 
 const LEADERBOARD_ID_KEY   = 'fishink_leaderboard_id';
