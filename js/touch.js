@@ -104,9 +104,32 @@ function initCanvasTouchPassthrough(canvasEl) {
   }, { passive: false });
 }
 
+function createActionButtons() {
+  const interactBtn = document.createElement('button');
+  interactBtn.id = 'touchInteractBtn';
+  interactBtn.className = 'touch-action-btn';
+  interactBtn.textContent = 'Interact';
+  interactBtn.addEventListener('touchstart', e => {
+    e.preventDefault();
+    triggerInteract();
+  });
+  document.body.appendChild(interactBtn);
+
+  const buildBtn = document.createElement('button');
+  buildBtn.id = 'touchBuildBtn';
+  buildBtn.className = 'touch-action-btn';
+  buildBtn.textContent = 'Build';
+  buildBtn.addEventListener('touchstart', e => {
+    e.preventDefault();
+    triggerBuildToggle();
+  });
+  document.body.appendChild(buildBtn);
+}
+
 // Called once from main.js's init(), after the canvas element exists.
 function initTouchControls(canvasEl) {
   if (!IS_TOUCH) return;
   createJoystick();
   initCanvasTouchPassthrough(canvasEl);
+  createActionButtons();
 }
