@@ -266,8 +266,13 @@ function triggerInteract() {
 }
 
 function updatePlayer(dt) {
-  const dx = manualCast.active ? 0 : ((KEYS['d'] || KEYS['D'] || KEYS['ArrowRight']) ? 1 : 0) - ((KEYS['a'] || KEYS['A'] || KEYS['ArrowLeft'])  ? 1 : 0);
-  const dy = manualCast.active ? 0 : ((KEYS['s'] || KEYS['S'] || KEYS['ArrowDown'])  ? 1 : 0) - ((KEYS['w'] || KEYS['W'] || KEYS['ArrowUp'])    ? 1 : 0);
+  const kx = ((KEYS['d'] || KEYS['D'] || KEYS['ArrowRight']) ? 1 : 0) - ((KEYS['a'] || KEYS['A'] || KEYS['ArrowLeft'])  ? 1 : 0);
+  const ky = ((KEYS['s'] || KEYS['S'] || KEYS['ArrowDown'])  ? 1 : 0) - ((KEYS['w'] || KEYS['W'] || KEYS['ArrowUp'])    ? 1 : 0);
+  // On touch devices joystickVector carries movement instead of key state;
+  // it stays {0,0} on desktop, so keyboard input always wins when present
+  // and this is a no-op there.
+  const dx = manualCast.active ? 0 : (kx !== 0 ? kx : joystickVector.x);
+  const dy = manualCast.active ? 0 : (ky !== 0 ? ky : joystickVector.y);
 
   const len = Math.sqrt(dx * dx + dy * dy) || 1;
   const spd = PLAYER_SPEED * dt;

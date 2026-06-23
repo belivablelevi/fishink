@@ -74,6 +74,7 @@ function init() {
 
   if (hasSave()) { loadGame(); } else { buildWorld(); resetPlayerSpawn(); }
   initMouseHandlers(canvas);
+  initTouchControls(canvas);
 
   const loadingAnim = startLoadingAnimation();
   const loadStart = performance.now();
