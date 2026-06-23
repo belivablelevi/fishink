@@ -14,7 +14,64 @@ const IS_TOUCH = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 // is held. Stays {0,0} forever on desktop.
 let joystickVector = { x: 0, y: 0 };
 
+let joystickTouchId = null;
+const JOYSTICK_RADIUS = 55; // px — must match half of .touch-joystick-base's width/height
+
+function createJoystick() {
+  const base = document.createElement('div');
+  base.className = 'touch-joystick-base';
+  const knob = document.createElement('div');
+  knob.className = 'touch-joystick-knob';
+  base.appendChild(knob);
+  document.body.appendChild(base);
+
+  function setKnob(dx, dy) {
+    knob.style.transform = `translate(${dx}px, ${dy}px)`;
+  }
+
+  function findOwnTouch(touchList) {
+    for (let i = 0; i < touchList.length; i++) {
+      if (touchList[i].identifier === joystickTouchId) return touchList[i];
+    }
+    return null;
+  }
+
+  base.addEventListener('touchstart', e => {
+    if (joystickTouchId !== null) return;
+    joystickTouchId = e.changedTouches[0].identifier;
+    e.preventDefault();
+  }, { passive: false });
+
+  base.addEventListener('touchmove', e => {
+    const t = findOwnTouch(e.changedTouches);
+    if (!t) return;
+    const rect = base.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    let dx = t.clientX - cx;
+    let dy = t.clientY - cy;
+    const dist = Math.hypot(dx, dy) || 1;
+    const clamped = Math.min(dist, JOYSTICK_RADIUS);
+    dx = (dx / dist) * clamped;
+    dy = (dy / dist) * clamped;
+    setKnob(dx, dy);
+    joystickVector = { x: dx / JOYSTICK_RADIUS, y: dy / JOYSTICK_RADIUS };
+    e.preventDefault();
+  }, { passive: false });
+
+  function endTouch(e) {
+    const t = findOwnTouch(e.changedTouches);
+    if (!t) return;
+    joystickTouchId = null;
+    joystickVector = { x: 0, y: 0 };
+    setKnob(0, 0);
+  }
+  base.addEventListener('touchend', endTouch);
+  base.addEventListener('touchcancel', endTouch);
+}
+
 // Called once from main.js's init(), after the canvas element exists.
 function initTouchControls(canvasEl) {
   if (!IS_TOUCH) return;
+  createJoystick();
 }
