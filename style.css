@@ -311,6 +311,20 @@ html, body {
    clear of them instead. */
 body.touch-active .build-hud { bottom: 170px; }
 
+/* The full-screen build menu (92vw x 90vh, ~5vh margin) leaves only a thin
+   strip clear at the bottom corners on a phone — the joystick and Interact
+   button would otherwise float on top of it and steal taps meant for the
+   menu's bottom-most content. Build stays visible/in place: it's the only
+   way to close the menu panel while remaining in placement mode (mobile's
+   equivalent of pressing B twice on desktop), same corner as the menu's
+   own X so nothing new to overlap. */
+body.build-menu-open .touch-joystick-base,
+body.build-menu-open #touchInteractBtn { display: none; }
+
+/* The Machines panel is bottom-left-anchored and slightly overlaps the
+   joystick's top-right edge on touch devices. */
+body.touch-active .machines-panel { bottom: 144px; }
+
 .hud-row { display: flex; align-items: center; gap: 8px; }
 .hud-selected .hud-preview canvas {
   display: block;

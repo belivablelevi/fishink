@@ -237,7 +237,14 @@ function switchMenuTab(name) {
 
 function setBuildMenuOpen(open) {
   buildMenuEl.classList.toggle('hidden', !open);
+  // The full-screen build menu's bottom corners sit right where the touch
+  // joystick/Interact button float on a phone — hide them while the menu
+  // covers them so they don't block taps on the menu underneath. Build
+  // stays visible/reachable (see style.css) since it's the only way to
+  // close the panel while staying in placement mode.
+  document.body.classList.toggle('build-menu-open', open);
   if (open) {
+    resetJoystick();
     refreshBuildPanel();
     renderUpgradesPanel();
     renderContractsPanel();

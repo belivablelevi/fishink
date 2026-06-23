@@ -16,6 +16,18 @@ let joystickVector = { x: 0, y: 0 };
 
 let joystickTouchId = null;
 const JOYSTICK_RADIUS = 55; // px — must match half of .touch-joystick-base's width/height
+let resetJoystickKnob = () => {}; // replaced by createJoystick(); a no-op before/without touch
+
+// CSS hides the joystick whenever the build menu opens (its bottom corners
+// would otherwise sit under it) — that hides the knob but doesn't fire
+// touchend, so without this a finger still down on the joystick at that
+// moment would leave joystickVector stuck non-zero and the knob visually
+// off-center the next time the joystick reappears.
+function resetJoystick() {
+  joystickTouchId = null;
+  joystickVector = { x: 0, y: 0 };
+  resetJoystickKnob();
+}
 
 function createJoystick() {
   const base = document.createElement('div');
@@ -28,6 +40,7 @@ function createJoystick() {
   function setKnob(dx, dy) {
     knob.style.transform = `translate(${dx}px, ${dy}px)`;
   }
+  resetJoystickKnob = () => setKnob(0, 0);
 
   function findOwnTouch(touchList) {
     for (let i = 0; i < touchList.length; i++) {
