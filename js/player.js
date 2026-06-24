@@ -80,7 +80,7 @@ const PLACEABLE_IDS = [B_CONCRETE, B_FISHER, B_BELT, B_SPLITTER, B_SORTER, B_CRA
                        B_SELLER, B_RECYCLER, B_PACKER, B_SMART_ROUTER, B_TELEPORTER,
                        B_DRONE_FISHER, B_DRONE_DELIVERY];
 
-const MENU_TAB_ORDER = ['build', 'upgrades', 'contracts', 'fishIndex', 'stats', 'controls', 'research', 'blueprints'];
+const MENU_TAB_ORDER = ['build', 'upgrades', 'fishIndex', 'stats', 'controls', 'research', 'blueprints'];
 
 function toggleBoxMode() {
   buildMode.boxMode = !buildMode.boxMode;
@@ -470,19 +470,28 @@ function handleClick(e) {
 function applyBoxAction(start, end, button) {
   const c0 = Math.min(start.c, end.c), c1 = Math.max(start.c, end.c);
   const r0 = Math.min(start.r, end.r), r1 = Math.max(start.r, end.r);
+  let count = 0;
   beginUndoBatch();
   for (let r = r0; r <= r1; r++) {
     for (let c = c0; c <= c1; c++) {
       if (button === 0) {
         if (!canPlaceBlock(buildMode.selectedId, c, r, buildMode.beltDir)) continue;
         if (game.cash < BLOCK_COSTS[buildMode.selectedId]) break;
-        buyAndPlace(buildMode.selectedId, c, r, buildMode.beltDir);
+        if (buyAndPlace(buildMode.selectedId, c, r, buildMode.beltDir, true)) count++;
       } else if (button === 2) {
-        sellAndRemove(c, r);
+        if (sellAndRemove(c, r, true)) count++;
       }
     }
   }
   endUndoBatch();
+  // Per-tile placement already plays sfxPlace()/sfxCoin() — a box drag can
+  // hit dozens of tiles in one mouseup, which would otherwise fire that
+  // sound (and stack that many toasts) all in the same instant. One sound
+  // and one summary toast for the whole drag instead.
+  if (count > 0) {
+    if (button === 0) { sfxPlace(); queueToast(`Placed ${count} block${count === 1 ? '' : 's'}`, '#7ec8e3'); }
+    else { sfxCoin(); queueToast(`Sold ${count} block${count === 1 ? '' : 's'}`, '#e8a030'); }
+  }
 }
 
 function handleMouseUp(e) {

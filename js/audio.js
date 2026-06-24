@@ -209,18 +209,14 @@ function sfxAchievement() {
   playBuffer('achievement');
 }
 
-function sfxContractReady() {
-  playTone({ freq: 880, dur: 0.12, type: 'sine', vol: 0.25, slideTo: 1320 });
-}
-
 function sfxTeleport(volMult = 1) {
   playBuffer('teleport', volMult);
 }
 
-// Manual machine-upgrade confirmation — only fired from the in-world block
-// popup's Upgrade button (js/ui.js wireUpgradeSection), never from the
-// Machines-tab list, so buying upgrades in bulk from the menu stays quiet.
-// Square wave to read distinct from the triangle-wave machineDing family.
+// Permanent level-up confirmation — global upgrades, per-instance machine
+// upgrades, and Research nodes all play this instead of sfxCoin, so a
+// level-up reads as distinct from a fish sale. Square wave to read distinct
+// from the triangle-wave machineDing family.
 function sfxUpgrade() {
   playTone({ freq: 523.25, dur: 0.08, type: 'square', vol: 0.2 });
   playTone({ freq: 659.25, dur: 0.08, type: 'square', vol: 0.2, delay: 0.07 });

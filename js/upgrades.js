@@ -17,7 +17,7 @@ const upgradeLevels = { castSpeed: 0, beltSpeed: 0, maxHeld: 0, fisherSpeed: 0, 
 
 function upgradeCost(def) {
   const lvl = upgradeLevels[def.id];
-  if (lvl >= def.maxLevel) return null;
+  if (lvl >= globalUpgradeCapFor(def.id)) return null;
   return Math.round(def.baseCost * Math.pow(def.costMult, lvl));
 }
 
@@ -43,7 +43,7 @@ function buyUpgrade(id) {
   if (game.cash < cost) { queueToast('Not enough cash!', '#e85d4a'); sfxFail(); return false; }
   game.cash -= cost;
   upgradeLevels[id]++;
-  sfxCoin();
+  sfxUpgrade();
   queueToast(`${def.name} upgraded! (Lv ${upgradeLevels[id]})`, '#4dca7c');
   saveGame();
   return true;
@@ -117,7 +117,8 @@ function buyMachineUpgrade(c, r) {
   if (game.cash < cost) { queueToast('Not enough cash!', '#e85d4a'); sfxFail(); return false; }
   game.cash -= cost;
   st.level = level + 1;
-  sfxCoin();
+  game.maxMachineLevel = Math.max(game.maxMachineLevel, st.level);
+  sfxUpgrade();
   queueToast(`${BLOCK_NAMES[id]} upgraded! (Lv ${st.level})`, '#4dca7c');
   // The player just used the mechanic the upgrade tip was teaching — no need
   // to keep showing it.

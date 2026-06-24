@@ -448,25 +448,6 @@ body.touch-active .machines-panel { bottom: 144px; }
 .level-badge.next { color: var(--c-accent); background: rgba(232,160,48,0.15); }
 .level-arrow { color: var(--c-muted); font-size: 10px; }
 
-.contract-row .reward-pill {
-  background: var(--c-mint);
-  color: #0a1a10;
-}
-.contract-row .reward-pill:disabled { opacity: 1; cursor: default; }
-.contract-bar {
-  width: 100%;
-  height: 5px;
-  border-radius: 3px;
-  background: rgba(255,255,255,0.08);
-  margin-top: 6px;
-  overflow: hidden;
-}
-.contract-bar-fill {
-  height: 100%;
-  background: var(--c-mint);
-  border-radius: 3px;
-  transition: width 0.2s;
-}
 .upgrade-buy {
   appearance: none;
   border: none;
@@ -874,20 +855,28 @@ body.touch-active .machines-panel { bottom: 144px; }
 
 .leaderboard-panel {
   position: fixed;
-  top: 56px;
-  left: 106px;
+  top: 5vh;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 25;
-  width: 280px;
-  max-height: 60vh;
-  overflow-y: auto;
+  width: min(92vw, 640px);
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
   font-family: var(--font-ui);
-  background: rgba(10,18,16,0.97);
-  border: 1px solid var(--c-border);
-  border-radius: 10px;
-  box-shadow: 0 14px 32px rgba(0,0,0,0.5);
-  padding: 10px 12px;
 }
 .leaderboard-panel.hidden { display: none; }
+
+.leaderboard-content {
+  background: rgba(10,18,16,0.96);
+  border: 1px solid var(--c-border);
+  border-radius: 0 10px 10px 10px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  box-shadow: 0 14px 32px rgba(0,0,0,0.45);
+  padding: 22px;
+}
 
 /* ─── First-time tutorial overlay — bottom-center, clear of other UI ───────── */
 .tutorial-overlay {

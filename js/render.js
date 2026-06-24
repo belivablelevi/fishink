@@ -95,6 +95,9 @@ function draw(ctx, canvas, dt) {
   // Delivery drones in flight toward the boat — cosmetic only
   drawDeliveryFlights(ctx);
 
+  // Catch particles (splash/sparkle) — drawn last so they sit on top of everything else
+  drawParticles(ctx);
+
   // Build ghost
   if (buildMode.active) {
     const { c, r } = tileFromMouse(mouseCanvas.x, mouseCanvas.y);
@@ -403,6 +406,17 @@ function drawGrassTile(ctx, sx, sy, S, c, r) {
       const oy = (tileHash(c, r, i * 2 + 81) - 0.5) * 5;
       ctx.fillStyle = palette[Math.floor(tileHash(c, r, i + 85) * palette.length)];
       ctx.fillRect(fx + ox, fy + oy, 1.5, 1.5);
+    }
+  }
+
+  // Sparse decorative rocks, same stable-per-tile hash pattern as the flowers.
+  if (tileHash(c, r, 140) > 0.96) {
+    const variant = Math.floor(tileHash(c, r, 141) * 4);
+    const rockImg = IMAGES['rock' + variant];
+    if (rockImg) {
+      const rx = sx + 2 + tileHash(c, r, 142) * (S - 18);
+      const ry = sy + 2 + tileHash(c, r, 143) * (S - 18);
+      ctx.drawImage(rockImg, rx, ry, 16, 16);
     }
   }
 
@@ -1472,6 +1486,29 @@ function drawDeliveryFlights(ctx) {
   }
 }
 
+// Catch particles — splash (blue/white circles) and sparkle (gold diamonds),
+// both fading out over their lifetime. `particles` is the shared array
+// maintained by sim.js's spawnParticles/tickParticles.
+function drawParticles(ctx) {
+  for (const p of particles) {
+    const sx = p.x - cam.x, sy = p.y - cam.y;
+    const alpha = Math.max(0, 1 - p.life / p.maxLife);
+    if (p.kind === 'sparkle') {
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.rotate(Math.PI / 4);
+      ctx.fillStyle = `rgba(255,215,80,${alpha})`;
+      ctx.fillRect(-2, -2, 4, 4);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = `rgba(180,220,255,${alpha})`;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
 // Drones in flight aren't tied to a single tile, so they're drawn in their
 // own full-grid pass rather than from drawBlock (which only fires for the
 // tile the pad sits on).
@@ -1633,11 +1670,11 @@ function drawPlayer(ctx) {
   // updatePlayer), and walkAmp eases toward 0 on stopping so the motion fades
   // out instead of snapping back to a neutral pose.
   const swing   = Math.sin(player.walkPhase) * player.walkAmp;
-  const bob     = Math.abs(Math.sin(player.walkPhase)) * player.walkAmp * 2;
-  const legSwing = swing * 3.5;
-  const armSwing = swing * 2.2;
-  const legLift  = Math.max(0, Math.sin(player.walkPhase)) * player.walkAmp * 1.5; // forward leg lifts slightly off the ground
-  const legLiftB = Math.max(0, -Math.sin(player.walkPhase)) * player.walkAmp * 1.5;
+  const bob     = Math.abs(Math.sin(player.walkPhase)) * player.walkAmp * 1.2;
+  const legSwing = swing * 2.0;
+  const armSwing = swing * 1.4;
+  const legLift  = Math.max(0, Math.sin(player.walkPhase)) * player.walkAmp; // forward leg lifts slightly off the ground
+  const legLiftB = Math.max(0, -Math.sin(player.walkPhase)) * player.walkAmp;
 
   // Shadow — shrinks a touch on the lift to sell the foot leaving the ground
   ctx.fillStyle = 'rgba(0,0,0,0.22)';

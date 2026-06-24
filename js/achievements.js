@@ -6,9 +6,14 @@ const ACHIEVEMENTS = [
   { id: 'earn10k',    name: 'Small Business',  desc: 'Earn $10,000 lifetime',        check: () => game.lifetimeEarned >= 10000 },
   { id: 'earn100k',   name: 'Fish Tycoon',     desc: 'Earn $100,000 lifetime',       check: () => game.lifetimeEarned >= 100000 },
   { id: 'fullIndex',  name: 'Ichthyologist',   desc: 'Complete the Fish Index',      check: () => game.fishIndex.size >= FISH.length },
-  { id: 'contracts10', name: 'Reliable Supplier', desc: 'Claim 10 contracts',        check: () => game.contractsClaimed >= 10 },
   { id: 'research1',   name: 'Innovator',       desc: 'Complete your first Research node', check: () => Object.values(researchLevels).some(v => v >= 1) },
   { id: 'researchAll', name: 'Mad Scientist',   desc: 'Complete all Research nodes', check: () => RESEARCH_NODES.every(n => researchLevels[n.id] >= 1) },
+  { id: 'rareCatch1',   name: 'Lucky Catch',     desc: 'Catch your first rare fish',        check: () => game.rareCatches >= 1 },
+  { id: 'rareCatch50',  name: 'Rare Hunter',      desc: 'Catch 50 rare fish',                check: () => game.rareCatches >= 50 },
+  { id: 'builder50',    name: 'Foreman',          desc: 'Place 50 blocks total',             check: () => game.blocksPlaced >= 50 },
+  { id: 'builder250',   name: 'Industrialist',    desc: 'Place 250 blocks total',            check: () => game.blocksPlaced >= 250 },
+  { id: 'machineLv5',   name: 'Fully Tuned',      desc: 'Max a machine to level 5',          check: () => game.maxMachineLevel >= 5 },
+  { id: 'machineLv10',  name: 'Peak Performance', desc: 'Max a machine to level 10 (Research)', check: () => game.maxMachineLevel >= 10 },
 ];
 
 function checkAchievements() {

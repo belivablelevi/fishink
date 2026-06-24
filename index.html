@@ -46,7 +46,13 @@
   <div id="machinesPanel" class="machines-panel hidden"></div>
 
   <button id="leaderboardToggleBtn" class="leaderboard-toggle-btn" title="Leaderboard">&#127942;</button>
-  <div id="leaderboardPanel" class="leaderboard-panel hidden"></div>
+  <div id="leaderboardPanel" class="leaderboard-panel hidden">
+    <div class="menu-header">
+      <div class="menu-title">FISH INK <span>LEADERBOARD</span></div>
+      <button class="menu-close" id="leaderboardCloseBtn" title="Close">&times;</button>
+    </div>
+    <div class="leaderboard-content" id="leaderboardContent"></div>
+  </div>
 
   <div id="tutorialOverlay" class="tutorial-overlay hidden">
     <div class="tutorial-step-count" id="tutorialStepCount"></div>
@@ -65,7 +71,6 @@
     <div class="tab-row">
       <button class="tab active" data-tab="build">Build</button>
       <button class="tab" data-tab="upgrades">Upgrades</button>
-      <button class="tab" data-tab="contracts">Contracts</button>
       <button class="tab" data-tab="fishIndex">Fish Index</button>
       <button class="tab" data-tab="stats">Stats</button>
       <button class="tab" data-tab="controls">Controls</button>
@@ -76,7 +81,6 @@
     <div class="panel">
       <div class="tab-panel" data-panel="build" id="buildPanel"></div>
       <div class="tab-panel hidden" data-panel="upgrades" id="upgradesPanel"></div>
-      <div class="tab-panel hidden" data-panel="contracts" id="contractsPanel"></div>
       <div class="tab-panel hidden" data-panel="fishIndex" id="fishIndexPanel"></div>
       <div class="tab-panel hidden" data-panel="stats" id="statsPanel"></div>
       <div class="tab-panel hidden" data-panel="controls" id="controlsPanel"></div>
@@ -113,7 +117,6 @@
   <script src="js/grid.js"></script>
   <script src="js/upgrades.js"></script>
   <script src="js/research.js"></script>
-  <script src="js/contracts.js"></script>
   <script src="js/achievements.js"></script>
   <script src="js/sim.js"></script>
   <script src="js/player.js"></script>

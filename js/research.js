@@ -8,9 +8,11 @@ const RESEARCH_NODES = [
   { id: 'capTier3', name: 'Precision Engineering', desc: "Raises every machine's upgrade cap from Lv 8 to Lv 10", cost: 25000, requires: 'capTier2' },
   { id: 'globalSellBonus', name: 'Automation Bonus', desc: 'All fish sell for +10% (stacks with Market Contacts)', cost: 15000, requires: null },
   { id: 'crateCapacity', name: 'Crate Expansion', desc: 'Storage Crates hold 20 more items (40 total)', cost: 6000, requires: null },
+  { id: 'globalTier2', name: 'Global Tooling I',  desc: 'Raises the level cap on 6 global upgrades (not Belt Motors) from 5 to 8', cost: 20000, requires: null },
+  { id: 'globalTier3', name: 'Global Tooling II', desc: 'Raises the level cap on 6 global upgrades (not Belt Motors) from 8 to 10', cost: 40000, requires: 'globalTier2' },
 ];
 
-const researchLevels = { capTier2: 0, capTier3: 0, globalSellBonus: 0, crateCapacity: 0 };
+const researchLevels = { capTier2: 0, capTier3: 0, globalSellBonus: 0, crateCapacity: 0, globalTier2: 0, globalTier3: 0 };
 
 function isResearchUnlocked() { return game.lifetimeEarned >= RESEARCH_UNLOCK_LIFETIME; }
 
@@ -28,7 +30,7 @@ function buyResearch(id) {
   if (game.cash < cost) { queueToast('Not enough cash!', '#e85d4a'); sfxFail(); return false; }
   game.cash -= cost;
   researchLevels[id] = 1;
-  sfxCoin();
+  sfxUpgrade();
   queueToast(`Research complete: ${def.name}!`, '#4dca7c');
   saveGame();
   return true;
@@ -41,3 +43,10 @@ function machineUpgradeCapFor(id) {
 }
 function researchSellMult() { return 1 + researchLevels.globalSellBonus * 0.10; }
 function researchCrateCapacity() { return CRATE_CAPACITY + researchLevels.crateCapacity * 20; }
+
+function globalUpgradeCapFor(id) {
+  if (id === 'beltSpeed') return 5; // explicitly excluded from the tier-2 cap raise
+  if (researchLevels.globalTier3) return 10;
+  if (researchLevels.globalTier2) return 8;
+  return 5;
+}

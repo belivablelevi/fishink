@@ -38,6 +38,8 @@ function loadImages(cb, onProgress) {
     sorter2: 'img/sorter-2.png', sorter3: 'img/sorter-3.png',
     sorter4: 'img/sorter-4.png', sorter5: 'img/sorter-5.png',
     iconMoney: 'img/icon-money.png', rod: 'img/rod.png',
+    rock0: 'img/rock-0.png', rock1: 'img/rock-1.png',
+    rock2: 'img/rock-2.png', rock3: 'img/rock-3.png',
   };
   const total = Object.keys(srcs).length;
   let loaded = 0;

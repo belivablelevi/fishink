@@ -1,7 +1,18 @@
 // Fish INK Factory — save/load (localStorage), separate from device audio prefs
 
 const SAVE_KEY = 'fishink_save';
-const SAVE_VERSION = 1;
+const SAVE_VERSION = 2;
+
+// Each entry mutates `data` in place from its key's version to key+1.
+const SAVE_MIGRATIONS = {
+  1: (data) => {
+    delete data.contracts;
+    if (data.game) delete data.game.contractsClaimed;
+    if (data.game?.unlockedAchievements) {
+      data.game.unlockedAchievements = data.game.unlockedAchievements.filter(id => id !== 'contracts10');
+    }
+  },
+};
 
 function serializeGame() {
   return {
@@ -10,7 +21,9 @@ function serializeGame() {
       cash: game.cash,
       lifetimeEarned: game.lifetimeEarned,
       fishSold: game.fishSold,
-      contractsClaimed: game.contractsClaimed,
+      rareCatches: game.rareCatches,
+      blocksPlaced: game.blocksPlaced,
+      maxMachineLevel: game.maxMachineLevel,
       time: game.time,
       dayTime: game.dayTime,
       fishIndex: Array.from(game.fishIndex),
@@ -22,7 +35,6 @@ function serializeGame() {
     upgradeLevels,
     researchLevels,
     blueprintLibrary: blueprint.library, blueprintActiveId: blueprint.activeId, nextBlueprintId,
-    contracts: { activeContracts, nextContractId, contractSpawnTimer },
     heldFish,
     STARTER_C, STARTER_R,
     terrain: terrain.map(row => Array.from(row)),
@@ -39,6 +51,9 @@ function deserializeGame(data) {
   game.unlockedAchievements = new Set(data.game.unlockedAchievements || []);
   game.tutorialDone   = data.game.tutorialDone || false;
   game.upgradeTipDone = data.game.upgradeTipDone || false;
+  game.rareCatches     = data.game.rareCatches || 0;
+  game.blocksPlaced    = data.game.blocksPlaced || 0;
+  game.maxMachineLevel = data.game.maxMachineLevel || 0;
 
   Object.assign(upgradeLevels, data.upgradeLevels);
   Object.assign(researchLevels, data.researchLevels || {});
@@ -49,11 +64,6 @@ function deserializeGame(data) {
   blueprint.pasting   = false;
   blueprint.selecting = false;
   blueprint.pasteRotation = 0;
-
-  activeContracts.length = 0;
-  activeContracts.push(...data.contracts.activeContracts);
-  nextContractId = data.contracts.nextContractId;
-  contractSpawnTimer = data.contracts.contractSpawnTimer;
 
   heldFish.length = 0;
   heldFish.push(...data.heldFish);
@@ -99,11 +109,12 @@ function loadGame() {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return false;
     const data = JSON.parse(raw);
-    if (data.version !== SAVE_VERSION) {
+    if (data.version > SAVE_VERSION) {
       localStorage.removeItem(SAVE_KEY);
-      queueToast('Save was outdated — starting fresh', '#e8a030');
+      queueToast('Save was from a newer version — starting fresh', '#e8a030');
       return false;
     }
+    for (let v = data.version; v < SAVE_VERSION; v++) SAVE_MIGRATIONS[v]?.(data);
     deserializeGame(data);
     return true;
   } catch (e) {

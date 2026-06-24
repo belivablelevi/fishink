@@ -4,7 +4,9 @@ const game = {
   cash: 50,
   lifetimeEarned: 0,
   fishSold: 0,
-  contractsClaimed: 0,
+  rareCatches: 0,
+  blocksPlaced: 0,
+  maxMachineLevel: 0,
   time: 0,
   dayTime: 0,
   fishIndex: new Set(), // species names ever caught — backs the Fish Index tab
@@ -25,8 +27,8 @@ function queueToast(msg, color) {
 // Merges rapid repeats of the same event type into one updating toast instead
 // of stacking a new line per occurrence — a busy recycler or seller can fire
 // several times a second, which used to flood the toast stack off-screen.
-// Rarer one-off messages (combos, contracts, rare catches, errors) skip this
-// and go through queueToast directly so they stay visible as their own line.
+// Rarer one-off messages (combos, rare catches, errors) skip this and go
+// through queueToast directly so they stay visible as their own line.
 function queueCoalescedToast(key, label, amount, color) {
   const existing = toasts.find(t => t.key === key && t.life > 0);
   if (existing) {
@@ -40,8 +42,8 @@ function queueCoalescedToast(key, label, amount, color) {
 }
 
 // Single place that actually pays the player — every cash reward (sales,
-// recycling, contracts, Fish Index bonuses) routes through this so the
-// bookkeeping (cash, lifetimeEarned, toast, sfx) can't drift between call sites.
+// recycling, Fish Index bonuses) routes through this so the bookkeeping
+// (cash, lifetimeEarned, toast, sfx) can't drift between call sites.
 function awardCash(amount, msg, color, volMult = 1) {
   game.cash          += amount;
   game.lifetimeEarned += amount;
@@ -89,9 +91,9 @@ function simUpdate(dt) {
   game.time   += dt;
   game.dayTime = game.time % DAY_CYCLE_SECONDS;
 
-  updateContracts(dt);
   checkAchievements();
   maybeShowUpgradeTip();
+  tickParticles(dt);
 
   saveAccum += dt;
   if (saveAccum >= AUTOSAVE_INTERVAL) {
@@ -387,23 +389,20 @@ function transferItem(c, r, st, nc, nr, nb) {
 }
 
 function sellFish(fish, c, r) {
-  const wentToContract = tryFulfillContract(fish);
-
   const { distinctSteps, mult: comboMult } = comboMultFor(fish);
   const earned = Math.round(fish.value * effectiveSellMult() * researchSellMult() * comboMult * 10) / 10;
   game.fishSold += fish.count || 1;
   game.cash          += earned;
   game.lifetimeEarned += earned;
   sfxCoin(distanceVolMult(c, r, SELL_SFX_RANGE));
-  // Combos and contract fulfillments are notable enough to call out on their
-  // own line; plain sells coalesce so a fast seller doesn't flood the stack.
-  // individualSellToasts defaults on so early sales feel concrete, but it
-  // self-disables past INDIVIDUAL_SELL_TOAST_LIMIT once the flood of sales
-  // would just spam the toast stack.
-  if (distinctSteps >= 2 || wentToContract || (settings.individualSellToasts && game.fishSold <= INDIVIDUAL_SELL_TOAST_LIMIT)) {
-    let msg = distinctSteps >= 2 ? `+$${earned.toFixed(1)} ${fish.species} (combo x${distinctSteps}!)`
-                                  : `+$${earned.toFixed(1)} ${fish.species}`;
-    if (wentToContract) msg += ' +contract';
+  // Combos are notable enough to call out on their own line; plain sells
+  // coalesce so a fast seller doesn't flood the stack. individualSellToasts
+  // defaults on so early sales feel concrete, but it self-disables past
+  // INDIVIDUAL_SELL_TOAST_LIMIT once the flood of sales would just spam the
+  // toast stack.
+  if (distinctSteps >= 2 || (settings.individualSellToasts && game.fishSold <= INDIVIDUAL_SELL_TOAST_LIMIT)) {
+    const msg = distinctSteps >= 2 ? `+$${earned.toFixed(1)} ${fish.species} (combo x${distinctSteps}!)`
+                                    : `+$${earned.toFixed(1)} ${fish.species}`;
     queueToast(msg, distinctSteps >= 2 ? '#e8c43f' : '#4dca7c');
   } else {
     queueCoalescedToast('sold', 'Sold', earned, '#4dca7c');
@@ -425,8 +424,6 @@ function recycleFish(fish, c, r) {
 }
 
 function droneSellFish(fish, c, r) {
-  const wentToContract = tryFulfillContract(fish);
-
   const { distinctSteps, mult: comboMult } = comboMultFor(fish);
   const levelBonus = machineValueMult(stateAt(c, r).level || 0);
   const earned = Math.round(fish.value * effectiveSellMult() * researchSellMult() * comboMult * effectiveDroneDeliveryBonus() * levelBonus * 10) / 10;
@@ -435,10 +432,9 @@ function droneSellFish(fish, c, r) {
   game.lifetimeEarned += earned;
   sfxCoin(distanceVolMult(c, r, SELL_SFX_RANGE));
   // Same flood guard as sellFish: a wall of delivery drones can sell several
-  // times a second, so only combos/contract fulfillments get their own line.
-  if (distinctSteps >= 2 || wentToContract || (settings.individualSellToasts && game.fishSold <= INDIVIDUAL_SELL_TOAST_LIMIT)) {
-    let msg = `+$${earned.toFixed(1)} ${fish.species} (drone${distinctSteps >= 2 ? ` combo x${distinctSteps}` : ''})`;
-    if (wentToContract) msg += ' +contract';
+  // times a second, so only combos get their own line.
+  if (distinctSteps >= 2 || (settings.individualSellToasts && game.fishSold <= INDIVIDUAL_SELL_TOAST_LIMIT)) {
+    const msg = `+$${earned.toFixed(1)} ${fish.species} (drone${distinctSteps >= 2 ? ` combo x${distinctSteps}` : ''})`;
     queueToast(msg, distinctSteps >= 2 ? '#e8c43f' : '#5ad0e8');
   } else {
     queueCoalescedToast('droneSold', 'Drone sold', earned, '#5ad0e8');
@@ -452,8 +448,10 @@ function droneSellFish(fish, c, r) {
 // little drone sprite from the station to the shipping boat so the sale reads
 // as "sent somewhere" instead of vanishing in place.
 const deliveryFlights = [];
+const MAX_CONCURRENT_DELIVERY_FLIGHTS = 8;
 
 function spawnDeliveryFlight(c, r) {
+  if (deliveryFlights.length >= MAX_CONCURRENT_DELIVERY_FLIGHTS) return; // cosmetic only, sale already applied
   const dist = Math.hypot(BOAT_C - c, BOAT_R - r);
   deliveryFlights.push({ fromC: c, fromR: r, t: 0, dur: Math.max(0.3, dist / DELIVERY_FLIGHT_SPEED) });
 }
@@ -681,6 +679,11 @@ function completeCast() {
     rare ? '#e8c43f' : '#4dca7c'
   );
   sfxCatch(rare);
+  spawnParticles(manualCast.wx, manualCast.wy, 'splash', 6);
+  if (rare) {
+    game.rareCatches++;
+    spawnParticles(manualCast.wx, manualCast.wy, 'sparkle', 10);
+  }
   tutorialNotify('catch');
 }
 
@@ -711,24 +714,24 @@ function dropNearestBelt() {
 
 // ─── Build / demolish ─────────────────────────────────────────────────────────
 
-function buyAndPlace(id, c, r, dir) {
+function buyAndPlace(id, c, r, dir, silent = false) {
   const cost = BLOCK_COSTS[id];
   if (!isBlockUnlocked(id)) {
-    queueToast(`Locked — reach ${BLOCK_UNLOCK_REQ[id].label}`, '#e85d4a');
-    sfxFail();
+    if (!silent) { queueToast(`Locked — reach ${BLOCK_UNLOCK_REQ[id].label}`, '#e85d4a'); sfxFail(); }
     return false;
   }
-  if (game.cash < cost) { queueToast('Not enough cash!', '#e85d4a'); sfxFail(); return false; }
-  if (!placeBlock(id, c, r, dir)) { queueToast('Cannot place here', '#e85d4a'); sfxFail(); return false; }
+  if (game.cash < cost) { if (!silent) { queueToast('Not enough cash!', '#e85d4a'); sfxFail(); } return false; }
+  if (!placeBlock(id, c, r, dir)) { if (!silent) { queueToast('Cannot place here', '#e85d4a'); sfxFail(); } return false; }
   game.cash -= cost;
+  game.blocksPlaced++;
   if (id === B_FISHER) fisherTimers[`${c},${r}`] = effectiveFisherInterval();
-  sfxPlace();
+  if (!silent) sfxPlace();
   notifyPlaced(id, c, r, dir, cost);
   saveGame();
   return true;
 }
 
-function sellAndRemove(c, r) {
+function sellAndRemove(c, r, silent = false) {
   const id = blockAt(c, r);
   if (id !== B_NONE) {
     const refund = Math.floor(BLOCK_COSTS[id] * 0.5);
@@ -737,7 +740,7 @@ function sellAndRemove(c, r) {
     removeBlock(c, r);
     if (id === B_FISHER) delete fisherTimers[`${c},${r}`];
     game.cash += refund;
-    if (refund > 0) { queueToast(`+$${refund} (salvage)`, '#e8a030'); sfxCoin(); }
+    if (refund > 0 && !silent) { queueToast(`+$${refund} (salvage)`, '#e8a030'); sfxCoin(); }
     notifyRemoved(id, c, r, dir, refund, prevConfig);
     saveGame();
     return true;
@@ -746,8 +749,7 @@ function sellAndRemove(c, r) {
     const refund = Math.floor(BLOCK_COSTS[B_CONCRETE] * 0.5);
     removeBlock(c, r);
     game.cash += refund;
-    queueToast(`+$${refund} (salvage)`, '#e8a030');
-    sfxCoin();
+    if (!silent) { queueToast(`+$${refund} (salvage)`, '#e8a030'); sfxCoin(); }
     saveGame();
     return true;
   }
@@ -755,3 +757,27 @@ function sellAndRemove(c, r) {
 }
 
 const heldFish = [];
+
+// ─── Particles (splash on catch, sparkle on rare catch) ───────────────────────
+const particles = [];
+
+function spawnParticles(x, y, kind, count) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 20 + Math.random() * 40;
+    particles.push({
+      x, y, kind,
+      vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 30,
+      life: 0, maxLife: kind === 'sparkle' ? 0.6 : 0.4,
+    });
+  }
+}
+
+function tickParticles(dt) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.life += dt;
+    if (p.life >= p.maxLife) { particles.splice(i, 1); continue; }
+    p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 60 * dt; // gravity
+  }
+}

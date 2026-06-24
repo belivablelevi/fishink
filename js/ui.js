@@ -1,6 +1,6 @@
 // Fish INK Factory — build/upgrades menu (DOM overlay, tabbed Godot-style)
 
-let buildMenuEl, buildPanelEl, upgradesPanelEl, contractsPanelEl, fishIndexPanelEl, statsPanelEl, controlsPanelEl, researchPanelEl, blueprintsPanelEl, menuCashEl;
+let buildMenuEl, buildPanelEl, upgradesPanelEl, fishIndexPanelEl, statsPanelEl, controlsPanelEl, researchPanelEl, blueprintsPanelEl, menuCashEl;
 let leaderboardPanelEl;
 
 // Category metadata for the Build tab's grouped item grid. Order here is the
@@ -206,7 +206,6 @@ function initBuildMenu() {
   buildMenuEl      = document.getElementById('buildMenu');
   buildPanelEl     = document.getElementById('buildPanel');
   upgradesPanelEl  = document.getElementById('upgradesPanel');
-  contractsPanelEl = document.getElementById('contractsPanel');
   fishIndexPanelEl = document.getElementById('fishIndexPanel');
   statsPanelEl     = document.getElementById('statsPanel');
   controlsPanelEl  = document.getElementById('controlsPanel');
@@ -222,7 +221,6 @@ function initBuildMenu() {
 
   renderBuildPanel();
   renderUpgradesPanel();
-  renderContractsPanel();
   renderFishIndexPanel();
   renderControlsPanel();
   renderResearchPanel();
@@ -247,7 +245,6 @@ function setBuildMenuOpen(open) {
     resetJoystick();
     refreshBuildPanel();
     renderUpgradesPanel();
-    renderContractsPanel();
     renderFishIndexPanel();
     renderStatsPanel();
     renderResearchPanel();
@@ -260,12 +257,15 @@ function setBuildMenuOpen(open) {
 function initLeaderboardMenu() {
   const btn   = document.getElementById('leaderboardToggleBtn');
   const panel = document.getElementById('leaderboardPanel');
-  leaderboardPanelEl = panel;
+  const closeBtn = document.getElementById('leaderboardCloseBtn');
+  leaderboardPanelEl = document.getElementById('leaderboardContent');
 
   btn.addEventListener('click', () => {
     panel.classList.toggle('hidden');
     if (!panel.classList.contains('hidden')) renderLeaderboardPanel();
   });
+
+  closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
 
   document.addEventListener('click', e => {
     if (!panel.classList.contains('hidden') && !panel.contains(e.target) && !btn.contains(e.target)) {
@@ -718,54 +718,6 @@ function renderLeaderboardList(result) {
   }
 }
 
-// ─── Contracts tab ─────────────────────────────────────────────────────────
-function renderContractsPanel() {
-  contractsPanelEl.innerHTML = '';
-
-  const hint = document.createElement('div');
-  hint.className = 'panel-hint';
-  hint.textContent = 'Sell matching fish to fill orders, then claim the reward — new contracts won’t appear until every current one is claimed';
-  contractsPanelEl.appendChild(hint);
-
-  if (activeContracts.length === 0) {
-    const empty = document.createElement('div');
-    empty.className = 'panel-hint';
-    empty.textContent = 'No active contracts — check back soon.';
-    contractsPanelEl.appendChild(empty);
-    return;
-  }
-
-  for (const c of activeContracts) {
-    const row = document.createElement('div');
-    row.className = 'upgrade-row contract-row';
-    row.dataset.id = c.id;
-
-    const pct = Math.min(100, (c.have / c.qty) * 100);
-    const info = document.createElement('div');
-    info.className = 'upgrade-info';
-    info.innerHTML = `
-      <div class="name">${c.category} Fish <span class="level-badge">${c.have}/${c.qty}</span></div>
-      <div class="desc">${c.completed ? 'Ready to claim' : 'In progress'}</div>
-      <div class="contract-bar"><div class="contract-bar-fill" style="width:${pct}%"></div></div>
-    `;
-
-    const reward = document.createElement('button');
-    reward.className = 'upgrade-buy reward-pill';
-    reward.textContent = c.completed ? `Claim $${c.reward}` : `$${c.reward}`;
-    reward.disabled = !c.completed;
-    if (c.completed) {
-      reward.addEventListener('click', () => {
-        claimContract(c.id);
-        renderContractsPanel();
-      });
-    }
-
-    row.appendChild(info);
-    row.appendChild(reward);
-    contractsPanelEl.appendChild(row);
-  }
-}
-
 // ─── Fish Index tab ──────────────────────────────────────────────────────────
 // A species unlocks the moment it's caught (randomFish() in data.js adds it
 // to game.fishIndex) — selling isn't required, so this reads as "fish you've
@@ -872,7 +824,6 @@ function renderStatsPanel() {
     ['Fish sold', game.fishSold],
     ['Uptime', formatUptime(game.time)],
     ['Fish Index discovered', `${game.fishIndex.size} / ${FISH.length}`],
-    ['Contracts claimed', game.contractsClaimed],
     ['Achievements unlocked', `${game.unlockedAchievements.size} / ${ACHIEVEMENTS.length}`],
   ];
   for (const [label, value] of rows) {
@@ -1085,10 +1036,7 @@ function wireUpgradeSection(c, r, cost) {
   if (!buyBtn || cost == null) return;
   buyBtn.disabled = game.cash < cost;
   buyBtn.addEventListener('click', () => {
-    if (buyMachineUpgrade(c, r)) {
-      if (ZOOM > MACHINE_SFX_ZOOM_THRESHOLD) sfxUpgrade();
-      renderBlockPopup();
-    }
+    if (buyMachineUpgrade(c, r)) renderBlockPopup();
   });
 }
 
@@ -1346,29 +1294,6 @@ function updateBlockPopupLive() {
 }
 
 // Cheap per-frame refresh: patches progress text in place on the existing
-// rows instead of tearing down and rebuilding the whole panel. Falls back to
-// a full renderContractsPanel() when the contract set itself changed
-// (added/removed/reordered) or a contract just became claimable, since that
-// needs the Claim button swapped in.
-function updateContractsPanelLive() {
-  const ids = activeContracts.map(c => String(c.id));
-  const existingIds = [...contractsPanelEl.querySelectorAll('.contract-row')].map(r => r.dataset.id);
-  const setChanged = ids.length !== existingIds.length || ids.some((id, i) => id !== existingIds[i]);
-  const justCompleted = activeContracts.some(c => c.completed &&
-    contractsPanelEl.querySelector(`.contract-row[data-id="${c.id}"] .desc`)?.textContent !== 'Ready to claim');
-  if (setChanged || justCompleted) {
-    renderContractsPanel();
-    return;
-  }
-  for (const c of activeContracts) {
-    const row = contractsPanelEl.querySelector(`.contract-row[data-id="${c.id}"]`);
-    if (!row) continue;
-    const pct = Math.min(100, (c.have / c.qty) * 100);
-    row.querySelector('.name').innerHTML = `${c.category} Fish <span class="level-badge">${c.have}/${c.qty}</span>`;
-    row.querySelector('.contract-bar-fill').style.width = `${pct}%`;
-  }
-}
-
 // Refresh affordability/levels each frame while the menu is open (cheap: only DOM attr toggles)
 function updateBuildMenuLive() {
   if (!buildMenuEl || buildMenuEl.classList.contains('hidden')) return;
@@ -1378,7 +1303,6 @@ function updateBuildMenuLive() {
     const cost = upgradeCost(def);
     if (cost != null) btn.disabled = game.cash < cost;
   });
-  updateContractsPanelLive();
   menuCashEl.textContent = `$${formatMoney(game.cash)}`;
 }
 
