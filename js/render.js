@@ -1487,10 +1487,15 @@ function drawBoat(ctx) {
 // happened in droneSellFish, so nothing here can affect game state.
 function drawDeliveryFlights(ctx) {
   for (const f of deliveryFlights) {
+    const dx = BOAT_C - f.fromC, dy = BOAT_R - f.fromR;
+    const len = Math.hypot(dx, dy) || 1;
+    // Unit vector perpendicular to the flight path, scaled by the flight's
+    // fixed random offset — keeps each drone on its own parallel lane.
+    const px = -dy / len, py = dx / len;
     const wx = f.fromC + 0.5 + (BOAT_C + 0.5 - f.fromC - 0.5) * f.t;
     const wy = f.fromR + 0.5 + (BOAT_R + 0.5 - f.fromR - 0.5) * f.t;
-    const sx = wx * TILE_SIZE - cam.x;
-    const sy = wy * TILE_SIZE - cam.y;
+    const sx = wx * TILE_SIZE - cam.x + px * f.offset;
+    const sy = wy * TILE_SIZE - cam.y + py * f.offset;
     drawDroneSprite(ctx, sx, sy, false);
   }
 }

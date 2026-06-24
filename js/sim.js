@@ -448,12 +448,16 @@ function droneSellFish(fish, c, r) {
 // little drone sprite from the station to the shipping boat so the sale reads
 // as "sent somewhere" instead of vanishing in place.
 const deliveryFlights = [];
-const MAX_CONCURRENT_DELIVERY_FLIGHTS = 8;
+const MAX_CONCURRENT_DELIVERY_FLIGHTS = 24;
 
 function spawnDeliveryFlight(c, r) {
   if (deliveryFlights.length >= MAX_CONCURRENT_DELIVERY_FLIGHTS) return; // cosmetic only, sale already applied
   const dist = Math.hypot(BOAT_C - c, BOAT_R - r);
-  deliveryFlights.push({ fromC: c, fromR: r, t: 0, dur: Math.max(0.3, dist / DELIVERY_FLIGHT_SPEED) });
+  // Random perpendicular offset (applied in render.js) so a burst of flights
+  // from the same station fans out into a loose swarm instead of stacking
+  // directly on top of one another along the same line to the boat.
+  const offset = (Math.random() - 0.5) * 70;
+  deliveryFlights.push({ fromC: c, fromR: r, t: 0, dur: Math.max(0.3, dist / DELIVERY_FLIGHT_SPEED), offset });
 }
 
 function tickDeliveryFlights(dt) {
