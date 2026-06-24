@@ -409,24 +409,13 @@ function drawGrassTile(ctx, sx, sy, S, c, r) {
     }
   }
 
-  // Sparse decorative rock cluster, drawn procedurally (small flat-shaded
-  // pebble blocks + a shadow speckle + a highlight speckle) to match the
-  // hand-drawn look of the speckles/flowers above rather than a sprite.
+  // Sparse decorative pebbles — tiny flat single-pixel-ish dots, same
+  // stable-per-tile hash placement as the speckles/flowers above.
   if (tileHash(c, r, 140) > 0.96) {
     const cx = sx + 5 + tileHash(c, r, 141) * (S - 10);
     const cy = sy + 5 + tileHash(c, r, 142) * (S - 10);
-    const pebbleCount = 2 + Math.floor(tileHash(c, r, 143) * 3); // 2-4 pebbles
-    for (let i = 0; i < pebbleCount; i++) {
-      const ox = (tileHash(c, r, i * 3 + 144) - 0.5) * 7;
-      const oy = (tileHash(c, r, i * 3 + 145) - 0.5) * 5;
-      const size = 2 + tileHash(c, r, i * 3 + 146) * 2;
-      ctx.fillStyle = '#8a8378';
-      ctx.fillRect(cx + ox - size / 2, cy + oy - size / 2, size, size);
-      ctx.fillStyle = 'rgba(50,45,40,0.5)';
-      ctx.fillRect(cx + ox - size / 2, cy + oy + size / 2 - 1, size, 1);
-      ctx.fillStyle = 'rgba(210,205,195,0.6)';
-      ctx.fillRect(cx + ox - size / 2, cy + oy - size / 2, 1, 1);
-    }
+    ctx.fillStyle = '#8a8378';
+    ctx.fillRect(cx, cy, 2, 2);
   }
 
   drawEdgeBlend(ctx, sx, sy, S, c, r, T_SHORE, 'rgba(206,170,115,0.4)');
