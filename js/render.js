@@ -1835,7 +1835,7 @@ function drawHUD(ctx, canvas) {
   ctx.textBaseline = 'middle';
   const cashLabel = formatMoney(cashAnim.displayed);
   const tw = ctx.measureText(cashLabel).width;
-  const bx = 16, by = ch - 26;
+  const bx = 16, by = (TUT.active || UPGRADE_TIP.active) ? 30 : ch - 26;
   const cashScale = 1 + cashAnim.pulse * 0.18;
 
   ctx.save();
