@@ -14,7 +14,8 @@ const RESEARCH_NODES = [
 
 const researchLevels = { capTier2: 0, capTier3: 0, globalSellBonus: 0, crateCapacity: 0, globalTier2: 0, globalTier3: 0 };
 
-function isResearchUnlocked() { return game.lifetimeEarned >= RESEARCH_UNLOCK_LIFETIME; }
+function researchUnlockLifetime() { return Math.max(5000, RESEARCH_UNLOCK_LIFETIME - prestigeUnlockDiscount()); }
+function isResearchUnlocked() { return game.lifetimeEarned >= researchUnlockLifetime(); }
 
 function researchCost(def) {
   if (researchLevels[def.id] >= 1) return null;

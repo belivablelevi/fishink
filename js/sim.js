@@ -1,7 +1,7 @@
 // Fish INK Factory — simulation engine
 
 const game = {
-  cash: 50,
+  cash: prestigeStartCash(),
   lifetimeEarned: 0,
   fishSold: 0,
   rareCatches: 0,
@@ -14,6 +14,7 @@ const game = {
   unlockedAchievements: new Set(),
   tutorialDone: false,
   upgradeTipDone: false,
+  automationTutorialDone: false,
 };
 
 const fisherTimers = {};
@@ -47,8 +48,55 @@ function queueCoalescedToast(key, label, amount, color) {
 function awardCash(amount, msg, color, volMult = 1) {
   game.cash          += amount;
   game.lifetimeEarned += amount;
+  trackEarn(amount);
   if (msg) queueToast(msg, color);
   sfxCoin(volMult);
+}
+
+// ─── Efficiency tracking — sliding 60s window for the Stats panel's $/min,
+// $/tile, $/machine metrics (C1). Lifetime totals can't show "how good is my
+// *current* layout," only "how good was my whole save ever."
+const earnHistory = []; // { t: game.time, amount }
+function trackEarn(amount) {
+  earnHistory.push({ t: game.time, amount });
+}
+function earnPerMinute() {
+  const cutoff = game.time - 60;
+  while (earnHistory.length && earnHistory[0].t < cutoff) earnHistory.shift();
+  return earnHistory.reduce((s, e) => s + e.amount, 0);
+}
+
+// Full-footprint rescan, mirrors the autoFisherCount pattern already done on
+// load (save.js) — cheap at 64x48, so a once-per-second rescan is fine.
+let currentBlockCount = 0;
+let currentMachineCount = 0;
+let blockCountAccum = 0;
+function rescanBlockCounts() {
+  let blocks = 0, machines = 0;
+  for (let r = 0; r < WORLD_ROWS; r++) {
+    for (let c = 0; c < WORLD_COLS; c++) {
+      const id = blockAt(c, r);
+      if (id === B_NONE) continue;
+      blocks++;
+      if (IS_UPGRADABLE(id)) machines++;
+    }
+  }
+  currentBlockCount = blocks;
+  currentMachineCount = machines;
+}
+
+// A fixed-format, screenshot/Discord-friendly summary so different players'
+// factories are comparable using the same formula (C3) — measurement +
+// export only, no server-side leaderboard.
+function buildEfficiencySnapshot() {
+  const perMin = earnPerMinute();
+  return {
+    earnPerMin: Math.round(perMin * 100) / 100,
+    footprintTiles: currentBlockCount,
+    earnPerTile: Math.round((perMin / Math.max(1, currentBlockCount)) * 100) / 100,
+    cashSpent: game.lifetimeEarned - game.cash,
+    timestamp: new Date().toISOString(),
+  };
 }
 
 // 1 right on top of the tile, fading linearly to 0 at `range` tiles-worth of
@@ -100,6 +148,12 @@ function simUpdate(dt) {
     saveAccum = 0;
     saveGame();
     submitLeaderboardScore();
+  }
+
+  blockCountAccum += dt;
+  if (blockCountAccum >= 1) {
+    blockCountAccum = 0;
+    rescanBlockCounts();
   }
 
   // Manual cast countdown
@@ -718,6 +772,32 @@ function dropNearestBelt() {
 
 // ─── Build / demolish ─────────────────────────────────────────────────────────
 
+// Returns a specific human-readable reason why canPlaceBlock failed, replacing
+// the previous generic "Cannot place here" toast. Only called after the unlock
+// and cash checks already passed, so those cases are excluded here.
+function placementFailReason(id, c, r) {
+  const t = tileAt(c, r);
+  const b = blockAt(c, r);
+  if (id === B_CONCRETE) {
+    if (t === T_CONCRETE)  return 'Already paved here';
+    if (t === T_WATER)     return 'Cannot pave over water';
+    if (t === T_SHORE)     return 'Cannot pave shore tiles';
+    if (b !== B_NONE)      return 'Something is already here';
+    return 'Cannot place concrete here';
+  }
+  if (id === B_FISHER) {
+    if (b !== B_NONE)              return 'Something is already here';
+    if (t !== T_SHORE)             return 'Fisher needs a shore tile next to water';
+    if (!isAdjacentToWater(c, r)) return 'No water adjacent to this tile';
+    return 'Cannot place Fisher here';
+  }
+  // All other equipment requires a concrete floor
+  if (t !== T_CONCRETE) return 'Needs concrete floor — place Concrete here first';
+  if (b !== B_NONE)     return 'Something is already here';
+  if (!IS_TRANSPORT(id) && playerOccupiesTile(c, r)) return 'Move out of the way first';
+  return 'Cannot place here';
+}
+
 function buyAndPlace(id, c, r, dir, silent = false) {
   const cost = BLOCK_COSTS[id];
   if (!isBlockUnlocked(id)) {
@@ -725,12 +805,21 @@ function buyAndPlace(id, c, r, dir, silent = false) {
     return false;
   }
   if (game.cash < cost) { if (!silent) { queueToast('Not enough cash!', '#e85d4a'); sfxFail(); } return false; }
-  if (!placeBlock(id, c, r, dir)) { if (!silent) { queueToast('Cannot place here', '#e85d4a'); sfxFail(); } return false; }
+  if (!placeBlock(id, c, r, dir)) {
+    if (!silent) { queueToast(placementFailReason(id, c, r), '#e85d4a'); sfxFail(); }
+    return false;
+  }
   game.cash -= cost;
   game.blocksPlaced++;
   if (id === B_FISHER) fisherTimers[`${c},${r}`] = effectiveFisherInterval();
   if (!silent) sfxPlace();
   notifyPlaced(id, c, r, dir, cost);
+  // Tutorial Phase 2 — notify on first placement of each key block type
+  const tutAction = id === B_CONCRETE  ? 'place_concrete'
+                  : id === B_FISHER    ? 'place_fisher'
+                  : IS_TRANSPORT(id)   ? 'place_belt'
+                  : null;
+  if (tutAction) tutorialNotify(tutAction);
   saveGame();
   return true;
 }
@@ -738,6 +827,13 @@ function buyAndPlace(id, c, r, dir, silent = false) {
 function sellAndRemove(c, r, silent = false) {
   const id = blockAt(c, r);
   if (id !== B_NONE) {
+    const st = stateAt(c, r);
+    if ((st.level || 0) > 0 && !silent) {
+      let spent = 0;
+      for (let lv = 0; lv < st.level; lv++) spent += machineUpgradeCost(id, lv) || 0;
+      const ok = confirm(`Remove Lv ${st.level} ${BLOCK_NAMES[id]}? Upgrade investment ($${spent.toLocaleString()}) will be lost.`);
+      if (!ok) return false;
+    }
     const refund = Math.floor(BLOCK_COSTS[id] * 0.5);
     const dir = stateAt(c, r).dir;
     const prevConfig = captureConfig(c, r);

@@ -92,6 +92,7 @@ function init() {
       runStartScreens(() => {
         document.getElementById('loadingScreen')?.classList.add('hidden');
         if (!game.tutorialDone) startTutorial();
+        else if (!game.automationTutorialDone) startPhase2Tutorial();
         requestAnimationFrame(loop);
       });
     }, 200);

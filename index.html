@@ -36,6 +36,8 @@
   <button id="gameMenuToggleBtn" class="game-menu-toggle-btn" title="Save / Restart"><img src="img/icon-cog.png" alt="Game menu"></button>
   <div id="gameMenuPanel" class="game-menu-panel hidden">
     <button class="game-menu-btn" id="saveNowBtn">Save Now</button>
+    <button class="game-menu-btn" id="exportSaveBtn">Export Save</button>
+    <button class="game-menu-btn" id="importSaveBtn">Import Save</button>
     <button class="game-menu-btn danger" id="restartGameBtn">Restart Game</button>
     <div class="game-menu-divider"></div>
     <label class="sound-row"><input type="checkbox" id="fullNumbersCheck"> Full Numbers</label>
@@ -60,6 +62,11 @@
     <button class="tutorial-skip-btn" onclick="skipTutorial()">Skip tutorial</button>
   </div>
 
+  <button id="buildHint" class="build-hint" onclick="triggerBuildToggle()" title="Open Build Mode (B)">
+    <span class="build-hint-key">B</span>
+    <span class="build-hint-label">Build</span>
+  </button>
+
   <div id="buildMenu" class="build-menu hidden">
     <div class="menu-header">
       <div class="menu-title">FISH INK <span>BUILD MENU</span></div>
@@ -75,6 +82,7 @@
       <button class="tab" data-tab="stats">Stats</button>
       <button class="tab" data-tab="controls">Controls</button>
       <button class="tab" data-tab="research">Research</button>
+      <button class="tab" data-tab="prestige">Prestige</button>
       <button class="tab" data-tab="blueprints">Blueprints</button>
       <div class="tab-hint">Tab to switch &middot; Esc to close</div>
     </div>
@@ -85,6 +93,7 @@
       <div class="tab-panel hidden" data-panel="stats" id="statsPanel"></div>
       <div class="tab-panel hidden" data-panel="controls" id="controlsPanel"></div>
       <div class="tab-panel hidden" data-panel="research" id="researchPanel"></div>
+      <div class="tab-panel hidden" data-panel="prestige" id="prestigePanel"></div>
       <div class="tab-panel hidden" data-panel="blueprints" id="blueprintsPanel"></div>
     </div>
   </div>
@@ -117,6 +126,7 @@
   <script src="js/grid.js"></script>
   <script src="js/upgrades.js"></script>
   <script src="js/research.js"></script>
+  <script src="js/prestige.js"></script>
   <script src="js/achievements.js"></script>
   <script src="js/sim.js"></script>
   <script src="js/player.js"></script>

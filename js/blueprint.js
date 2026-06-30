@@ -97,6 +97,24 @@ function captureBlueprint(start, end) {
   saveGame();
 }
 
+// Pasting a leveled-up machine must cost the same as leveling it up by hand —
+// applies levels one at a time via machineUpgradeCost, stopping (silently,
+// like the rest of pasteBlueprint's best-effort placement) at whatever level
+// the player can currently afford. Returns the level actually paid for.
+function chargeForPastedLevel(c, r, id, targetLevel) {
+  if (!targetLevel) return 0;
+  let level = 0;
+  while (level < targetLevel) {
+    const cost = machineUpgradeCost(id, level);
+    if (cost == null || game.cash < cost) break;
+    game.cash -= cost;
+    level++;
+  }
+  stateAt(c, r).level = level;
+  game.maxMachineLevel = Math.max(game.maxMachineLevel, level);
+  return level;
+}
+
 // Best-effort: tiles whose destination fails canPlaceBlock (terrain mismatch,
 // unlock gate, etc.) are silently skipped and never charged — see plan D13.
 function pasteBlueprint(originC, originR) {
@@ -129,8 +147,14 @@ function pasteBlueprint(originC, originR) {
     if (!canPlaceBlock(t.id, c, r, t.dir)) continue;
     if (game.cash < BLOCK_COSTS[t.id]) continue;
     if (buyAndPlace(t.id, c, r, t.dir)) {
-      applyConfig(c, r, t.config);
-      attachConfigToLastPlaced(t.config);
+      const targetLevel = (t.config && t.config.level) || 0;
+      // t.config.dir is the pre-rotation direction captured at copy time —
+      // t.dir (already rotated by getRotatedClipboard) is the source of
+      // truth here, so it must override config.dir or this Object.assign
+      // would clobber the just-placed correct orientation right back to it.
+      applyConfig(c, r, { ...t.config, dir: t.dir, level: 0 });
+      const achievedLevel = chargeForPastedLevel(c, r, t.id, targetLevel);
+      attachConfigToLastPlaced({ ...t.config, dir: t.dir, level: achievedLevel });
       placed++;
     }
   }
@@ -156,6 +180,31 @@ function deleteBlueprint(id) {
   if (blueprint.activeId === id) { blueprint.activeId = null; blueprint.pasting = false; }
   saveGame();
   return true;
+}
+
+// Shareable plain-text codes — lets a player post a layout to Discord and
+// have someone else recreate it exactly. Reuses the A2-fixed `tiles` data
+// shape (captureBlueprintConfig already strips upgrade levels), so an
+// imported blueprint never carries free upgrades either.
+function exportBlueprintCode(id) {
+  const entry = blueprint.library.find(b => b.id === id);
+  if (!entry) return null;
+  const { id: _drop, createdAt: _drop2, ...portable } = entry;
+  return btoa(JSON.stringify(portable));
+}
+
+function importBlueprintCode(code) {
+  try {
+    const portable = JSON.parse(atob(code.trim()));
+    if (!portable.tiles || !portable.w || !portable.h) throw new Error('bad shape');
+    if (blueprint.library.length >= BLUEPRINT_LIBRARY_MAX) { queueToast('Blueprint library full (20 max)', '#e85d4a'); return false; }
+    const entry = { id: nextBlueprintId++, name: portable.name || 'Imported', w: portable.w, h: portable.h, tiles: portable.tiles, createdAt: Date.now() };
+    blueprint.library.push(entry);
+    blueprint.activeId = entry.id;
+    queueToast(`Imported blueprint "${entry.name}"`, '#4dca7c');
+    saveGame();
+    return true;
+  } catch (e) { queueToast('Invalid blueprint code', '#e85d4a'); return false; }
 }
 
 function selectBlueprint(id) {

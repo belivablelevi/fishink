@@ -31,6 +31,7 @@ function serializeGame() {
       unlockedAchievements: Array.from(game.unlockedAchievements),
       tutorialDone: game.tutorialDone,
       upgradeTipDone: game.upgradeTipDone,
+      automationTutorialDone: game.automationTutorialDone,
     },
     upgradeLevels,
     researchLevels,
@@ -49,8 +50,9 @@ function deserializeGame(data) {
   game.fishIndex = new Set(data.game.fishIndex);
   game.fishIndexBonuses = new Set(data.game.fishIndexBonuses);
   game.unlockedAchievements = new Set(data.game.unlockedAchievements || []);
-  game.tutorialDone   = data.game.tutorialDone || false;
-  game.upgradeTipDone = data.game.upgradeTipDone || false;
+  game.tutorialDone           = data.game.tutorialDone || false;
+  game.upgradeTipDone         = data.game.upgradeTipDone || false;
+  game.automationTutorialDone = data.game.automationTutorialDone || false;
   game.rareCatches     = data.game.rareCatches || 0;
   game.blocksPlaced    = data.game.blocksPlaced || 0;
   game.maxMachineLevel = data.game.maxMachineLevel || 0;
@@ -123,6 +125,21 @@ function loadGame() {
     queueToast('Save was corrupted — starting fresh', '#e85d4a');
     return false;
   }
+}
+
+function exportSaveToClipboard() {
+  const text = btoa(JSON.stringify(serializeGame()));
+  navigator.clipboard.writeText(text).then(() => queueToast('Save copied to clipboard', '#4dca7c'));
+}
+
+function importSaveFromText(text) {
+  try {
+    const data = JSON.parse(atob(text.trim()));
+    for (let v = data.version; v < SAVE_VERSION; v++) SAVE_MIGRATIONS[v]?.(data);
+    deserializeGame(data);
+    saveGame();
+    queueToast('Save imported', '#4dca7c');
+  } catch (e) { queueToast('Invalid save code', '#e85d4a'); }
 }
 
 let restarting = false;

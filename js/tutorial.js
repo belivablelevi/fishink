@@ -1,91 +1,162 @@
-// Fish INK Factory — first-time player tutorial: a skippable, one-time,
-// action-driven walkthrough of the core loop (move, fish, drop, sell). The
-// player already starts with a pre-built belt chain + Seller on the dock
-// (see buildWorld() in grid.js), so this only teaches using what's already
-// there — it never asks them to open the build menu or place anything.
+// Fish INK Factory — two-phase tutorial
 //
-// Each step's arrow target is locked once, at spawn (see startTutorial()'s
-// nearestTileMatching() calls below) — not recomputed every frame. Otherwise
-// "nearest" would keep re-evaluating as the player walks around and the
-// arrow would visibly jump between equally-close belt/water/sand tiles.
-const TUTORIAL_STEPS = [
+// Phase 1 (5 steps): manual fishing loop — move, cast, catch, drop, sell.
+// Phase 2 (5 steps): automation tutorial — fires automatically after Phase 1,
+//   only for players who have never placed a block (game.blocksPlaced === 0),
+//   so returning/mid-game players aren't re-tutorialed.
+//
+// Arrow targets are locked once at phase start (nearestTileMatching calls), not
+// recomputed per frame, so they don't jump around as the player walks.
+
+const TUTORIAL_PHASE1_STEPS = [
   {
-    id: 'move', text: 'Use WASD or the Arrow Keys to move around the dock.',
+    id: 'move',
+    text: 'Use <span class="tutorial-key">WASD</span> or Arrow Keys to walk around the dock.',
     target: () => TUT.sandTile,
   },
   {
-    id: 'cast', text: 'Left-click on the water within range to cast your line.',
+    id: 'cast',
+    text: 'Left-click on the water within range to cast your line.',
     target: () => TUT.fishingTile,
   },
   {
-    id: 'catch', text: 'Wait for it… you’ll automatically catch a fish.',
+    id: 'catch',
+    text: 'Wait for it… you\'ll automatically reel in a fish!',
     target: () => null,
   },
   {
-    id: 'drop', text: 'Hover over the conveyor belt and press E (or click it) to drop your fish on.',
+    id: 'drop',
+    text: 'Hover the conveyor belt and press <span class="tutorial-key">E</span> — or click it — to drop your fish on.',
     target: () => TUT.beltTile,
   },
   {
-    id: 'sell', text: 'Watch your fish ride the belt to the Seller and cash in!',
+    id: 'sell',
+    text: 'Watch your fish ride the belt to the Seller and cash in!',
     target: () => TUT.sellerTile,
   },
 ];
 
+const TUTORIAL_PHASE2_STEPS = [
+  {
+    id: 'build_open',
+    text: 'Nice work! Now let\'s automate. Press <span class="tutorial-key">B</span> to open Build Mode.',
+    target: () => null,
+  },
+  {
+    id: 'place_concrete',
+    text: 'Select <strong>Concrete</strong> (Floor &amp; Belts tab), then click any land tile to lay a foundation. <em>Right-click removes buildings.</em>',
+    target: () => TUT.landTile,
+  },
+  {
+    id: 'place_fisher',
+    text: 'Select <strong>Fisher</strong> (Fishing tab) and place it on a shore tile next to water. It\'ll catch fish automatically.',
+    target: () => TUT.shoreTile,
+  },
+  {
+    id: 'place_belt',
+    text: 'Select <strong>Belt</strong> and connect your Fisher toward a Seller. Belts carry fish automatically — rotate with <span class="tutorial-key">R</span>.',
+    target: () => null,
+  },
+  {
+    id: 'close_build',
+    text: 'Great setup! Press <span class="tutorial-key">Esc</span> to exit Build Mode and watch your factory run.',
+    target: () => null,
+  },
+];
+
 const TUT = {
-  active: false, stepIndex: 0, startWx: 0, startWy: 0,
+  active: false,
+  phase: 1,       // 1 = manual fishing, 2 = automation
+  stepIndex: 0,
+  // Phase 1 targets (locked at startTutorial)
   sandTile: null, fishingTile: null, beltTile: null, sellerTile: null,
+  // Phase 2 targets (locked at startPhase2Tutorial)
+  landTile: null, shoreTile: null,
 };
 
 function startTutorial() {
-  TUT.active = true;
+  TUT.active   = true;
+  TUT.phase    = 1;
   TUT.stepIndex = 0;
-  TUT.startWx = player.wx;
-  TUT.startWy = player.wy;
 
-  // Locked once here, at spawn — see the file-header comment above.
   TUT.sandTile    = nearestTileMatching((c, r) => tileAt(c, r) === T_SHORE, 20);
   TUT.fishingTile = nearestTileMatching((c, r) => tileAt(c, r) === T_WATER, 20);
   TUT.beltTile    = nearestTileMatching((c, r) => IS_TRANSPORT(blockAt(c, r)), 20);
   TUT.sellerTile  = nearestTileMatching((c, r) => blockAt(c, r) === B_SELLER, 20);
 
   renderTutorialOverlay();
+  updateBuildHintUI();
 }
 
-// Single integration point gameplay code calls when a tutorial-relevant
-// action happens — a no-op unless it matches the step currently shown, so
-// call sites stay cheap and order-independent.
+function startPhase2Tutorial() {
+  if (game.automationTutorialDone) return;
+  // Skip Phase 2 for players who already know how to build
+  if (game.blocksPlaced > 0) {
+    game.automationTutorialDone = true;
+    saveGame();
+    return;
+  }
+  TUT.active    = true;
+  TUT.phase     = 2;
+  TUT.stepIndex = 0;
+  TUT.landTile  = nearestTileMatching((c, r) => tileAt(c, r) === T_EMPTY, 20);
+  TUT.shoreTile = nearestTileMatching((c, r) => tileAt(c, r) === T_SHORE, 20);
+
+  renderTutorialOverlay();
+  updateBuildHintUI();
+}
+
+// Single integration point — cheap no-op unless we're waiting on this action.
 function tutorialNotify(actionType) {
   if (!TUT.active) return;
-  const step = TUTORIAL_STEPS[TUT.stepIndex];
+  const steps = TUT.phase === 2 ? TUTORIAL_PHASE2_STEPS : TUTORIAL_PHASE1_STEPS;
+  const step  = steps[TUT.stepIndex];
   if (!step || step.id !== actionType) return;
-  if (TUT.stepIndex >= TUTORIAL_STEPS.length - 1) {
-    finishTutorial();
+  if (TUT.stepIndex >= steps.length - 1) {
+    TUT.phase === 2 ? finishPhase2Tutorial() : finishTutorial();
   } else {
     TUT.stepIndex++;
     renderTutorialOverlay();
+    updateBuildHintUI();
   }
 }
 
 function skipTutorial() {
-  // The overlay is shared with the upgrade tip below — route the dismissal
-  // to whichever one is actually showing.
   if (UPGRADE_TIP.active) { dismissUpgradeTip(); return; }
   TUT.active = false;
-  game.tutorialDone = true;
+  if (TUT.phase === 2) {
+    game.automationTutorialDone = true;
+  } else {
+    game.tutorialDone           = true;
+    game.automationTutorialDone = true;
+  }
+  saveGame();
   renderTutorialOverlay();
+  updateBuildHintUI();
 }
 
 function finishTutorial() {
   TUT.active = false;
   game.tutorialDone = true;
   renderTutorialOverlay();
+  updateBuildHintUI();
+  // Transition directly into the automation tutorial
+  startPhase2Tutorial();
 }
 
-// Second, independent one-shot tip: the main tutorial above never mentions
-// upgrading, since it only walks through gear that's already pre-built on
-// the dock at spawn. So once the player has built their first auto-fisher
-// AND has actually saved up enough cash to upgrade it, resurface the same
-// overlay with a single pointer at the mechanic.
+function finishPhase2Tutorial() {
+  TUT.active = false;
+  TUT.phase  = 1;
+  game.automationTutorialDone = true;
+  saveGame();
+  renderTutorialOverlay();
+  updateBuildHintUI();
+  queueToast('Factory is running! Fish sell automatically now.', '#4dca7c');
+}
+
+// ─── Upgrade tip ─────────────────────────────────────────────────────────────
+// Separate one-shot: fires once the player has placed a Fisher AND can afford
+// to upgrade it. Reuses the same overlay since only one tip shows at a time.
 const UPGRADE_TIP = { active: false };
 
 function maybeShowUpgradeTip() {
@@ -98,32 +169,64 @@ function maybeShowUpgradeTip() {
 }
 
 function dismissUpgradeTip() {
-  UPGRADE_TIP.active = false;
+  UPGRADE_TIP.active  = false;
   game.upgradeTipDone = true;
   renderTutorialOverlay();
 }
 
+// ─── Overlay rendering ───────────────────────────────────────────────────────
 function renderTutorialOverlay() {
   const el = document.getElementById('tutorialOverlay');
   if (!el) return;
+
   if (UPGRADE_TIP.active) {
     el.classList.remove('hidden');
     document.getElementById('tutorialStepCount').textContent = 'Tip';
-    document.getElementById('tutorialStepText').textContent =
-      'You can afford to upgrade your Fisher — hover it and press E, then click Upgrade.';
+    document.getElementById('tutorialStepText').innerHTML =
+      'You can afford to upgrade your Fisher! Hover it and press <span class="tutorial-key">E</span>, then click Upgrade.';
     return;
   }
+
   if (!TUT.active) { el.classList.add('hidden'); return; }
-  const step = TUTORIAL_STEPS[TUT.stepIndex];
+
+  const steps     = TUT.phase === 2 ? TUTORIAL_PHASE2_STEPS : TUTORIAL_PHASE1_STEPS;
+  const step      = steps[TUT.stepIndex];
+  const phaseLabel = TUT.phase === 2 ? 'Automation Tutorial' : 'Fishing Tutorial';
+
   el.classList.remove('hidden');
   document.getElementById('tutorialStepCount').textContent =
-    `Step ${TUT.stepIndex + 1} of ${TUTORIAL_STEPS.length}`;
-  document.getElementById('tutorialStepText').textContent = step.text;
+    `${phaseLabel} — Step ${TUT.stepIndex + 1} of ${steps.length}`;
+  document.getElementById('tutorialStepText').innerHTML = step.text;
 }
 
-// Outward ring search from the player's spawn tile for the nearest tile
-// matching `pred(c, r)` — called once per target in startTutorial(), not
-// per frame (see file-header comment).
+// ─── Build hint button ───────────────────────────────────────────────────────
+// A persistent "B — Build" button visible when not in build mode. Pulses
+// during the build_open tutorial step so players know exactly what to press.
+function updateBuildHintUI() {
+  const el = document.getElementById('buildHint');
+  if (!el) return;
+  el.classList.toggle('hidden', buildMode.active);
+  const waitingForB = TUT.active && TUT.phase === 2 &&
+    TUTORIAL_PHASE2_STEPS[TUT.stepIndex]?.id === 'build_open';
+  el.classList.toggle('build-hint-pulse', waitingForB);
+}
+
+// ─── Arrow target ────────────────────────────────────────────────────────────
+// World-pixel center of the current step's arrow target, or null if the step
+// doesn't point at a world tile (e.g. "wait for catch", "press Escape").
+function tutorialTargetWorldPos() {
+  if (!TUT.active) return null;
+  const steps = TUT.phase === 2 ? TUTORIAL_PHASE2_STEPS : TUTORIAL_PHASE1_STEPS;
+  const step  = steps[TUT.stepIndex];
+  if (!step) return null;
+  const tile = step.target();
+  if (!tile) return null;
+  return { wx: (tile.c + 0.5) * TILE_SIZE, wy: (tile.r + 0.5) * TILE_SIZE };
+}
+
+// ─── Nearest tile search ─────────────────────────────────────────────────────
+// Outward ring search from the player's spawn tile — called once at phase
+// start, not per frame (see file-header comment).
 function nearestTileMatching(pred, maxRadius) {
   const pc = Math.floor(player.wx / TILE_SIZE);
   const pr = Math.floor(player.wy / TILE_SIZE);
@@ -137,15 +240,4 @@ function nearestTileMatching(pred, maxRadius) {
     }
   }
   return null;
-}
-
-// World-pixel center of the current step's locked arrow target, or null if
-// this step doesn't point at anything (e.g. "wait for a catch").
-function tutorialTargetWorldPos() {
-  if (!TUT.active) return null;
-  const step = TUTORIAL_STEPS[TUT.stepIndex];
-  if (!step) return null;
-  const tile = step.target();
-  if (!tile) return null;
-  return { wx: (tile.c + 0.5) * TILE_SIZE, wy: (tile.r + 0.5) * TILE_SIZE };
 }

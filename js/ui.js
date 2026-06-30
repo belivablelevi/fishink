@@ -1,6 +1,6 @@
 // Fish INK Factory — build/upgrades menu (DOM overlay, tabbed Godot-style)
 
-let buildMenuEl, buildPanelEl, upgradesPanelEl, fishIndexPanelEl, statsPanelEl, controlsPanelEl, researchPanelEl, blueprintsPanelEl, menuCashEl;
+let buildMenuEl, buildPanelEl, upgradesPanelEl, fishIndexPanelEl, statsPanelEl, controlsPanelEl, researchPanelEl, prestigePanelEl, blueprintsPanelEl, menuCashEl;
 let leaderboardPanelEl;
 
 // Category metadata for the Build tab's grouped item grid. Order here is the
@@ -78,6 +78,8 @@ function initGameMenu() {
   const btn   = document.getElementById('gameMenuToggleBtn');
   const panel = document.getElementById('gameMenuPanel');
   const saveBtn    = document.getElementById('saveNowBtn');
+  const exportBtn  = document.getElementById('exportSaveBtn');
+  const importBtn  = document.getElementById('importSaveBtn');
   const restartBtn = document.getElementById('restartGameBtn');
   const fullNumbersCheck = document.getElementById('fullNumbersCheck');
   const individualSellToastsCheck = document.getElementById('individualSellToastsCheck');
@@ -98,6 +100,17 @@ function initGameMenu() {
   saveBtn.addEventListener('click', () => {
     saveGame();
     queueToast('Game saved', '#4dca7c');
+    panel.classList.add('hidden');
+  });
+
+  exportBtn.addEventListener('click', () => {
+    exportSaveToClipboard();
+    panel.classList.add('hidden');
+  });
+
+  importBtn.addEventListener('click', () => {
+    const text = prompt('Paste your save code:');
+    if (text) importSaveFromText(text);
     panel.classList.add('hidden');
   });
 
@@ -210,6 +223,7 @@ function initBuildMenu() {
   statsPanelEl     = document.getElementById('statsPanel');
   controlsPanelEl  = document.getElementById('controlsPanel');
   researchPanelEl  = document.getElementById('researchPanel');
+  prestigePanelEl  = document.getElementById('prestigePanel');
   blueprintsPanelEl = document.getElementById('blueprintsPanel');
   menuCashEl       = document.getElementById('menuCash');
 
@@ -224,6 +238,7 @@ function initBuildMenu() {
   renderFishIndexPanel();
   renderControlsPanel();
   renderResearchPanel();
+  renderPrestigePanel();
   renderBlueprintsPanel();
 }
 
@@ -231,6 +246,7 @@ function switchMenuTab(name) {
   buildMenuEl.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   buildMenuEl.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('hidden', p.dataset.panel !== name));
   if (name === 'stats') renderStatsPanel();
+  if (name === 'prestige') renderPrestigePanel();
 }
 
 function setBuildMenuOpen(open) {
@@ -248,6 +264,7 @@ function setBuildMenuOpen(open) {
     renderFishIndexPanel();
     renderStatsPanel();
     renderResearchPanel();
+    renderPrestigePanel();
     renderBlueprintsPanel();
     menuCashEl.textContent = `$${formatMoney(game.cash)}`;
   }
@@ -484,7 +501,7 @@ function renderResearchPanel() {
   hint.className = 'panel-hint';
 
   if (!isResearchUnlocked()) {
-    hint.textContent = 'Unlocks at $50,000 lifetime earned';
+    hint.textContent = `Unlocks at $${researchUnlockLifetime().toLocaleString()} lifetime earned`;
     researchPanelEl.appendChild(hint);
     return;
   }
@@ -529,6 +546,80 @@ function renderResearchPanel() {
   }
 }
 
+// ─── Prestige tab ──────────────────────────────────────────────────────────
+function renderPrestigePanel() {
+  prestigePanelEl.innerHTML = '';
+
+  const hint = document.createElement('div');
+  hint.className = 'panel-hint';
+  const available = tokensAvailableOnReset();
+  hint.textContent = `Reset your run for Fish Tokens (permanent bonuses) — $${PRESTIGE_TOKEN_DIVISOR.toLocaleString()} lifetime earned ≈ 1 token`;
+  prestigePanelEl.appendChild(hint);
+
+  const summary = document.createElement('div');
+  summary.className = 'upgrade-row';
+  summary.innerHTML = `
+    <div class="upgrade-info">
+      <div class="name">Fish Tokens: <span class="level-badge">${prestigeTokens.total}</span></div>
+      <div class="desc">Available on prestige now: ${available}</div>
+    </div>
+  `;
+  const prestigeBtn = document.createElement('button');
+  prestigeBtn.className = 'upgrade-buy';
+  prestigeBtn.textContent = 'Prestige Now';
+  prestigeBtn.disabled = available < 1;
+  prestigeBtn.addEventListener('click', () => {
+    if (confirm(`Prestige now for ${available} Fish Token(s)? This wipes your current run (cash, machines, layout) but keeps Fish Tokens and any prestige upgrades you've bought.`)) {
+      doPrestige();
+    }
+  });
+  summary.appendChild(prestigeBtn);
+  prestigePanelEl.appendChild(summary);
+
+  for (const def of PRESTIGE_UPGRADES) {
+    const lvl  = prestigeLevels[def.id];
+    const cost = prestigeUpgradeCost(def);
+    const maxed = cost == null;
+
+    const row = document.createElement('div');
+    row.className = 'upgrade-row';
+    row.title = def.desc;
+
+    const info = document.createElement('div');
+    info.className = 'upgrade-info';
+    info.innerHTML = `
+      <div class="name">
+        ${def.name}
+        <span class="level-pair">
+          <span class="level-badge">LV ${lvl}</span>
+          ${maxed ? '' : `<span class="level-arrow">&rarr;</span><span class="level-badge next">LV ${lvl + 1}</span>`}
+        </span>
+      </div>
+      <div class="desc">${def.desc}</div>
+      <div class="effect">${maxed ? '<span class="maxed">Maxed out</span>' : ''}</div>
+    `;
+
+    const buyBtn = document.createElement('button');
+    buyBtn.className = 'upgrade-buy';
+    buyBtn.textContent = maxed ? 'MAXED' : `${cost} token${cost === 1 ? '' : 's'}`;
+    buyBtn.disabled = maxed || prestigeTokens.total < cost;
+    buyBtn.addEventListener('click', () => {
+      if (buyPrestigeUpgrade(def.id)) {
+        renderPrestigePanel();
+        // Industry Contacts changes the Research tab's unlock-threshold hint,
+        // but that panel only re-renders on tab switch — refresh it here too
+        // so the discount is visible immediately, matching Seed Capital's
+        // instant-effect fix.
+        if (def.id === 'unlockGate') renderResearchPanel();
+      }
+    });
+
+    row.appendChild(info);
+    row.appendChild(buyBtn);
+    prestigePanelEl.appendChild(row);
+  }
+}
+
 // ─── Blueprints tab ────────────────────────────────────────────────────────
 function renderBlueprintsPanel() {
   blueprintsPanelEl.innerHTML = '';
@@ -537,6 +628,19 @@ function renderBlueprintsPanel() {
   hint.className = 'panel-hint';
   hint.textContent = 'Copy (C) saves a new entry here — pick one Active, then Paste (V) to stamp it';
   blueprintsPanelEl.appendChild(hint);
+
+  const importRow = document.createElement('div');
+  importRow.className = 'upgrade-row';
+  importRow.innerHTML = `<div class="upgrade-info"><div class="name">Import a shared layout</div><div class="desc">Paste a blueprint code someone shared on Discord</div></div>`;
+  const importBtn = document.createElement('button');
+  importBtn.className = 'upgrade-buy';
+  importBtn.textContent = 'Paste Code';
+  importBtn.addEventListener('click', () => {
+    const code = prompt('Paste blueprint code:');
+    if (code && importBlueprintCode(code)) { renderBlueprintsPanel(); updateBuildHud(); }
+  });
+  importRow.appendChild(importBtn);
+  blueprintsPanelEl.appendChild(importRow);
 
   if (blueprint.library.length === 0) {
     const empty = document.createElement('div');
@@ -581,6 +685,14 @@ function renderBlueprintsPanel() {
       updateBuildHud();
     });
 
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'upgrade-buy';
+    copyBtn.textContent = 'Copy Code';
+    copyBtn.addEventListener('click', () => {
+      const code = exportBlueprintCode(entry.id);
+      if (code) navigator.clipboard.writeText(code).then(() => queueToast('Blueprint code copied to clipboard', '#4dca7c'));
+    });
+
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'upgrade-buy bp-delete-btn';
     deleteBtn.textContent = 'Delete';
@@ -591,6 +703,7 @@ function renderBlueprintsPanel() {
     });
 
     btnGroup.appendChild(loadBtn);
+    btnGroup.appendChild(copyBtn);
     btnGroup.appendChild(deleteBtn);
 
     row.appendChild(info);
@@ -833,6 +946,47 @@ function renderStatsPanel() {
     statsPanelEl.appendChild(row);
   }
 
+  const effDivider = document.createElement('div');
+  effDivider.className = 'cat-divider';
+  effDivider.style.setProperty('--cat-color', '#7ec8e3');
+  effDivider.innerHTML = `<span class="cat-dot"></span>Efficiency (last 60s)`;
+  statsPanelEl.appendChild(effDivider);
+
+  const perMin = earnPerMinute();
+  const effRows = [
+    ['$/min', `$${perMin.toFixed(2)}`, 'earnPerMin'],
+    ['Footprint (tiles)', currentBlockCount, 'footprint'],
+    ['$/tile', `$${(perMin / Math.max(1, currentBlockCount)).toFixed(2)}`, 'earnPerTile'],
+    ['$/machine', `$${(perMin / Math.max(1, currentMachineCount)).toFixed(2)}`, 'earnPerMachine'],
+  ];
+  for (const [label, value, key] of effRows) {
+    const row = document.createElement('div');
+    row.className = 'upgrade-row';
+    row.innerHTML = `<div class="upgrade-info"><div class="name">${label}</div></div><div class="cost afford" data-stat="${key}">${value}</div>`;
+    statsPanelEl.appendChild(row);
+  }
+
+  const snapshotRow = document.createElement('div');
+  snapshotRow.className = 'upgrade-row';
+  snapshotRow.innerHTML = `<div class="upgrade-info"><div class="name">Snapshot</div><div class="desc">Generate a Discord-ready efficiency card image</div></div>`;
+  const snapshotBtn = document.createElement('button');
+  snapshotBtn.className = 'upgrade-buy';
+  snapshotBtn.textContent = 'Snapshot Image';
+  snapshotBtn.addEventListener('click', () => {
+    const canvas = renderSnapshotCard(buildEfficiencySnapshot());
+    canvas.toBlob(blob => {
+      if (navigator.clipboard && window.ClipboardItem) {
+        navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+          .then(() => queueToast('Snapshot image copied — paste into Discord', '#4dca7c'))
+          .catch(() => downloadSnapshotBlob(blob));
+      } else {
+        downloadSnapshotBlob(blob);
+      }
+    });
+  });
+  snapshotRow.appendChild(snapshotBtn);
+  statsPanelEl.appendChild(snapshotRow);
+
   const divider = document.createElement('div');
   divider.className = 'cat-divider';
   divider.style.setProperty('--cat-color', '#f0c419');
@@ -853,6 +1007,84 @@ function renderStatsPanel() {
     row.appendChild(card);
   }
   statsPanelEl.appendChild(row);
+}
+
+// Patches just the Efficiency numbers in place instead of calling the full
+// renderStatsPanel() rebuild every frame — a full rebuild tears down and
+// recreates the Copy Snapshot button on every tick, which could drop a click
+// landing between two rebuilds before the listener ever fired.
+function updateStatsPanelLive() {
+  if (!statsPanelEl || statsPanelEl.classList.contains('hidden')) return;
+  if (!statsPanelEl.querySelector('[data-stat]')) return; // not rendered yet
+  const perMin = earnPerMinute();
+  const vals = {
+    earnPerMin: `$${perMin.toFixed(2)}`,
+    footprint: currentBlockCount,
+    earnPerTile: `$${(perMin / Math.max(1, currentBlockCount)).toFixed(2)}`,
+    earnPerMachine: `$${(perMin / Math.max(1, currentMachineCount)).toFixed(2)}`,
+  };
+  for (const key in vals) {
+    const el = statsPanelEl.querySelector(`[data-stat="${key}"]`);
+    if (el) el.textContent = vals[key];
+  }
+}
+
+// Draws the C3 efficiency snapshot as a Discord-embed-style PNG card
+// (instead of plain text) — reuses render.js's roundRect since this still
+// just draws to a 2D canvas context, only an offscreen one.
+function renderSnapshotCard(snap) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 640; canvas.height = 320;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#07080f';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#0d1117';
+  roundRect(ctx, 16, 16, canvas.width - 32, canvas.height - 32, 16);
+  ctx.fill();
+  ctx.fillStyle = '#7ec8e3';
+  roundRect(ctx, 16, 16, 6, canvas.height - 32, 3);
+  ctx.fill();
+
+  ctx.fillStyle = '#e8a030';
+  ctx.font = "700 28px 'Chakra Petch', sans-serif";
+  ctx.fillText('FishInk Factory', 44, 64);
+  ctx.fillStyle = '#6a7a8a';
+  ctx.font = "600 16px 'Chakra Petch', sans-serif";
+  ctx.fillText('Efficiency Snapshot', 44, 90);
+
+  const rows = [
+    ['$/min', `$${snap.earnPerMin.toFixed(2)}`],
+    ['Footprint', `${snap.footprintTiles} tiles`],
+    ['$/tile', `$${snap.earnPerTile.toFixed(2)}`],
+    ['Invested', `$${Math.round(snap.cashSpent).toLocaleString()}`],
+  ];
+  let y = 140;
+  for (const [label, value] of rows) {
+    ctx.fillStyle = '#6a7a8a';
+    ctx.font = "600 15px 'Chakra Petch', sans-serif";
+    ctx.fillText(label, 44, y);
+    ctx.fillStyle = '#e0e8f0';
+    ctx.font = "700 24px 'JetBrains Mono', monospace";
+    ctx.fillText(value, 220, y);
+    y += 42;
+  }
+
+  ctx.fillStyle = '#4dca7c';
+  ctx.font = "500 12px 'JetBrains Mono', monospace";
+  ctx.fillText(new Date(snap.timestamp).toLocaleString(), 44, canvas.height - 30);
+
+  return canvas;
+}
+
+function downloadSnapshotBlob(blob) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `fishink-snapshot-${Date.now()}.png`;
+  a.click();
+  URL.revokeObjectURL(url);
+  queueToast('Snapshot image downloaded', '#4dca7c');
 }
 
 // ─── Controls tab — full keybind cheat-sheet ───────────────────────────────
@@ -1304,6 +1536,7 @@ function updateBuildMenuLive() {
     if (cost != null) btn.disabled = game.cash < cost;
   });
   menuCashEl.textContent = `$${formatMoney(game.cash)}`;
+  updateStatsPanelLive();
 }
 
 // ─── Bottom-right build HUD ─────────────────────────────────────────────────

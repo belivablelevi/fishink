@@ -50,11 +50,11 @@ function buyUpgrade(id) {
 }
 
 // ─── Derived gameplay values (base stat × upgrade level) ──────────────────────
-function effectiveCastTime()       { return CAST_TIME * (1 - upgradeLevels.castSpeed * 0.15); }
+function effectiveCastTime()       { return CAST_TIME * (1 - upgradeLevels.castSpeed * 0.15) * prestigeSpeedMult(); }
 function effectiveBeltSpeed()      { return BELT_SPEED * (1 + upgradeLevels.beltSpeed * 0.15); }
 function effectiveMaxHeld()        { return MAX_HELD + upgradeLevels.maxHeld * 2; }
-function effectiveFisherInterval() { return FISHER_INTERVAL * (1 - upgradeLevels.fisherSpeed * 0.12); }
-function effectiveSellMult()       { return 1 + upgradeLevels.sellPrice * 0.10; }
+function effectiveFisherInterval() { return FISHER_INTERVAL * (1 - upgradeLevels.fisherSpeed * 0.12) * prestigeSpeedMult(); }
+function effectiveSellMult()       { return (1 + upgradeLevels.sellPrice * 0.10) * prestigeSellMult(); }
 function effectiveDroneSpeedMult()      { return 1 + upgradeLevels.droneFisherSpeed * 0.15; }
 function effectiveDroneDeliveryBonus()  { return 1.10 + upgradeLevels.droneDeliveryBonus * 0.08; }
 

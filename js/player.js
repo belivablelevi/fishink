@@ -80,7 +80,7 @@ const PLACEABLE_IDS = [B_CONCRETE, B_FISHER, B_BELT, B_SPLITTER, B_SORTER, B_CRA
                        B_SELLER, B_RECYCLER, B_PACKER, B_SMART_ROUTER, B_TELEPORTER,
                        B_DRONE_FISHER, B_DRONE_DELIVERY];
 
-const MENU_TAB_ORDER = ['build', 'upgrades', 'fishIndex', 'stats', 'controls', 'research', 'blueprints'];
+const MENU_TAB_ORDER = ['build', 'upgrades', 'fishIndex', 'stats', 'controls', 'research', 'prestige', 'blueprints'];
 
 function toggleBoxMode() {
   buildMode.boxMode = !buildMode.boxMode;
@@ -100,11 +100,13 @@ function triggerBuildToggle() {
   if (!buildMode.active) {
     buildMode.active = true;
     buildMode.menuOpen = true;
+    tutorialNotify('build_open');
   } else {
     buildMode.menuOpen = !buildMode.menuOpen;
   }
   setBuildMenuOpen(buildMode.menuOpen);
   closeBlockPopup();
+  updateBuildHintUI();
 }
 
 // Cancels everything build-related at once — box mode, any in-progress
@@ -123,6 +125,8 @@ function exitBuildMode() {
   blueprint.pasting = false;
   bpDragStart = null;
   blueprint.pasteRotation = 0;
+  tutorialNotify('close_build');
+  updateBuildHintUI();
 }
 
 function handleBuildKey(e) {
