@@ -75,9 +75,11 @@ const TUT = {
 };
 
 function startTutorial() {
-  TUT.active   = true;
-  TUT.phase    = 1;
+  TUT.active    = true;
+  TUT.phase     = 1;
   TUT.stepIndex = 0;
+  TUT.startWx   = player.wx;
+  TUT.startWy   = player.wy;
 
   TUT.sandTile    = nearestTileMatching((c, r) => tileAt(c, r) === T_SHORE, 20);
   TUT.fishingTile = nearestTileMatching((c, r) => tileAt(c, r) === T_WATER, 20);
