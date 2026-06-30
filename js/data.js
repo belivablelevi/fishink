@@ -111,7 +111,7 @@ const FISHER_INTERVAL = 5.0;
 // Manual cast time
 const CAST_TIME = 3.0;
 
-const DAY_CYCLE_SECONDS = 3600;
+const DAY_CYCLE_SECONDS = 600; // 10 real minutes = one in-game day (was 3600)
 
 function weightedRandom(pool, weightKey) {
   const total = pool.reduce((s, e) => s + e[weightKey], 0);

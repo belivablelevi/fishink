@@ -1240,6 +1240,13 @@ function renderBlockPopup() {
   else if (kind === 'recycler')  renderRecyclerPopupContent(c, r);
   else if (kind === 'packer')    renderPackerPopupContent(c, r);
   else if (kind === 'teleporter') renderTeleporterPopupContent(c, r);
+  // "Move" button appended to every popup type — lets players relocate a block
+  // for free instead of demolishing and rebuilding it.
+  const moveBtn = document.createElement('button');
+  moveBtn.className = 'mp-move';
+  moveBtn.textContent = 'Move (free)';
+  moveBtn.addEventListener('click', () => movePickUpBlock(c, r));
+  if (blockPopupEl) blockPopupEl.appendChild(moveBtn);
 }
 
 // Shared "Lv N+1: -X% time, +Y% value" + buy button block, used both as the

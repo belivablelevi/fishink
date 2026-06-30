@@ -21,6 +21,14 @@ const fisherTimers = {};
 const manualCast = { active: false, timer: 0, duration: 0, wx: 0, wy: 0 };
 const toasts = [];
 
+// Floating catch labels that rise above the catch point and fade out
+const floatTexts = [];
+const FLOAT_TEXT_SPEED = 22; // world-pixels per second, rising
+const FLOAT_TEXT_LIFE  = 1.6;
+function spawnFloatText(text, wx, wy, color) {
+  floatTexts.push({ text, wx, wy, life: FLOAT_TEXT_LIFE, color: color || '#4dca7c' });
+}
+
 function queueToast(msg, color) {
   toasts.push({ msg, color: color || '#4dca7c', life: 2.2 });
 }
@@ -142,6 +150,11 @@ function simUpdate(dt) {
   checkAchievements();
   maybeShowUpgradeTip();
   tickParticles(dt);
+  for (let i = floatTexts.length - 1; i >= 0; i--) {
+    floatTexts[i].life -= dt;
+    floatTexts[i].wy   -= dt * FLOAT_TEXT_SPEED;
+    if (floatTexts[i].life <= 0) floatTexts.splice(i, 1);
+  }
 
   saveAccum += dt;
   if (saveAccum >= AUTOSAVE_INTERVAL) {
@@ -732,10 +745,13 @@ function completeCast() {
   fish.progress = 0;
   heldFish.push(fish);
   const rare = fish.category === 'Rare' || fish.category === 'Epic';
+  const catchColor = rare ? '#e8c43f' : '#4dca7c';
   queueToast(
     rare ? `★ ${fish.size} ${fish.species}!` : `${fish.size} ${fish.species}`,
-    rare ? '#e8c43f' : '#4dca7c'
+    catchColor
   );
+  // Floating label above the player (not the water tile) so it's always visible
+  spawnFloatText((rare ? '★ ' : '') + fish.species, player.wx, player.wy - TILE_SIZE, catchColor);
   sfxCatch(rare);
   spawnParticles(manualCast.wx, manualCast.wy, 'splash', 6);
   if (rare) {
@@ -772,6 +788,37 @@ function dropNearestBelt() {
 
 // ─── Build / demolish ─────────────────────────────────────────────────────────
 
+// Picks up a block for free (no refund, no charge) — used by the "Move" button
+// in block popups. Stores a full state snapshot in buildMode.pendingMove so the
+// block can be re-placed with its level/config intact. If the player cancels the
+// move (exits build mode), exitBuildMode refunds the original purchase price.
+function movePickUpBlock(c, r) {
+  const id = blockAt(c, r);
+  if (id === B_NONE) return;
+  const st = stateAt(c, r);
+  buildMode.pendingMove = {
+    id,
+    dir:    st ? st.dir : 0,
+    level:  st ? (st.level || 0) : 0,
+    config: typeof captureConfig === 'function' ? (captureConfig(c, r) || {}) : {},
+  };
+  // Remove silently — no cash change here; cost is recovered if move is cancelled
+  removeBlock(c, r);
+  if (id === B_FISHER) delete fisherTimers[`${c},${r}`];
+  notifyRemoved(id, c, r, buildMode.pendingMove.dir, 0, buildMode.pendingMove.config);
+  closeBlockPopup();
+  if (!buildMode.active) {
+    buildMode.active   = true;
+    buildMode.menuOpen = false;
+    setBuildMenuOpen(false);
+  }
+  buildMode.selectedId = id;
+  buildMode.beltDir    = buildMode.pendingMove.dir;
+  updateBuildHintUI();
+  saveGame();
+  queueToast(`Moving ${BLOCK_NAMES[id]} — click to place`, '#7ec8e3');
+}
+
 // Returns a specific human-readable reason why canPlaceBlock failed, replacing
 // the previous generic "Cannot place here" toast. Only called after the unlock
 // and cash checks already passed, so those cases are excluded here.
@@ -799,6 +846,26 @@ function placementFailReason(id, c, r) {
 }
 
 function buyAndPlace(id, c, r, dir, silent = false) {
+  // Move operation: free placement, restores full saved state
+  if (buildMode.pendingMove && buildMode.pendingMove.id === id) {
+    if (!placeBlock(id, c, r, dir)) {
+      if (!silent) { queueToast(placementFailReason(id, c, r), '#e85d4a'); sfxFail(); }
+      return false;
+    }
+    const pm = buildMode.pendingMove;
+    buildMode.pendingMove = null;
+    game.blocksPlaced++;
+    if (id === B_FISHER) fisherTimers[`${c},${r}`] = effectiveFisherInterval();
+    if (typeof applyConfig === 'function') applyConfig(c, r, { ...pm.config, dir, level: 0 });
+    const st = stateAt(c, r);
+    if (st && pm.level) { st.level = pm.level; game.maxMachineLevel = Math.max(game.maxMachineLevel, pm.level); }
+    if (typeof attachConfigToLastPlaced === 'function') attachConfigToLastPlaced({ ...pm.config, dir, level: pm.level });
+    if (!silent) sfxPlace();
+    notifyPlaced(id, c, r, dir, 0);
+    saveGame();
+    return true;
+  }
+
   const cost = BLOCK_COSTS[id];
   if (!isBlockUnlocked(id)) {
     if (!silent) { queueToast(`Locked — reach ${BLOCK_UNLOCK_REQ[id].label}`, '#e85d4a'); sfxFail(); }

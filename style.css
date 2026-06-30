@@ -574,6 +574,24 @@ body.touch-active .machines-panel { bottom: 144px; }
   cursor: not-allowed;
 }
 
+/* Move button — appears at the bottom of every block popup */
+.block-popup .mp-move {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 7px 12px;
+  background: rgba(126,200,227,0.12);
+  border: 1px solid rgba(126,200,227,0.3);
+  border-radius: 6px;
+  color: var(--c-sky);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.block-popup .mp-move:hover { background: rgba(126,200,227,0.22); }
+
 /* Sorter settings — size threshold pills */
 .block-popup .mp-size-row {
   display: flex;

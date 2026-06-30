@@ -57,8 +57,9 @@ const buildMode = {
   active: false,
   menuOpen: false,
   selectedId: B_BELT,
-  beltDir: 0,   // index into BELT_DIRS — rotated with R before placing
-  boxMode: false, // X toggles — drag a rectangle to bulk place/remove instead of painting tile-by-tile
+  beltDir: 0,      // index into BELT_DIRS — rotated with R before placing
+  boxMode: false,  // X toggles — drag a rectangle to bulk place/remove
+  pendingMove: null, // { id, dir, level, config } set by movePickUpBlock(); free placement + state restore
 };
 
 // Per-block popup — opened by clicking a placed machine tile, or by pressing
@@ -115,6 +116,12 @@ function triggerBuildToggle() {
 // build menu's X button, and the mobile Exit button (which has no Escape
 // key to fall back on).
 function exitBuildMode() {
+  // If player cancels a pending move, refund the full original cost
+  if (buildMode.pendingMove) {
+    game.cash += BLOCK_COSTS[buildMode.pendingMove.id] || 0;
+    queueToast('Move cancelled — refunded', '#e8a030');
+    buildMode.pendingMove = null;
+  }
   buildMode.active = false;
   buildMode.menuOpen = false;
   buildMode.boxMode = false;
@@ -309,12 +316,22 @@ function updatePlayer(dt) {
 
   updateCamera();
 
-  // E key — interacts with whatever block the mouse is hovering. See
-  // triggerInteract() for the full behavior; shared with the mobile
-  // Interact button.
+  // E key — first press: open popup or drop fish. While held: repeat fish-drop
+  // at a fixed interval (hold-to-unload) without re-triggering popup opens.
   const eDown = !!(KEYS['e'] || KEYS['E']);
-  if (eDown && !player._eWas && !buildMode.active) {
-    triggerInteract();
+  if (!buildMode.active) {
+    if (eDown && !player._eWas) {
+      triggerInteract();
+      player._eHoldAccum = 0;
+    } else if (eDown && heldFish.length > 0) {
+      player._eHoldAccum = (player._eHoldAccum || 0) + dt;
+      while (player._eHoldAccum >= 0.18) {
+        player._eHoldAccum -= 0.18;
+        dropNearestBelt();
+      }
+    } else {
+      player._eHoldAccum = 0;
+    }
   }
   player._eWas = eDown;
 }

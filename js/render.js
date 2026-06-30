@@ -183,9 +183,34 @@ function draw(ctx, canvas, dt) {
   // HUD (unscaled)
   drawHUD(ctx, canvas);
   if (!TUT.active) drawHeldFish(ctx, canvas);
+  drawFloatTexts(ctx, canvas);
   drawToasts(ctx, canvas, dt);
   drawHoverTooltip(ctx, canvas);
   drawTutorialArrow(ctx, canvas);
+}
+
+// ─── Floating catch labels ───────────────────────────────────────────────────
+function drawFloatTexts(ctx, canvas) {
+  if (!floatTexts.length) return;
+  const cw = canvas.width, ch = canvas.height;
+  ctx.save();
+  ctx.font = '700 13px "Chakra Petch", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (const ft of floatTexts) {
+    const t  = ft.life / FLOAT_TEXT_LIFE; // 1→0
+    const alpha = t < 0.35 ? t / 0.35 : 1; // fade out in last 35%
+    const sx = (ft.wx - cam.x) * ZOOM + cw / 2;
+    const sy = (ft.wy - cam.y) * ZOOM + ch / 2;
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+    ctx.lineWidth = 3;
+    ctx.strokeText(ft.text, sx, sy);
+    ctx.fillStyle = ft.color;
+    ctx.fillText(ft.text, sx, sy);
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
 }
 
 // ─── Tutorial arrow ──────────────────────────────────────────────────────────
@@ -1788,7 +1813,7 @@ function drawPlayer(ctx) {
 
 // ─── HUD ─────────────────────────────────────────────────────────────────────
 
-const cashAnim = { displayed: 0 };
+const cashAnim = { displayed: 0, prev: 0, pulse: 0 };
 // Screen-space rect of the cash pill, refreshed every frame in drawHUD —
 // lets the DOM machines button dock immediately beside it instead of using
 // a fixed offset that would drift whenever the cash label's width changes.
@@ -1797,34 +1822,45 @@ const cashPillRect = { right: 0, top: 0, bottom: 0 };
 function drawHUD(ctx, canvas) {
   const cw = canvas.width, ch = canvas.height;
 
-  // Smooth cash
+  // Smooth cash + pulse animation when cash increases
   cashAnim.displayed += (game.cash - cashAnim.displayed) * 0.12;
   if (Math.abs(game.cash - cashAnim.displayed) < 0.01) cashAnim.displayed = game.cash;
+  if (game.cash > cashAnim.prev) cashAnim.pulse = 0.35;
+  cashAnim.prev = game.cash;
+  if (cashAnim.pulse > 0) cashAnim.pulse = Math.max(0, cashAnim.pulse - dt * 1.4);
 
-  // Cash pill
-  ctx.font = '13px "Press Start 2P", "Courier New", monospace';
+  // Cash pill — larger font, brief scale-up when money arrives
+  ctx.font = '16px "Press Start 2P", "Courier New", monospace';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   const cashLabel = formatMoney(cashAnim.displayed);
   const tw = ctx.measureText(cashLabel).width;
-  const bx = 16, by = ch - 24;
-  ctx.fillStyle = 'rgba(8,14,8,0.85)';
-  roundRect(ctx, bx - 10, by - 18, tw + 43, 36, 8); ctx.fill();
-  cashPillRect.right  = bx - 10 + tw + 43;
-  cashPillRect.top    = by - 18;
-  cashPillRect.bottom = by + 18;
+  const bx = 16, by = ch - 26;
+  const cashScale = 1 + cashAnim.pulse * 0.18;
+
+  ctx.save();
+  ctx.translate(bx + 19 + tw / 2, by);
+  ctx.scale(cashScale, cashScale);
+  ctx.translate(-(bx + 19 + tw / 2), -by);
+
+  ctx.fillStyle = 'rgba(8,14,8,0.88)';
+  roundRect(ctx, bx - 10, by - 20, tw + 47, 40, 9); ctx.fill();
+  cashPillRect.right  = bx - 10 + tw + 47;
+  cashPillRect.top    = by - 20;
+  cashPillRect.bottom = by + 20;
   if (IMAGES.iconMoney) {
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(IMAGES.iconMoney, bx - 6, by - 15, 34, 34);
+    ctx.drawImage(IMAGES.iconMoney, bx - 5, by - 17, 36, 36);
   } else {
     ctx.fillStyle = '#e8c43f'; ctx.fillText('$', bx, by);
   }
   ctx.lineWidth = 0.5;
   ctx.strokeStyle = '#000000';
   ctx.lineJoin = 'round';
-  ctx.strokeText(cashLabel, bx + 19, by);
-  ctx.fillStyle = '#70cd18';
-  ctx.fillText(cashLabel, bx + 19, by);
+  ctx.strokeText(cashLabel, bx + 22, by);
+  ctx.fillStyle = cashAnim.pulse > 0.05 ? '#a0f040' : '#70cd18';
+  ctx.fillText(cashLabel, bx + 22, by);
+  ctx.restore();
 
   // Corner hints
   ctx.fillStyle = 'rgba(255,255,255,0.28)';
