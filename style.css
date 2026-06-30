@@ -574,6 +574,29 @@ body.touch-active .machines-panel { bottom: 144px; }
   cursor: not-allowed;
 }
 
+/* Cash HUD — DOM pill so it sits above the tutorial overlay (z-index 30 > 25) */
+.cash-hud {
+  position: fixed;
+  bottom: 6px;
+  left: 6px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: rgba(8,14,8,0.88);
+  border: 1px solid var(--c-border);
+  border-radius: 9px;
+  padding: 2px 12px 2px 2px;
+  pointer-events: none;
+  font-family: "Press Start 2P", "Courier New", monospace;
+  font-size: 16px;
+  color: #70cd18;
+  transition: color 0.1s, transform 0.1s;
+}
+.cash-hud.cash-hud-pulse { color: #a0f040; transform: scale(1.08); }
+.cash-hud-icon { width: 36px; height: 36px; image-rendering: pixelated; flex-shrink: 0; }
+body.touch-active .cash-hud { bottom: 20px; left: 90px; }
+
 /* Move button — appears at the bottom of every block popup */
 .block-popup .mp-move {
   display: block;

@@ -1829,38 +1829,18 @@ function drawHUD(ctx, canvas) {
   cashAnim.prev = game.cash;
   if (cashAnim.pulse > 0) cashAnim.pulse = Math.max(0, cashAnim.pulse - dt * 1.4);
 
-  // Cash pill — larger font, brief scale-up when money arrives
-  ctx.font = '16px "Press Start 2P", "Courier New", monospace';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
+  // Cash pill — DOM element so it always renders above the tutorial overlay
   const cashLabel = formatMoney(cashAnim.displayed);
-  const tw = ctx.measureText(cashLabel).width;
-  const bx = 16, by = (TUT.active || UPGRADE_TIP.active) ? 30 : ch - 26;
-  const cashScale = 1 + cashAnim.pulse * 0.18;
-
-  ctx.save();
-  ctx.translate(bx + 19 + tw / 2, by);
-  ctx.scale(cashScale, cashScale);
-  ctx.translate(-(bx + 19 + tw / 2), -by);
-
-  ctx.fillStyle = 'rgba(8,14,8,0.88)';
-  roundRect(ctx, bx - 10, by - 20, tw + 47, 40, 9); ctx.fill();
-  cashPillRect.right  = bx - 10 + tw + 47;
-  cashPillRect.top    = by - 20;
-  cashPillRect.bottom = by + 20;
-  if (IMAGES.iconMoney) {
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(IMAGES.iconMoney, bx - 5, by - 17, 36, 36);
-  } else {
-    ctx.fillStyle = '#e8c43f'; ctx.fillText('$', bx, by);
+  const cashHudEl  = document.getElementById('cashHud');
+  const cashHudVal = document.getElementById('cashHudValue');
+  if (cashHudVal) cashHudVal.textContent = cashLabel;
+  if (cashHudEl) {
+    cashHudEl.classList.toggle('cash-hud-pulse', cashAnim.pulse > 0.05);
+    const r = cashHudEl.getBoundingClientRect();
+    cashPillRect.right  = r.right;
+    cashPillRect.top    = r.top;
+    cashPillRect.bottom = r.bottom;
   }
-  ctx.lineWidth = 0.5;
-  ctx.strokeStyle = '#000000';
-  ctx.lineJoin = 'round';
-  ctx.strokeText(cashLabel, bx + 22, by);
-  ctx.fillStyle = cashAnim.pulse > 0.05 ? '#a0f040' : '#70cd18';
-  ctx.fillText(cashLabel, bx + 22, by);
-  ctx.restore();
 
   // Corner hints
   ctx.fillStyle = 'rgba(255,255,255,0.28)';
