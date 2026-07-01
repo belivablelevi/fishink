@@ -72,6 +72,6 @@ function doPrestige() {
   if (earned < 1) { queueToast('Need more lifetime earnings to prestige', '#9aa0a8'); return false; }
   prestigeTokens.total += earned;
   savePrestige();
-  restartGame(); // existing wipe-and-reload in save.js; PRESTIGE_KEY is untouched by it
+  resetRun(); // soft reset — keeps the tokens just banked; PRESTIGE_KEY is untouched
   return true;
 }

@@ -133,7 +133,19 @@ function loadGame() {
 
 let restarting = false;
 
+// Full wipe — clears the run save AND prestige data. Used by the Restart Game
+// button so the player gets a completely clean slate.
 function restartGame() {
+  restarting = true;
+  localStorage.removeItem(SAVE_KEY);
+  localStorage.removeItem(PRESTIGE_KEY); // prestige.js declares this constant
+  location.reload();
+}
+
+// Soft run-reset — clears only the run save, leaving prestige tokens/upgrades
+// intact. Used exclusively by doPrestige() so the tokens it just banked
+// aren't immediately wiped by the reload.
+function resetRun() {
   restarting = true;
   localStorage.removeItem(SAVE_KEY);
   location.reload();
