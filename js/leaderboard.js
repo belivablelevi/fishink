@@ -113,7 +113,7 @@ function normaliseName(s) {
   n = n.replace(/[5]/g,   's'); // $ handled below after non-alpha strip
   n = n.replace(/[7+]/g,  't');
   n = n.replace(/8/g,     'b');
-  n = n.replace(/9/g,     'g');
+  n = n.replace(/[69]/g,  'g'); // 6 and 9 both used as 'g' (n166er, n1gg9r)
   n = n.replace(/2/g,     'z');
 
   // 4. Phonetic substitutions
