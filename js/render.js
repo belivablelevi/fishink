@@ -175,6 +175,9 @@ function draw(ctx, canvas, dt) {
   // being held rather than floating behind the body.
   drawFishingRod(ctx);
 
+  // Floating catch labels — drawn in world space so coordinates match naturally
+  drawFloatTexts(ctx);
+
   ctx.restore();
 
   // Atmosphere overlays (screen-space, drawn over the world but under the HUD)
@@ -183,31 +186,31 @@ function draw(ctx, canvas, dt) {
   // HUD (unscaled)
   drawHUD(ctx, canvas);
   if (!TUT.active) drawHeldFish(ctx, canvas);
-  drawFloatTexts(ctx, canvas);
   drawToasts(ctx, canvas, dt);
   drawHoverTooltip(ctx, canvas);
   drawTutorialArrow(ctx, canvas);
 }
 
 // ─── Floating catch labels ───────────────────────────────────────────────────
-function drawFloatTexts(ctx, canvas) {
+// Called inside the ctx.scale(ZOOM,ZOOM) world transform, so ft.wx/wy are
+// plain world pixels with cam offset — same as drawPlayer, drawParticles, etc.
+function drawFloatTexts(ctx) {
   if (!floatTexts.length) return;
-  const cw = canvas.width, ch = canvas.height;
   ctx.save();
-  ctx.font = '700 18px "Press Start 2P", "Courier New", monospace';
+  ctx.font = '700 9px "Press Start 2P", "Courier New", monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   for (const ft of floatTexts) {
-    const t  = ft.life / FLOAT_TEXT_LIFE; // 1→0
-    const alpha = t < 0.35 ? t / 0.35 : 1; // fade out in last 35%
-    const sx = (ft.wx - cam.x) * ZOOM;
-    const sy = (ft.wy - cam.y) * ZOOM;
+    const t = ft.life / FLOAT_TEXT_LIFE; // 1 → 0
+    const alpha = t < 0.4 ? t / 0.4 : 1;
+    const x = ft.wx - cam.x;
+    const y = ft.wy - cam.y;
     ctx.globalAlpha = alpha;
-    ctx.strokeStyle = 'rgba(0,0,0,0.7)';
-    ctx.lineWidth = 3;
-    ctx.strokeText(ft.text, sx, sy);
+    ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+    ctx.lineWidth = 2.5 / ZOOM;
+    ctx.strokeText(ft.text, x, y);
     ctx.fillStyle = ft.color;
-    ctx.fillText(ft.text, sx, sy);
+    ctx.fillText(ft.text, x, y);
   }
   ctx.globalAlpha = 1;
   ctx.restore();
