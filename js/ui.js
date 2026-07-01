@@ -1042,32 +1042,32 @@ function renderSnapshotCard(snap) {
   ctx.fill();
 
   ctx.fillStyle = '#e8a030';
-  ctx.font = "700 28px 'Chakra Petch', sans-serif";
-  ctx.fillText('FishInk Factory', 44, 64);
+  ctx.font = "bold 22px sans-serif";
+  ctx.fillText('FishInk Factory', 44, 62);
   ctx.fillStyle = '#6a7a8a';
-  ctx.font = "600 16px 'Chakra Petch', sans-serif";
-  ctx.fillText('Efficiency Snapshot', 44, 90);
+  ctx.font = "15px sans-serif";
+  ctx.fillText(snap.estimated ? 'Efficiency Snapshot  (lifetime avg)' : 'Efficiency Snapshot', 44, 88);
 
   const rows = [
-    ['$/min', `$${snap.earnPerMin.toFixed(2)}`],
+    ['$/min',     `$${snap.earnPerMin.toFixed(2)}`],
     ['Footprint', `${snap.footprintTiles} tiles`],
-    ['$/tile', `$${snap.earnPerTile.toFixed(2)}`],
-    ['Invested', `$${Math.round(snap.cashSpent).toLocaleString()}`],
+    ['$/tile',    `$${snap.earnPerTile.toFixed(2)}`],
+    ['Invested',  `$${Math.round(snap.cashSpent).toLocaleString()}`],
   ];
   let y = 140;
   for (const [label, value] of rows) {
     ctx.fillStyle = '#6a7a8a';
-    ctx.font = "600 15px 'Chakra Petch', sans-serif";
+    ctx.font = "bold 13px sans-serif";
     ctx.fillText(label, 44, y);
     ctx.fillStyle = '#e0e8f0';
-    ctx.font = "700 24px 'JetBrains Mono', monospace";
-    ctx.fillText(value, 220, y);
-    y += 42;
+    ctx.font = "bold 22px monospace";
+    ctx.fillText(value, 200, y);
+    y += 44;
   }
 
   ctx.fillStyle = '#4dca7c';
-  ctx.font = "500 12px 'JetBrains Mono', monospace";
-  ctx.fillText(new Date(snap.timestamp).toLocaleString(), 44, canvas.height - 30);
+  ctx.font = "12px monospace";
+  ctx.fillText(new Date(snap.timestamp).toLocaleString(), 44, canvas.height - 28);
 
   return canvas;
 }

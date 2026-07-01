@@ -97,12 +97,20 @@ function rescanBlockCounts() {
 // factories are comparable using the same formula (C3) — measurement +
 // export only, no server-side leaderboard.
 function buildEfficiencySnapshot() {
-  const perMin = earnPerMinute();
+  let perMin = earnPerMinute();
+  // Fallback: if earnHistory is still empty (e.g. just loaded a save), use
+  // the lifetime average so the snapshot always shows a meaningful number.
+  let estimated = false;
+  if (perMin === 0 && game.lifetimeEarned > 0 && game.time > 10) {
+    perMin = game.lifetimeEarned / Math.max(game.time / 60, 1);
+    estimated = true;
+  }
   return {
     earnPerMin: Math.round(perMin * 100) / 100,
     footprintTiles: currentBlockCount,
     earnPerTile: Math.round((perMin / Math.max(1, currentBlockCount)) * 100) / 100,
     cashSpent: game.lifetimeEarned - game.cash,
+    estimated,
     timestamp: new Date().toISOString(),
   };
 }
