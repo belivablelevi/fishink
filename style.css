@@ -1206,4 +1206,3 @@ body.touch-active .build-hint { right: 90px; bottom: 20px; }
 }
 .touch-action-btn:active { background: rgba(255,255,255,0.15); }
 #touchInteractBtn { right: 24px; bottom: 100px; }
-#touchBuildBtn    { right: 24px; bottom: 24px; }
