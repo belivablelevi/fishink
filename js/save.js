@@ -42,7 +42,7 @@ function serializeGame() {
     terrain: terrain.map(row => Array.from(row)),
     blocks: blocks.map(row => Array.from(row)),
     cellState,
-    player: { wx: player.wx, wy: player.wy, facing: player.facing },
+    player: { wx: player.wx, wy: player.wy, facing: player.facing, inBoat: player.inBoat },
   };
 }
 
@@ -75,7 +75,6 @@ function deserializeGame(data) {
   STARTER_R = data.STARTER_R;
 
   offshoreIslands = data.offshoreIslands || [];
-  initFerryBoats(); // re-seed visual boat state from restored island positions
 
   terrain   = data.terrain.map(row => Uint8Array.from(row));
   blocks    = data.blocks.map(row => Uint8Array.from(row));
@@ -93,9 +92,10 @@ function deserializeGame(data) {
       if (blocks[r][c] === B_FISHER) fisherTimers[`${c},${r}`] = effectiveFisherInterval();
     }
 
-  player.wx = data.player.wx;
-  player.wy = data.player.wy;
+  player.wx     = data.player.wx;
+  player.wy     = data.player.wy;
   player.facing = data.player.facing;
+  player.inBoat = data.player.inBoat || false;
 }
 
 function saveGame() {

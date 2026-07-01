@@ -452,8 +452,6 @@ function buildWorld() {
     island.dockR = approach.r;
   }
 
-  // Seed the ferry boats with the freshly discovered island positions
-  if (typeof initFerryBoats === 'function') initFerryBoats();
 }
 
 function makeCellState() {

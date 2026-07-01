@@ -89,9 +89,6 @@ function draw(ctx, canvas, dt) {
   // Shipping boat — fixed dock the Drone Delivery network sends fish to
   drawBoat(ctx);
 
-  // Ferry boats shuttling between cargo dock and offshore islands
-  drawFerryBoats(ctx);
-
   // Fishing Drones in flight — not tied to a single tile, drawn world-wide
   drawDrones(ctx);
 
@@ -1726,6 +1723,8 @@ function drawPlayer(ctx) {
   const px  = player.wx - cam.x;
   const py  = player.wy - cam.y;
 
+  if (player.inBoat) { drawPlayerBoat(ctx, px, py); return; }
+
   // Continuous stride: phase advances smoothly while moving (set in
   // updatePlayer), and walkAmp eases toward 0 on stopping so the motion fades
   // out instead of snapping back to a neutral pose.
@@ -2025,59 +2024,57 @@ function drawFerryBoat(ctx, screenX, screenY, angle) {
   ctx.restore();
 }
 
-// Renders all active ferry boats.  Each one travels from a slight offset near
-// the cargo-ship dock to its island's dock-approach tile and back, along a
-// gentle sinusoidal arc so the path isn't perfectly straight.
-function drawFerryBoats(ctx) {
-  const S = TILE_SIZE;
-  for (const b of ferryBoats) {
-    const t = b.t;
+// Draws the player's boat when they're sailing. The player's head and hat
+// peek out of the wheelhouse so they're still recognisable on the water.
+function drawPlayerBoat(ctx, px, py) {
+  const angleMap = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
+  const angle = angleMap[player.facing] || 0;
+  const bob   = Math.sin(game.time * 1.8) * 1.2; // kept in sync with drawFerryBoat
 
-    // Source (cargo-ship dock area) → destination (island dock approach)
-    const srcC = BOAT_C + 1.5, srcR = BOAT_R + 0.5;
-    const dstC = b.dockC + 0.5, dstR = b.dockR + 0.5;
-
-    const rawDx = dstC - srcC, rawDy = dstR - srcR;
-    const len   = Math.hypot(rawDx, rawDy) || 1;
-    const perpX = -rawDy / len, perpY = rawDx / len;
-    const CURVE = len * 0.1; // gentle arc amplitude
-
-    const wx = srcC + rawDx * t + perpX * CURVE * Math.sin(t * Math.PI);
-    const wy = srcR + rawDy * t + perpY * CURVE * Math.sin(t * Math.PI);
-
-    const screenX = wx * S - cam.x;
-    const screenY = wy * S - cam.y;
-
-    // Cull off-screen
-    if (screenX < -S * 3 || screenX > ctx.canvas.width  + S * 3) continue;
-    if (screenY < -S * 3 || screenY > ctx.canvas.height + S * 3) continue;
-
-    // Face direction of travel
-    const moving = b.phase === 'out' || b.phase === 'back';
-    const angle  = b.phase === 'back'
-      ? Math.atan2(-rawDy, -rawDx)
-      : Math.atan2( rawDy,  rawDx);
-
-    // Wake ripples (only while under way)
-    if (moving) {
-      ctx.save();
-      ctx.strokeStyle = 'rgba(255,255,255,0.20)';
-      ctx.lineWidth = 1.5;
-      for (let i = 0; i < 2; i++) {
-        const ph = (game.time * 0.9 + i * 0.55) % 1;
-        ctx.globalAlpha = 1 - ph;
-        ctx.beginPath();
-        ctx.ellipse(
-          screenX - Math.cos(angle) * (S * 0.6 + ph * 12),
-          screenY - Math.sin(angle) * (S * 0.6 + ph * 12),
-          3 + ph * 5, 1.5 + ph * 2, angle, 0, Math.PI * 2
-        );
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1;
-      ctx.restore();
+  // Wake ripples behind the stern when moving
+  if (player.moving) {
+    const S = TILE_SIZE;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.24)';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 3; i++) {
+      const ph = (game.time * 1.1 + i * 0.4) % 1;
+      ctx.globalAlpha = 1 - ph;
+      ctx.beginPath();
+      ctx.ellipse(
+        px - Math.cos(angle) * (S * 0.6 + ph * 18),
+        py - Math.sin(angle) * (S * 0.6 + ph * 18),
+        3 + ph * 7, 1.5 + ph * 2.5, angle, 0, Math.PI * 2
+      );
+      ctx.stroke();
     }
-
-    drawFerryBoat(ctx, screenX, screenY, angle);
+    ctx.globalAlpha = 1;
+    ctx.restore();
   }
+
+  // Boat hull + cabin (uses the same ferry-boat helper)
+  drawFerryBoat(ctx, px, py, angle);
+
+  // Player head + hat peeking above the cabin, bobbing with the boat
+  const Hh = TILE_SIZE * 0.42;
+  const headY = py - Hh - 10 + bob;
+
+  ctx.fillStyle = '#2a1808';
+  ctx.fillRect(px - 5, headY - 1, 10, 10);
+  ctx.fillStyle = '#f0d090';
+  ctx.fillRect(px - 4, headY,      8,  8);
+
+  ctx.fillStyle = '#1a1a2a';
+  if      (player.facing === 'right') { ctx.fillRect(px + 2, headY + 2, 2, 2); }
+  else if (player.facing === 'left')  { ctx.fillRect(px - 4, headY + 2, 2, 2); }
+  else if (player.facing === 'up')    { ctx.fillRect(px - 2, headY + 1, 2, 2); ctx.fillRect(px + 1, headY + 1, 2, 2); }
+  else                                { ctx.fillRect(px - 2, headY + 3, 2, 2); ctx.fillRect(px + 1, headY + 3, 2, 2); }
+
+  // Bucket hat
+  ctx.fillStyle = '#8a7550';
+  ctx.fillRect(px - 6, headY - 3, 12, 2);
+  ctx.fillStyle = '#a8916a';
+  ctx.fillRect(px - 4, headY - 6,  8, 4);
+  ctx.fillStyle = '#6e5c3e';
+  ctx.fillRect(px - 4, headY - 3,  8, 1.5);
 }

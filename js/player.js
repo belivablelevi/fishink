@@ -1,6 +1,7 @@
 // Fish INK Factory — player movement, camera, interaction
 
 const PLAYER_SPEED = 120;
+const BOAT_SPEED   = 150; // slightly faster than walking on land
 const PLAYER_HALF  = 10;
 const FISHING_ROD_RANGE = 6 * TILE_SIZE; // max cast distance from the player
 let ZOOM = 2.0;
@@ -39,6 +40,7 @@ const player = {
   walkPhase: 0,  // continuous stride angle — advances only while moving
   walkAmp: 0,    // 0..1, eases toward 1 while moving / 0 while idle, so steps fade out smoothly instead of snapping
   moving: false,
+  inBoat: false, // true while player is sailing on water
 };
 
 // Re-centers the player on the starter dock — call after buildWorld(), since
@@ -238,11 +240,16 @@ function playerCanMoveTo(wx, wy) {
     const tc = Math.floor(cx / TILE_SIZE);
     const tr = Math.floor(cy / TILE_SIZE);
     const t  = tileAt(tc, tr);
-    if (!tileWalkable(t)) return false;
-    // Can't walk through machines/sellers, but belts and the shore Fisher dock
-    // are walkable — the Drone Pad is solid equipment like any other machine.
-    const b = blockAt(tc, tr);
-    if (b !== B_NONE && !IS_TRANSPORT(b) && b !== B_FISHER) return false;
+    if (player.inBoat) {
+      // Boat travels on open water; T_SHORE lets the player glide to a beach
+      if (t !== T_WATER && t !== T_SHORE) return false;
+    } else {
+      if (!tileWalkable(t)) return false;
+      // Can't walk through machines/sellers, but belts and the shore Fisher
+      // dock are walkable — the Drone Pad is solid equipment like any other.
+      const b = blockAt(tc, tr);
+      if (b !== B_NONE && !IS_TRANSPORT(b) && b !== B_FISHER) return false;
+    }
   }
   return true;
 }
@@ -292,7 +299,7 @@ function updatePlayer(dt) {
   const dy = manualCast.active ? 0 : (ky !== 0 ? ky : joystickVector.y);
 
   const len = Math.sqrt(dx * dx + dy * dy) || 1;
-  const spd = PLAYER_SPEED * dt;
+  const spd = (player.inBoat ? BOAT_SPEED : PLAYER_SPEED) * dt;
   let moved = false;
 
   if (dx !== 0 || dy !== 0) {
@@ -319,7 +326,7 @@ function updatePlayer(dt) {
   // E key — first press: open popup or drop fish. While held: repeat fish-drop
   // at a fixed interval (hold-to-unload) without re-triggering popup opens.
   const eDown = !!(KEYS['e'] || KEYS['E']);
-  if (!buildMode.active) {
+  if (!buildMode.active && !player.inBoat) {
     if (eDown && !player._eWas) {
       triggerInteract();
       player._eHoldAccum = 0;
@@ -334,6 +341,31 @@ function updatePlayer(dt) {
     }
   }
   player._eWas = eDown;
+
+  // F key — embark / disembark the boat. T_SHORE is the embarkation zone in
+  // both directions: walk to the beach to board, sail back to beach to land.
+  const fDown = !!(KEYS['f'] || KEYS['F']);
+  if (!buildMode.active && fDown && !player._fWas) {
+    const pc = Math.floor(player.wx / TILE_SIZE);
+    const pr = Math.floor(player.wy / TILE_SIZE);
+    const t  = tileAt(pc, pr);
+    if (!player.inBoat) {
+      if (t === T_SHORE) {
+        player.inBoat = true;
+        queueToast('Boat — WASD to sail · F to land', '#7ec8e3');
+      } else {
+        queueToast('Walk to the beach (sandy edge) to board your boat', '#9aa0a8');
+      }
+    } else {
+      if (t === T_SHORE || tileWalkable(t)) {
+        player.inBoat = false;
+        queueToast('Back on land', '#7ec8e3');
+      } else {
+        queueToast('Sail to shore to disembark', '#9aa0a8');
+      }
+    }
+  }
+  player._fWas = fDown;
 }
 
 // Which popup kind (if any) E should open for a hovered block id.
@@ -444,9 +476,9 @@ function handleClick(e) {
       // Machines/sorter/crate/etc. now open via hover + E, not a direct
       // click — clicking elsewhere just dismisses an open popup, same as Escape
       closeBlockPopup();
-      // Cast at water only (not shore), within rod range
+      // Cast at water only (not shore), within rod range, not while boating
       const t = tileAt(c, r);
-      if (t === T_WATER && !manualCast.active && heldFish.length < effectiveMaxHeld()) {
+      if (t === T_WATER && !manualCast.active && !player.inBoat && heldFish.length < effectiveMaxHeld()) {
         const tx = c * TILE_SIZE + TILE_SIZE / 2, ty = r * TILE_SIZE + TILE_SIZE / 2;
         const dx = tx - player.wx, dy = ty - player.wy;
         if (Math.hypot(dx, dy) <= FISHING_ROD_RANGE) {
