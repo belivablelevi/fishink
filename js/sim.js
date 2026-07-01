@@ -197,6 +197,7 @@ function simUpdate(dt) {
       const id = blockAt(c, r);
       if (!IS_MACHINE(id)) continue;
       const st = stateAt(c, r);
+      if (st.bypassFlash > 0) st.bypassFlash = Math.max(0, st.bypassFlash - dt);
       if (!st.processing) continue;
       st.timer -= dt;
       if (st.timer <= 0) {
@@ -436,7 +437,8 @@ function transferItem(c, r, st, nc, nr, nb) {
     if (!nst.inputItem && !nst.processing && !nst.item) {
       const def = machineDef(nb);
       if (st.item.mults && st.item.mults.includes(def.label)) {
-        // Already processed by this machine type — pass through without re-processing
+        // Already processed by this machine type — pass through and flash red
+        nst.bypassFlash = 0.45;
         nst.item = st.item;
         st.item  = null;
       } else {

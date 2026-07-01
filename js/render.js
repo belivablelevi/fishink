@@ -747,6 +747,11 @@ function drawBlock(ctx, id, sx, sy, c, r, forceDir) {
       ctx.fillStyle = COLORS.accent;
       ctx.fillRect(sx + 3, sy + S - 6, (S - 6) * p, 3);
     }
+    if (st && st.bypassFlash > 0) {
+      const a = st.bypassFlash / 0.45;
+      ctx.fillStyle = `rgba(220,60,60,${(a * 0.55).toFixed(2)})`;
+      ctx.fillRect(sx, sy, S, S);
+    }
     drawLevelBadge(ctx, sx, sy, S, st && st.level);
     // Machine fish drawn in drawAllFish
 
