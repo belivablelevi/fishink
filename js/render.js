@@ -89,6 +89,9 @@ function draw(ctx, canvas, dt) {
   // Shipping boat — fixed dock the Drone Delivery network sends fish to
   drawBoat(ctx);
 
+  // Ferry boats shuttling between cargo dock and offshore islands
+  drawFerryBoats(ctx);
+
   // Fishing Drones in flight — not tied to a single tile, drawn world-wide
   drawDrones(ctx);
 
@@ -1951,5 +1954,130 @@ function drawToasts(ctx, canvas, dt) {
     ctx.fillText(t.msg, 27, y);
     y -= 34;
     ctx.globalAlpha = 1;
+  }
+}
+
+// ── Ferry boats ───────────────────────────────────────────────────────────────
+
+// Draws a single ferry boat centred at (screenX, screenY) pointing in
+// direction `angle` (radians, 0 = right). Smaller and simpler than the
+// main cargo ship — a wooden fishing vessel about 1.5×0.7 tiles.
+function drawFerryBoat(ctx, screenX, screenY, angle) {
+  const S  = TILE_SIZE;
+  const L  = S * 1.4;   // hull length bow-to-stern
+  const Hh = S * 0.42;  // hull half-height at midship
+
+  ctx.save();
+  ctx.translate(screenX, screenY);
+  ctx.rotate(angle);
+  ctx.translate(0, Math.sin(game.time * 1.8) * 1.2); // gentle bob
+
+  // ── Hull ─────────────────────────────────────────────────────────────────
+  ctx.fillStyle = '#7a5c2e';
+  ctx.beginPath();
+  ctx.moveTo(-L / 2,      -Hh * 0.3);
+  ctx.lineTo(-L / 2 + L * 0.2, -Hh);
+  ctx.lineTo( L / 2 - L * 0.1, -Hh);
+  ctx.lineTo( L / 2,       0);
+  ctx.lineTo(-L / 2,       0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#4a3618';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // ── Deck ─────────────────────────────────────────────────────────────────
+  ctx.fillStyle = '#a07830';
+  ctx.fillRect(-L / 2 + L * 0.2, -Hh, L * 0.66, Hh * 0.45);
+
+  // ── Wheelhouse (cabin) ───────────────────────────────────────────────────
+  const cabX = -L / 2 + L * 0.1;
+  const cabW = L * 0.28;
+  const cabH = Hh * 0.8;
+  ctx.fillStyle = '#c4a25a';
+  ctx.fillRect(cabX, -Hh - cabH, cabW, cabH);
+  ctx.strokeStyle = '#8a6e30';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(cabX, -Hh - cabH, cabW, cabH);
+
+  // Windows
+  ctx.fillStyle = 'rgba(130,190,240,0.75)';
+  ctx.fillRect(cabX + 3,           -Hh - cabH * 0.75, cabW * 0.36, cabH * 0.38);
+  ctx.fillRect(cabX + cabW * 0.54, -Hh - cabH * 0.75, cabW * 0.32, cabH * 0.38);
+
+  // ── Mast + flag ──────────────────────────────────────────────────────────
+  const mastX = cabX + cabW * 0.5;
+  ctx.strokeStyle = '#5a4010';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(mastX, -Hh - cabH);
+  ctx.lineTo(mastX, -Hh - cabH - Hh * 1.1);
+  ctx.stroke();
+
+  ctx.fillStyle = '#e0753a';
+  ctx.beginPath();
+  ctx.moveTo(mastX,            -Hh - cabH - Hh * 1.1);
+  ctx.lineTo(mastX + L * 0.13, -Hh - cabH - Hh * 0.8);
+  ctx.lineTo(mastX,            -Hh - cabH - Hh * 0.5);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// Renders all active ferry boats.  Each one travels from a slight offset near
+// the cargo-ship dock to its island's dock-approach tile and back, along a
+// gentle sinusoidal arc so the path isn't perfectly straight.
+function drawFerryBoats(ctx) {
+  const S = TILE_SIZE;
+  for (const b of ferryBoats) {
+    const t = b.t;
+
+    // Source (cargo-ship dock area) → destination (island dock approach)
+    const srcC = BOAT_C + 1.5, srcR = BOAT_R + 0.5;
+    const dstC = b.dockC + 0.5, dstR = b.dockR + 0.5;
+
+    const rawDx = dstC - srcC, rawDy = dstR - srcR;
+    const len   = Math.hypot(rawDx, rawDy) || 1;
+    const perpX = -rawDy / len, perpY = rawDx / len;
+    const CURVE = len * 0.1; // gentle arc amplitude
+
+    const wx = srcC + rawDx * t + perpX * CURVE * Math.sin(t * Math.PI);
+    const wy = srcR + rawDy * t + perpY * CURVE * Math.sin(t * Math.PI);
+
+    const screenX = wx * S - cam.x;
+    const screenY = wy * S - cam.y;
+
+    // Cull off-screen
+    if (screenX < -S * 3 || screenX > ctx.canvas.width  + S * 3) continue;
+    if (screenY < -S * 3 || screenY > ctx.canvas.height + S * 3) continue;
+
+    // Face direction of travel
+    const moving = b.phase === 'out' || b.phase === 'back';
+    const angle  = b.phase === 'back'
+      ? Math.atan2(-rawDy, -rawDx)
+      : Math.atan2( rawDy,  rawDx);
+
+    // Wake ripples (only while under way)
+    if (moving) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,255,0.20)';
+      ctx.lineWidth = 1.5;
+      for (let i = 0; i < 2; i++) {
+        const ph = (game.time * 0.9 + i * 0.55) % 1;
+        ctx.globalAlpha = 1 - ph;
+        ctx.beginPath();
+        ctx.ellipse(
+          screenX - Math.cos(angle) * (S * 0.6 + ph * 12),
+          screenY - Math.sin(angle) * (S * 0.6 + ph * 12),
+          3 + ph * 5, 1.5 + ph * 2, angle, 0, Math.PI * 2
+        );
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+
+    drawFerryBoat(ctx, screenX, screenY, angle);
   }
 }

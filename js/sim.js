@@ -29,6 +29,44 @@ function spawnFloatText(text, wx, wy, color) {
   floatTexts.push({ text, wx, wy, life: FLOAT_TEXT_LIFE, color: color || '#4dca7c' });
 }
 
+// ── Ferry boats (cosmetic — reserved for future boat-travel gameplay) ─────────
+// Each boat shuttles between the cargo-ship dock (BOAT_C/BOAT_R) and one
+// offshore island's dock approach position.  Phase cycle:
+//   'out' → move t 0→1 → 'atIsland' wait → 'back' → move t 1→0 → 'atDock' wait
+const FERRY_LEG_SECS  = 50; // seconds one way
+const FERRY_WAIT_SECS = 6;  // seconds parked at each end
+
+let ferryBoats = []; // { dockC, dockR, t, phase, waitTimer }
+
+function initFerryBoats() {
+  const n = offshoreIslands.length;
+  ferryBoats = offshoreIslands.map((island, i) => ({
+    dockC: island.dockC,
+    dockR: island.dockR,
+    t: n > 1 ? i / n : 0, // stagger so boats don't all move in lockstep
+    phase: 'out',
+    waitTimer: 0,
+  }));
+}
+
+function updateFerryBoats(dt) {
+  for (const b of ferryBoats) {
+    if (b.phase === 'out') {
+      b.t += dt / FERRY_LEG_SECS;
+      if (b.t >= 1) { b.t = 1; b.phase = 'atIsland'; b.waitTimer = FERRY_WAIT_SECS; }
+    } else if (b.phase === 'atIsland') {
+      b.waitTimer -= dt;
+      if (b.waitTimer <= 0) b.phase = 'back';
+    } else if (b.phase === 'back') {
+      b.t -= dt / FERRY_LEG_SECS;
+      if (b.t <= 0) { b.t = 0; b.phase = 'atDock'; b.waitTimer = FERRY_WAIT_SECS * 0.5; }
+    } else { // atDock
+      b.waitTimer -= dt;
+      if (b.waitTimer <= 0) b.phase = 'out';
+    }
+  }
+}
+
 function queueToast(msg, color) {
   toasts.push({ msg, color: color || '#4dca7c', life: 2.2 });
 }
@@ -170,6 +208,8 @@ function simUpdate(dt) {
     saveGame();
     submitLeaderboardScore();
   }
+
+  updateFerryBoats(dt);
 
   blockCountAccum += dt;
   if (blockCountAccum >= 1) {

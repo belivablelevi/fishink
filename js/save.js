@@ -38,6 +38,7 @@ function serializeGame() {
     blueprintLibrary: blueprint.library, blueprintActiveId: blueprint.activeId, nextBlueprintId,
     heldFish,
     STARTER_C, STARTER_R,
+    offshoreIslands,
     terrain: terrain.map(row => Array.from(row)),
     blocks: blocks.map(row => Array.from(row)),
     cellState,
@@ -72,6 +73,9 @@ function deserializeGame(data) {
 
   STARTER_C = data.STARTER_C;
   STARTER_R = data.STARTER_R;
+
+  offshoreIslands = data.offshoreIslands || [];
+  initFerryBoats(); // re-seed visual boat state from restored island positions
 
   terrain   = data.terrain.map(row => Uint8Array.from(row));
   blocks    = data.blocks.map(row => Uint8Array.from(row));

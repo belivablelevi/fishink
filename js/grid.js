@@ -160,6 +160,12 @@ const BOAT_CLEAR = 5; // tiles radius kept as open ocean around the boat
 
 const ISLAND_EDGE_MARGIN = 3; // tiles of guaranteed ocean kept around the world border
 
+// Offshore islands discovered by buildWorld() — each entry gets cx/cy (island
+// centre) and dockC/dockR (first open-water tile on the side facing the cargo
+// ship, where the ferry boat parks).  Persisted in the save file so ferry
+// boats survive reloads without re-running buildWorld().
+let offshoreIslands = [];
+
 function randRange(min, max) { return min + Math.random() * (max - min); }
 
 // Random-walking union of circles — each step nudges the center and resizes
@@ -240,6 +246,8 @@ function carvePond(radius) {
 // 3-tile clearance from any existing land so there's always open water between
 // offshore islands and the main island. Returns true if placed, false if the
 // requested position overlapped existing land (caller retries or skips).
+// Returns { cx, cy } (island centroid) on successful placement, null if
+// rejected (overlaps land or is too close to the cargo-ship dock).
 function carveOffshoreIsland(cx, cy, maxR) {
   const steps = 2 + Math.floor(Math.random() * 2);
   const circles = [];
@@ -266,7 +274,7 @@ function carveOffshoreIsland(cx, cy, maxR) {
     const r1 = Math.min(WORLD_ROWS - 1, Math.ceil(circ.cy + circ.r + CLEAR));
     for (let row = r0; row <= r1; row++)
       for (let col = c0; col <= c1; col++)
-        if (terrain[row][col] === T_EMPTY) return false;
+        if (terrain[row][col] === T_EMPTY) return null;
   }
 
   for (const circ of circles) {
@@ -280,7 +288,38 @@ function carveOffshoreIsland(cx, cy, maxR) {
         if (dx * dx + dy * dy <= circ.r * circ.r) terrain[row][col] = T_EMPTY;
       }
   }
-  return true;
+
+  // Return the centroid of all painted circles as the island's reference point
+  const centC = circles.reduce((s, c) => s + c.cx, 0) / circles.length;
+  const centR = circles.reduce((s, c) => s + c.cy, 0) / circles.length;
+  return { cx: centC, cy: centR };
+}
+
+// Walks from island centre toward the cargo ship and returns the first
+// T_WATER tile it crosses, stepped one tile further offshore so the ferry
+// boat parks just off the beach rather than right on the shoreline.
+// Must be called AFTER applyShorePass() so T_SHORE tiles are already set.
+function findIslandDockApproach(cx, cy) {
+  const dx = BOAT_C - cx, dy = BOAT_R - cy;
+  const dist = Math.hypot(dx, dy);
+  if (dist === 0) return { c: Math.round(cx), r: Math.round(cy) };
+  const ux = dx / dist, uy = dy / dist;
+  let firstWater = null;
+  for (let step = 0; step <= Math.ceil(dist) + 2; step++) {
+    const c = Math.round(cx + ux * step);
+    const r = Math.round(cy + uy * step);
+    if (c < 0 || c >= WORLD_COLS || r < 0 || r >= WORLD_ROWS) break;
+    if (tileAt(c, r) === T_WATER) {
+      if (firstWater === null) firstWater = { c, r };
+      // One extra tile further into open water
+      const c2 = Math.round(cx + ux * (step + 2));
+      const r2 = Math.round(cy + uy * (step + 2));
+      if (c2 >= 0 && c2 < WORLD_COLS && r2 >= 0 && r2 < WORLD_ROWS && tileAt(c2, r2) === T_WATER)
+        return { c: c2, r: r2 };
+      return { c, r };
+    }
+  }
+  return firstWater || { c: Math.round(cx), r: Math.round(cy) };
 }
 
 // Any land tile touching water becomes sand — covers the coastline and every
@@ -364,11 +403,13 @@ function buildWorld() {
     { cx:  8,                cy:  WORLD_ROWS - 9  }, // SW
     { cx:  WORLD_COLS - 10,  cy:  WORLD_ROWS - 9  }, // SE
   ];
+  offshoreIslands = [];
   for (const slot of offshoreSlots) {
     for (let attempt = 0; attempt < 4; attempt++) {
       const jx = slot.cx + randRange(-3, 3);
       const jy = slot.cy + randRange(-2, 2);
-      if (carveOffshoreIsland(jx, jy, 4 + Math.random() * 2)) break;
+      const result = carveOffshoreIsland(jx, jy, 4 + Math.random() * 2);
+      if (result) { offshoreIslands.push(result); break; }
     }
   }
 
@@ -402,6 +443,17 @@ function buildWorld() {
   blocks[STARTER_R][STARTER_C + 2] = B_BELT;
   blocks[STARTER_R][STARTER_C + 3] = B_SELLER;
   // default dir (0 = right) from makeCellState() already points them the right way
+
+  // Compute dock approach positions for each offshore island. Must be done
+  // after applyShorePass() so T_SHORE tiles are already set.
+  for (const island of offshoreIslands) {
+    const approach = findIslandDockApproach(island.cx, island.cy);
+    island.dockC = approach.c;
+    island.dockR = approach.r;
+  }
+
+  // Seed the ferry boats with the freshly discovered island positions
+  if (typeof initFerryBoats === 'function') initFerryBoats();
 }
 
 function makeCellState() {
