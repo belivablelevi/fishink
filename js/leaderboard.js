@@ -38,15 +38,15 @@ const LEADERBOARD_NAME_KEY = 'fishink_leaderboard_name';
 // phonetic substitutions (ph→f), separator insertion (f.u.c.k), and more.
 
 const BANNED_WORDS = [
-  // Core profanity + common phonetic/leet bypasses
-  'fuck','fuk','fvk','fux','fok','fck','fak','fack','phuk',
-  'shit','sht','shyt','sh1t',
+  // Core profanity + phonetic/leet/vowel-drop bypasses
+  'fuck','fuk','fvk','fux','fok','fck','fak','fack','phuk','fucc','fvcc',
+  'shit','sht','shyt',
   'ass','arse',
-  'bitch','btch',
-  'cunt',
-  'dick','dik',
-  'cock','cok',
-  'pussy','pusi',
+  'bitch','btch','bytch',
+  'cunt','cvnt','kunt','cont','cnt',
+  'dick','dik','dck',
+  'cock','cok','cck',
+  'pussy','pusi','pssy',
   'piss','pis',
   'bastard',
   'crap',
@@ -55,8 +55,9 @@ const BANNED_WORDS = [
   'jizz','jiz',
   'twat','twot',
   'wank','wanker',
-  // Racial slurs
-  'nigger','nigga','niga','nigg',
+  'slut','sloot',
+  // Racial slurs + common vowel-drop / qq-substitution bypasses
+  'nigger','nigga','niga','nigg','ngger','nggr',
   'coon',
   'chink','chinc',
   'gook',
@@ -74,7 +75,6 @@ const BANNED_WORDS = [
   'retard',
   // Misogynistic slurs
   'whore','whor',
-  'slut',
   // Hate symbols / figures
   'rape',
   'nazi',
@@ -110,15 +110,16 @@ function normaliseName(s) {
   n = n.replace(/3/g,     'e');
   n = n.replace(/[1!|]/g, 'i');
   n = n.replace(/0/g,     'o');
-  n = n.replace(/[5]/g,   's'); // $ handled below after non-alpha strip
+  n = n.replace(/[$5]/g,  's'); // $ must be converted before the non-alpha strip
   n = n.replace(/[7+]/g,  't');
   n = n.replace(/8/g,     'b');
   n = n.replace(/[69]/g,  'g'); // 6 and 9 both used as 'g' (n166er, n1gg9r)
   n = n.replace(/2/g,     'z');
 
   // 4. Phonetic substitutions
-  n = n.replace(/ph/g, 'f');  // phuck → fuck
-  n = n.replace(/ck/g, 'k');  // fvck → fvk
+  n = n.replace(/ph/g, 'f');   // phuck → fuck
+  n = n.replace(/qq/g, 'gg');  // niqqa → nigga, niqqer → nigger
+  n = n.replace(/ck/g, 'k');   // fvck → fvk
   n = n.replace(/qu/g, 'k');
 
   // 5. Strip everything non-alpha — removes separators like f.u.c.k, f-u-c-k,
