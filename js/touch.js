@@ -127,6 +127,16 @@ function createActionButtons() {
     triggerInteract();
   });
   document.body.appendChild(interactBtn);
+
+  const buildBtn = document.createElement('button');
+  buildBtn.id = 'touchBuildBtn';
+  buildBtn.className = 'touch-action-btn';
+  buildBtn.textContent = 'Build';
+  buildBtn.addEventListener('touchstart', e => {
+    e.preventDefault();
+    triggerBuildToggle();
+  });
+  document.body.appendChild(buildBtn);
 }
 
 // The joystick and action buttons are sized/positioned for a wide, short
