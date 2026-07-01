@@ -29,7 +29,11 @@ const START_SCREENS = [
       `;
       const input = card.querySelector('#startNameInput');
       const btn   = card.querySelector('#startNameBtn');
-      const submit = () => { if (setLeaderboardName(input.value)) done(); };
+      const submit = () => {
+        const result = setLeaderboardName(input.value);
+        if (result === 'inappropriate') { input.style.borderColor = '#e05c5c'; input.placeholder = 'Keep it clean!'; input.value = ''; return; }
+        if (result) done();
+      };
       btn.addEventListener('click', submit);
       input.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
       input.focus();

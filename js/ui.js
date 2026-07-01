@@ -789,7 +789,12 @@ function renderLeaderboardNamePrompt() {
   joinBtn.className = 'upgrade-buy';
   joinBtn.textContent = 'Join leaderboard';
   joinBtn.addEventListener('click', () => {
-    if (setLeaderboardName(input.value)) {
+    const result = setLeaderboardName(input.value);
+    if (result === 'inappropriate') {
+      input.style.borderColor = '#e05c5c';
+      input.value = '';
+      input.placeholder = 'Keep it clean!';
+    } else if (result) {
       submitLeaderboardScore();
       renderLeaderboardPanel();
     }

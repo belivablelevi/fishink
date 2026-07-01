@@ -14,6 +14,42 @@ var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const LEADERBOARD_ID_KEY   = 'fishink_leaderboard_id';
 const LEADERBOARD_NAME_KEY = 'fishink_leaderboard_name';
 
+// ── Admin name override ────────────────────────────────────────────────────
+// Add a `name_locked boolean default false` column to leaderboard_scores.
+// When you want to rename a player: edit their `name` in the Supabase table
+// editor, then set `name_locked = true`. This trigger will then silently
+// ignore any name the client submits, keeping your version intact:
+//
+//   CREATE OR REPLACE FUNCTION prevent_locked_name_update()
+//   RETURNS TRIGGER AS $$
+//   BEGIN
+//     IF OLD.name_locked = TRUE THEN NEW.name = OLD.name; END IF;
+//     RETURN NEW;
+//   END;
+//   $$ LANGUAGE plpgsql;
+//
+//   CREATE TRIGGER protect_locked_name
+//   BEFORE UPDATE ON leaderboard_scores
+//   FOR EACH ROW EXECUTE FUNCTION prevent_locked_name_update();
+// ──────────────────────────────────────────────────────────────────────────
+
+// Basic profanity filter — normalises leet-speak before checking
+const BANNED_WORDS = [
+  'fuck','shit','ass','bitch','cunt','dick','cock','pussy','nigger','nigga',
+  'faggot','fag','retard','whore','slut','bastard','piss','damn','hell',
+  'rape','kill','nazi','hitler',
+];
+function normaliseName(s) {
+  return s.toLowerCase()
+    .replace(/[4@]/g,'a').replace(/3/g,'e').replace(/[1!|]/g,'i')
+    .replace(/0/g,'o').replace(/[5$]/g,'s').replace(/[7+]/g,'t')
+    .replace(/[^a-z0-9]/g,'');
+}
+function nameIsClean(name) {
+  const n = normaliseName(name);
+  return !BANNED_WORDS.some(w => n.includes(w));
+}
+
 function isLeaderboardConfigured() {
   return SUPABASE_URL !== 'YOUR_SUPABASE_URL' && SUPABASE_ANON !== 'YOUR_SUPABASE_ANON_KEY';
 }
@@ -34,6 +70,7 @@ function getLeaderboardName() {
 function setLeaderboardName(name) {
   const trimmed = (name || '').trim().slice(0, 20);
   if (!trimmed) return false;
+  if (!nameIsClean(trimmed)) return 'inappropriate';
   localStorage.setItem(LEADERBOARD_NAME_KEY, trimmed);
   return true;
 }
