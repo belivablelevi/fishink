@@ -434,12 +434,12 @@ function transferItem(c, r, st, nc, nr, nb) {
   if (IS_MACHINE(nb)) {
     const nst = stateAt(nc, nr);
     if (!nst.inputItem && !nst.processing && !nst.item) {
-      if (st.item.mults && st.item.mults.length > 0) {
-        // Already processed by a machine — pass straight through to the output side
+      const def = machineDef(nb);
+      if (st.item.mults && st.item.mults.includes(def.label)) {
+        // Already processed by this machine type — pass through without re-processing
         nst.item = st.item;
         st.item  = null;
       } else {
-        const def = machineDef(nb);
         nst.inputItem  = st.item;
         nst.processing = true;
         nst.timer      = def.processTime * machineSpeedMult(nst.level || 0);
