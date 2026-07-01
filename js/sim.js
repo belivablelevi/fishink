@@ -887,6 +887,8 @@ function buyAndPlace(id, c, r, dir, silent = false) {
                   : IS_TRANSPORT(id)   ? 'place_belt'
                   : null;
   if (tutAction) tutorialNotify(tutAction);
+  // link_seller advances on any subsequent belt placement (same trigger, different step)
+  if (IS_TRANSPORT(id)) tutorialNotify('link_seller');
   saveGame();
   return true;
 }

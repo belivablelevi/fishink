@@ -54,12 +54,17 @@ const TUTORIAL_PHASE2_STEPS = [
   },
   {
     id: 'place_belt',
-    text: 'Select <strong>Belt</strong> and connect your Fisher toward a Seller. Belts carry fish automatically — rotate with <span class="tutorial-key">R</span>.',
-    target: () => null,
+    text: 'Select <strong>Belt</strong> and place it next to your Fisher, pointing toward the Seller. Rotate with <span class="tutorial-key">R</span>.',
+    target: () => TUT.sellerTile,
+  },
+  {
+    id: 'link_seller',
+    text: 'Keep laying Belts to build a complete path to the <strong>Seller</strong> — the arrow shows where! Each belt must point in the right direction.',
+    target: () => TUT.sellerTile,
   },
   {
     id: 'close_build',
-    text: 'Great setup! Press <span class="tutorial-key">Esc</span> to exit Build Mode and watch your factory run.',
+    text: 'Path connected! Press <span class="tutorial-key">Esc</span> to exit Build Mode and watch fish sell automatically.',
     target: () => null,
   },
 ];
