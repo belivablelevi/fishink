@@ -200,8 +200,8 @@ function drawFloatTexts(ctx, canvas) {
   for (const ft of floatTexts) {
     const t  = ft.life / FLOAT_TEXT_LIFE; // 1→0
     const alpha = t < 0.35 ? t / 0.35 : 1; // fade out in last 35%
-    const sx = (ft.wx - cam.x) * ZOOM + cw / 2;
-    const sy = (ft.wy - cam.y) * ZOOM + ch / 2;
+    const sx = (ft.wx - cam.x) * ZOOM;
+    const sy = (ft.wy - cam.y) * ZOOM;
     ctx.globalAlpha = alpha;
     ctx.strokeStyle = 'rgba(0,0,0,0.7)';
     ctx.lineWidth = 3;
