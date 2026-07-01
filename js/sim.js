@@ -23,8 +23,8 @@ const toasts = [];
 
 // Floating catch labels that rise above the catch point and fade out
 const floatTexts = [];
-const FLOAT_TEXT_SPEED = 22; // world-pixels per second, rising
-const FLOAT_TEXT_LIFE  = 1.6;
+const FLOAT_TEXT_SPEED = 55; // world-pixels per second, rising
+const FLOAT_TEXT_LIFE  = 2.0;
 function spawnFloatText(text, wx, wy, color) {
   floatTexts.push({ text, wx, wy, life: FLOAT_TEXT_LIFE, color: color || '#4dca7c' });
 }
@@ -751,7 +751,7 @@ function completeCast() {
     catchColor
   );
   // Floating label above the player (not the water tile) so it's always visible
-  spawnFloatText((rare ? '★ ' : '') + fish.species, player.wx, player.wy - TILE_SIZE, catchColor);
+  spawnFloatText((rare ? '★ ' : '') + fish.species, player.wx, player.wy - TILE_SIZE * 2, catchColor);
   sfxCatch(rare);
   spawnParticles(manualCast.wx, manualCast.wy, 'splash', 6);
   if (rare) {

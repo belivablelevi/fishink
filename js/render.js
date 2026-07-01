@@ -194,7 +194,7 @@ function drawFloatTexts(ctx, canvas) {
   if (!floatTexts.length) return;
   const cw = canvas.width, ch = canvas.height;
   ctx.save();
-  ctx.font = '700 13px "Chakra Petch", sans-serif';
+  ctx.font = '700 18px "Press Start 2P", "Courier New", monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   for (const ft of floatTexts) {
