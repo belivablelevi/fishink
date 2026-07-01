@@ -1855,16 +1855,13 @@ function drawHUD(ctx, canvas, dt) {
     cashPillRect.bottom = r.bottom;
   }
 
-  // Corner hints
-  ctx.fillStyle = 'rgba(255,255,255,0.28)';
-  ctx.font = '11px "Segoe UI", system-ui, sans-serif';
-  ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
-  ctx.fillText(
-    buildMode.active
-      ? 'Left-click place  |  Right-click remove/cancel  |  [B] Toggle menu'
-      : '[B] Build  |  Click water to fish',
-    cw - 14, ch - 10
-  );
+  // Corner hint — only show placement controls while in build mode
+  if (buildMode.active) {
+    ctx.fillStyle = 'rgba(255,255,255,0.28)';
+    ctx.font = '11px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+    ctx.fillText('Left-click place  |  Right-click remove/cancel  |  [B] Toggle menu', cw - 14, ch - 10);
+  }
 
   // Stats pill
   ctx.fillStyle = 'rgba(8,14,8,0.75)';

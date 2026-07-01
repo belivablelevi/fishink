@@ -1008,46 +1008,44 @@ body.touch-active .tutorial-overlay { bottom: 180px; }
    build mode. Pulses during the tutorial's build_open step. */
 .build-hint {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: 20px;
+  right: 20px;
   z-index: 20;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
   background: rgba(10,18,16,0.92);
-  border: 1px solid var(--c-border);
-  border-radius: 8px;
-  padding: 8px 14px;
+  border: 2px solid var(--c-border);
+  border-radius: 12px;
   font-family: var(--font-ui);
   cursor: pointer;
-  transition: background 0.15s, transform 0.1s;
+  transition: background 0.15s, transform 0.1s, border-color 0.15s;
   user-select: none;
   appearance: none;
   color: inherit;
 }
-.build-hint:hover { background: rgba(25,42,35,0.97); }
+.build-hint:hover {
+  background: rgba(25,42,35,0.97);
+  border-color: var(--c-accent);
+  transform: scale(1.06);
+}
 .build-hint.hidden { display: none; }
 .build-hint-key {
-  background: var(--c-accent);
-  color: #07080f;
-  border-radius: 4px;
-  padding: 2px 8px;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-}
-.build-hint-label {
-  color: var(--c-text);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--c-accent);
+  line-height: 1;
 }
 /* Pulsing glow when tutorial is asking the player to press B */
-.build-hint-pulse .build-hint-key {
+.build-hint-pulse {
   animation: buildKeyPulse 1s ease-in-out infinite;
 }
 @keyframes buildKeyPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(232,160,48,0.7); }
-  50%       { box-shadow: 0 0 0 10px rgba(232,160,48,0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(232,160,48,0.7); border-color: rgba(232,160,48,0.8); }
+  50%       { box-shadow: 0 0 0 12px rgba(232,160,48,0); border-color: rgba(232,160,48,0.3); }
 }
 /* On touch devices the joystick takes the bottom-right corner — push hint left */
 body.touch-active .build-hint { right: 90px; bottom: 20px; }
