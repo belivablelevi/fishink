@@ -152,11 +152,11 @@ function countAutoFishers() { return autoFisherCount; }
 let STARTER_C = 30;
 let STARTER_R = 10;
 
-// Fixed shipping-boat dock — sits in the open ocean corner that
-// carveIslandBlob() never reaches (see ISLAND_EDGE_MARGIN below), so it's
-// guaranteed clear of land/ponds on every world regardless of seed.
-const BOAT_C = WORLD_COLS - 6;
+// Fixed shipping-boat dock. Guaranteed clear of land by a post-generation
+// force-clear in buildWorld() — no terrain pass may leave land here.
+const BOAT_C = WORLD_COLS - 6;  // col 58
 const BOAT_R = 6;
+const BOAT_CLEAR = 5; // tiles radius kept as open ocean around the boat
 
 const ISLAND_EDGE_MARGIN = 3; // tiles of guaranteed ocean kept around the world border
 
@@ -251,6 +251,13 @@ function carveOffshoreIsland(cx, cy, maxR) {
     r  = Math.max(2, Math.min(maxR, r + randRange(-1, 1)));
   }
 
+  // Reject if any circle lands within BOAT_CLEAR tiles of the boat dock.
+  for (const circ of circles) {
+    const dx = circ.cx - BOAT_C, dy = circ.cy - BOAT_R;
+    if (Math.sqrt(dx * dx + dy * dy) - circ.r < BOAT_CLEAR) return false;
+  }
+
+  // Reject if too close to existing land (3-tile clearance from main island).
   const CLEAR = 3;
   for (const circ of circles) {
     const c0 = Math.max(0, Math.floor(circ.cx - circ.r - CLEAR));
@@ -347,15 +354,15 @@ function buildWorld() {
     if (p) ponds.push(p);
   }
 
-  // Offshore islands — small landmasses dotted around the ocean, one per
-  // corner, reserved for the future boat-travel system. Each slot gets up to
-  // 4 placement attempts with random jitter so a crowded coastline doesn't
-  // block them entirely; unsuccessful attempts are silently skipped.
+  // Offshore islands — small landmasses dotted around the ocean, reserved for
+  // the future boat-travel system. The NE corner is intentionally omitted: the
+  // cargo ship docks there (BOAT_C/BOAT_R) and needs clear water. Each slot
+  // gets up to 4 placement attempts with jitter; unsuccessful ones are skipped.
   const offshoreSlots = [
-    { cx:  8,                 cy:  7                 }, // NW
-    { cx:  WORLD_COLS - 10,  cy:  7                 }, // NE
-    { cx:  8,                 cy:  WORLD_ROWS - 9   }, // SW
-    { cx:  WORLD_COLS - 10,  cy:  WORLD_ROWS - 9   }, // SE
+    { cx:  8,                cy:  7               }, // NW
+    { cx:  22,               cy:  5               }, // N-mid (clear of NE boat dock)
+    { cx:  8,                cy:  WORLD_ROWS - 9  }, // SW
+    { cx:  WORLD_COLS - 10,  cy:  WORLD_ROWS - 9  }, // SE
   ];
   for (const slot of offshoreSlots) {
     for (let attempt = 0; attempt < 4; attempt++) {
@@ -366,6 +373,15 @@ function buildWorld() {
   }
 
   applyShorePass();
+
+  // ── Boat dock guarantee ───────────────────────────────────────────────────
+  // Belt-and-suspenders: regardless of what any terrain pass produced, force
+  // the zone around the cargo-ship dock back to open water. This is the single
+  // source of truth — if BOAT_C/BOAT_R ever moves, update BOAT_CLEAR too.
+  for (let r = BOAT_R - BOAT_CLEAR; r <= BOAT_R + BOAT_CLEAR; r++)
+    for (let c = BOAT_C - BOAT_CLEAR; c <= BOAT_C + BOAT_CLEAR; c++)
+      if (r >= 0 && r < WORLD_ROWS && c >= 0 && c < WORLD_COLS)
+        terrain[r][c] = T_WATER;
 
   // ── Starter concrete platform ──────────────────────────────────────────────
   // A 3-row × 8-col pad, placed on whichever dry patch landed closest to the
