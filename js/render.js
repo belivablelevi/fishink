@@ -197,7 +197,7 @@ function draw(ctx, canvas, dt) {
 function drawFloatTexts(ctx) {
   if (!floatTexts.length) return;
   ctx.save();
-  ctx.font = '700 9px "Press Start 2P", "Courier New", monospace';
+  ctx.font = '500 6px "Press Start 2P", "Courier New", monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   for (const ft of floatTexts) {
@@ -206,8 +206,8 @@ function drawFloatTexts(ctx) {
     const x = ft.wx - cam.x;
     const y = ft.wy - cam.y;
     ctx.globalAlpha = alpha;
-    ctx.strokeStyle = 'rgba(0,0,0,0.75)';
-    ctx.lineWidth = 2.5 / ZOOM;
+    ctx.strokeStyle = 'rgba(0,0,0,0.9)';
+    ctx.lineWidth = 2 / ZOOM;
     ctx.strokeText(ft.text, x, y);
     ctx.fillStyle = ft.color;
     ctx.fillText(ft.text, x, y);
