@@ -309,31 +309,41 @@ function drawHoverTooltip(ctx, canvas) {
 }
 
 // ─── Day/night lighting ──────────────────────────────────────────────────────
-// dayTime 0 = dawn. Tint ramps warm at dawn/dusk, deep blue at night, clear at
-// midday — all purely a function of the existing clock, no extra state.
+// Smooth continuous overlay — every segment boundary has matching alpha so
+// there are no jumps. smoothstep eases each ramp in and out.
 function drawDayNightOverlay(ctx, canvas) {
   const p = game.dayTime / DAY_CYCLE_SECONDS; // 0..1 across one full day
+  const ss = t => t * t * (3 - 2 * t);       // smoothstep easer
   let color, alpha;
-  if (p < 0.05 || p > 0.95) {           // deep night
+
+  if (p < 0.05) {                             // deep night (start)
     color = '20,30,60'; alpha = 0.35;
-  } else if (p < 0.1) {                  // dawn
-    const t = (p - 0.05) / 0.05;
-    color = '230,150,80'; alpha = 0.22 * (1 - t);
-  } else if (p < 0.4) {                  // day
+  } else if (p < 0.18) {                      // dawn: night dims, warm glow fades
+    const t = ss((p - 0.05) / 0.13);
+    const r = Math.round(20  + t * 210);
+    const g = Math.round(30  + t * 120);
+    const b = Math.round(60  + t * 20);
+    color = `${r},${g},${b}`; alpha = 0.35 * (1 - t);
+  } else if (p < 0.42) {                      // day: clear
     color = '0,0,0'; alpha = 0;
-  } else if (p < 0.5) {                  // dusk approaching
-    const t = (p - 0.4) / 0.1;
-    color = '230,130,70'; alpha = 0.2 * t;
-  } else if (p < 0.55) {                 // dusk peak
-    color = '230,130,70'; alpha = 0.2;
-  } else if (p < 0.9) {                  // evening fading to night
-    const t = (p - 0.55) / 0.35;
-    color = `${Math.round(230 - t * 210)},${Math.round(130 - t * 100)},${Math.round(70 + t * -10 + 60)}`;
-    alpha = 0.2 + t * 0.15;
-  } else {                                // ramp into deep night
-    const t = (p - 0.9) / 0.05;
-    color = '20,30,60'; alpha = 0.35 * t;
+  } else if (p < 0.52) {                      // dusk approaching
+    const t = ss((p - 0.42) / 0.10);
+    color = '230,130,70'; alpha = 0.20 * t;
+  } else if (p < 0.60) {                      // dusk peak
+    color = '230,130,70'; alpha = 0.20;
+  } else if (p < 0.75) {                      // evening: warm fades to blue
+    const t = ss((p - 0.60) / 0.15);
+    const r = Math.round(230 - t * 210);
+    const g = Math.round(130 - t * 100);
+    const b = Math.round(70  + t * -10);
+    color = `${r},${g},${b}`; alpha = 0.20 + t * 0.05;
+  } else if (p < 0.92) {                      // night settling in
+    const t = ss((p - 0.75) / 0.17);
+    color = '20,30,60'; alpha = 0.25 + t * 0.10;
+  } else {                                     // deep night (end)
+    color = '20,30,60'; alpha = 0.35;
   }
+
   if (alpha <= 0) return;
   ctx.fillStyle = `rgba(${color},${alpha})`;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
