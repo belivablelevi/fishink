@@ -127,21 +127,6 @@ function loadGame() {
   }
 }
 
-function exportSaveToClipboard() {
-  const text = btoa(JSON.stringify(serializeGame()));
-  navigator.clipboard.writeText(text).then(() => queueToast('Save copied to clipboard', '#4dca7c'));
-}
-
-function importSaveFromText(text) {
-  try {
-    const data = JSON.parse(atob(text.trim()));
-    for (let v = data.version; v < SAVE_VERSION; v++) SAVE_MIGRATIONS[v]?.(data);
-    deserializeGame(data);
-    saveGame();
-    queueToast('Save imported', '#4dca7c');
-  } catch (e) { queueToast('Invalid save code', '#e85d4a'); }
-}
-
 let restarting = false;
 
 function restartGame() {

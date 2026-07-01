@@ -78,9 +78,7 @@ function initGameMenu() {
   const btn   = document.getElementById('gameMenuToggleBtn');
   const panel = document.getElementById('gameMenuPanel');
   const saveBtn    = document.getElementById('saveNowBtn');
-  const exportBtn  = document.getElementById('exportSaveBtn');
-  const importBtn  = document.getElementById('importSaveBtn');
-  const restartBtn = document.getElementById('restartGameBtn');
+const restartBtn = document.getElementById('restartGameBtn');
   const fullNumbersCheck = document.getElementById('fullNumbersCheck');
   const individualSellToastsCheck = document.getElementById('individualSellToastsCheck');
 
@@ -103,18 +101,7 @@ function initGameMenu() {
     panel.classList.add('hidden');
   });
 
-  exportBtn.addEventListener('click', () => {
-    exportSaveToClipboard();
-    panel.classList.add('hidden');
-  });
-
-  importBtn.addEventListener('click', () => {
-    const text = prompt('Paste your save code:');
-    if (text) importSaveFromText(text);
-    panel.classList.add('hidden');
-  });
-
-  restartBtn.addEventListener('click', () => {
+restartBtn.addEventListener('click', () => {
     if (confirm('Restart the game? This wipes your current save and starts a brand new world.')) {
       restartGame();
     }
