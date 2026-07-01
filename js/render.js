@@ -184,7 +184,7 @@ function draw(ctx, canvas, dt) {
   drawDayNightOverlay(ctx, canvas);
 
   // HUD (unscaled)
-  drawHUD(ctx, canvas);
+  drawHUD(ctx, canvas, dt);
   if (!TUT.active) drawHeldFish(ctx, canvas);
   drawToasts(ctx, canvas, dt);
   drawHoverTooltip(ctx, canvas);
@@ -1822,7 +1822,7 @@ const cashAnim = { displayed: 0, prev: 0, pulse: 0 };
 // a fixed offset that would drift whenever the cash label's width changes.
 const cashPillRect = { right: 0, top: 0, bottom: 0 };
 
-function drawHUD(ctx, canvas) {
+function drawHUD(ctx, canvas, dt) {
   const cw = canvas.width, ch = canvas.height;
 
   // Smooth cash + pulse animation when cash increases
