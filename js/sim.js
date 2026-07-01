@@ -434,11 +434,17 @@ function transferItem(c, r, st, nc, nr, nb) {
   if (IS_MACHINE(nb)) {
     const nst = stateAt(nc, nr);
     if (!nst.inputItem && !nst.processing && !nst.item) {
-      const def = machineDef(nb);
-      nst.inputItem  = st.item;
-      nst.processing = true;
-      nst.timer      = def.processTime * machineSpeedMult(nst.level || 0);
-      st.item        = null;
+      if (st.item.mults && st.item.mults.length > 0) {
+        // Already processed by a machine — pass straight through to the output side
+        nst.item = st.item;
+        st.item  = null;
+      } else {
+        const def = machineDef(nb);
+        nst.inputItem  = st.item;
+        nst.processing = true;
+        nst.timer      = def.processTime * machineSpeedMult(nst.level || 0);
+        st.item        = null;
+      }
     }
     return;
   }
