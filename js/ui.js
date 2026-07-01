@@ -255,7 +255,7 @@ function setBuildMenuOpen(open) {
     renderBlueprintsPanel();
     menuCashEl.textContent = `$${formatMoney(game.cash)}`;
   }
-  updateBuildHintUI();
+  if (typeof updateBuildHintUI === 'function') updateBuildHintUI();
 }
 
 // ─── Leaderboard — standalone top-left icon button + dropdown panel ────────
