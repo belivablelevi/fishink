@@ -481,6 +481,7 @@ function handleClick(e) {
       buildMode.active = false;
       buildMode.menuOpen = false;
       setBuildMenuOpen(false);
+      updateBuildHintUI();
     }
   }
 }
