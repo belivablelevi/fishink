@@ -235,6 +235,47 @@ function carvePond(radius) {
   return null;
 }
 
+// Carves a small island blob in the open ocean. Uses the same union-of-circles
+// approach as the main island but capped at a smaller radius. Enforces a
+// 3-tile clearance from any existing land so there's always open water between
+// offshore islands and the main island. Returns true if placed, false if the
+// requested position overlapped existing land (caller retries or skips).
+function carveOffshoreIsland(cx, cy, maxR) {
+  const steps = 2 + Math.floor(Math.random() * 2);
+  const circles = [];
+  let ox = cx, oy = cy, r = maxR * (0.55 + Math.random() * 0.45);
+  for (let i = 0; i < steps; i++) {
+    circles.push({ cx: ox, cy: oy, r });
+    ox = Math.max(3, Math.min(WORLD_COLS - 3, ox + randRange(-2.5, 2.5)));
+    oy = Math.max(3, Math.min(WORLD_ROWS - 3, oy + randRange(-2.5, 2.5)));
+    r  = Math.max(2, Math.min(maxR, r + randRange(-1, 1)));
+  }
+
+  const CLEAR = 3;
+  for (const circ of circles) {
+    const c0 = Math.max(0, Math.floor(circ.cx - circ.r - CLEAR));
+    const c1 = Math.min(WORLD_COLS - 1, Math.ceil(circ.cx + circ.r + CLEAR));
+    const r0 = Math.max(0, Math.floor(circ.cy - circ.r - CLEAR));
+    const r1 = Math.min(WORLD_ROWS - 1, Math.ceil(circ.cy + circ.r + CLEAR));
+    for (let row = r0; row <= r1; row++)
+      for (let col = c0; col <= c1; col++)
+        if (terrain[row][col] === T_EMPTY) return false;
+  }
+
+  for (const circ of circles) {
+    const c0 = Math.max(0, Math.floor(circ.cx - circ.r));
+    const c1 = Math.min(WORLD_COLS - 1, Math.ceil(circ.cx + circ.r));
+    const r0 = Math.max(0, Math.floor(circ.cy - circ.r));
+    const r1 = Math.min(WORLD_ROWS - 1, Math.ceil(circ.cy + circ.r));
+    for (let row = r0; row <= r1; row++)
+      for (let col = c0; col <= c1; col++) {
+        const dx = col - circ.cx, dy = row - circ.cy;
+        if (dx * dx + dy * dy <= circ.r * circ.r) terrain[row][col] = T_EMPTY;
+      }
+  }
+  return true;
+}
+
 // Any land tile touching water becomes sand — covers the coastline and every
 // pond bank in one pass, so Fisher placement (T_SHORE adjacent to T_WATER)
 // works the same everywhere.
@@ -304,6 +345,24 @@ function buildWorld() {
   for (let i = 0; i < pondCount; i++) {
     const p = carvePond(3 + Math.floor(Math.random() * 4)); // radius 3-6
     if (p) ponds.push(p);
+  }
+
+  // Offshore islands — small landmasses dotted around the ocean, one per
+  // corner, reserved for the future boat-travel system. Each slot gets up to
+  // 4 placement attempts with random jitter so a crowded coastline doesn't
+  // block them entirely; unsuccessful attempts are silently skipped.
+  const offshoreSlots = [
+    { cx:  8,                 cy:  7                 }, // NW
+    { cx:  WORLD_COLS - 10,  cy:  7                 }, // NE
+    { cx:  8,                 cy:  WORLD_ROWS - 9   }, // SW
+    { cx:  WORLD_COLS - 10,  cy:  WORLD_ROWS - 9   }, // SE
+  ];
+  for (const slot of offshoreSlots) {
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const jx = slot.cx + randRange(-3, 3);
+      const jy = slot.cy + randRange(-2, 2);
+      if (carveOffshoreIsland(jx, jy, 4 + Math.random() * 2)) break;
+    }
   }
 
   applyShorePass();
