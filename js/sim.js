@@ -751,7 +751,7 @@ function completeCast() {
     catchColor
   );
   // Floating label above the player (not the water tile) so it's always visible
-  spawnFloatText((rare ? '★ ' : '') + fish.species, player.wx, player.wy - TILE_SIZE * 3.5, rare ? '#e8c43f' : '#ffffff');
+  spawnFloatText((rare ? '★ ' : '') + fish.species, player.wx, player.wy - 34, rare ? '#e8c43f' : '#ffffff');
   sfxCatch(rare);
   spawnParticles(manualCast.wx, manualCast.wy, 'splash', 6);
   if (rare) {

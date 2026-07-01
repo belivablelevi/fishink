@@ -1,5 +1,7 @@
 // Fish INK Factory — game loop
 
+const GAME_VERSION = '1.4.6';
+
 let canvas, ctx;
 let lastTime = 0;
 let firstFrameDrawn = false;
@@ -66,6 +68,7 @@ function startLoadingAnimation() {
 const MIN_LOADING_MS = 350;
 
 function init() {
+  console.log(`%cFishInk Factory v${GAME_VERSION}`, 'color:#70cd18;font-weight:bold;font-size:14px');
   canvas = document.getElementById('canvas');
   ctx    = canvas.getContext('2d');
 
