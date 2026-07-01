@@ -33,21 +33,104 @@ const LEADERBOARD_NAME_KEY = 'fishink_leaderboard_name';
 //   FOR EACH ROW EXECUTE FUNCTION prevent_locked_name_update();
 // ──────────────────────────────────────────────────────────────────────────
 
-// Basic profanity filter — normalises leet-speak before checking
+// Hardened profanity filter
+// Handles: leet speak, Unicode confusables, invisible chars, elongation (fuuuck),
+// phonetic substitutions (ph→f), separator insertion (f.u.c.k), and more.
+
 const BANNED_WORDS = [
-  'fuck','shit','ass','bitch','cunt','dick','cock','pussy','nigger','nigga',
-  'faggot','fag','retard','whore','slut','bastard','piss','damn','hell',
-  'rape','kill','nazi','hitler',
+  // Core profanity + common phonetic/leet bypasses
+  'fuck','fuk','fvk','fux','fok','fck','fak','fack','phuk',
+  'shit','sht','shyt','sh1t',
+  'ass','arse',
+  'bitch','btch',
+  'cunt',
+  'dick','dik',
+  'cock','cok',
+  'pussy','pusi',
+  'piss','pis',
+  'bastard',
+  'crap',
+  'anus','anal',
+  'tits','tit',
+  'jizz','jiz',
+  'twat','twot',
+  'wank','wanker',
+  // Racial slurs
+  'nigger','nigga','niga','nigg',
+  'coon',
+  'chink','chinc',
+  'gook',
+  'kike',
+  'spic','spick',
+  'wetback',
+  'beaner',
+  'paki',
+  'raghead','towelhead',
+  // Homophobic / transphobic slurs
+  'faggot','fagot','fag',
+  'dyke',
+  'tranny',
+  // Ableist slurs
+  'retard',
+  // Misogynistic slurs
+  'whore','whor',
+  'slut',
+  // Hate symbols / figures
+  'rape',
+  'nazi',
+  'hitler',
+  'kkk',
 ];
+
+// Build regexes that allow repeated chars per letter: fuuuck → f+u+c+k+ still matches.
+const BANNED_RX = BANNED_WORDS.map(w =>
+  new RegExp(w.split('').map(c => `${c}+`).join(''))
+);
+
 function normaliseName(s) {
-  return s.toLowerCase()
-    .replace(/[4@]/g,'a').replace(/3/g,'e').replace(/[1!|]/g,'i')
-    .replace(/0/g,'o').replace(/[5$]/g,'s').replace(/[7+]/g,'t')
-    .replace(/[^a-z0-9]/g,'');
+  let n = s.toLowerCase();
+
+  // 1. Strip zero-width / invisible Unicode (bypass attempts using invisible chars)
+  //    U+00AD soft-hyphen, U+200B–U+200F zero-width spaces/joins, U+FEFF BOM
+  n = n.replace(/[­​‌‍‎‏⁠﻿]/g, '');
+
+  // 2. Unicode confusables → ASCII (Cyrillic, accented Latin, Greek look-alikes)
+  n = n.replace(/[à-åаαɑ]/g, 'a'); // à-å, Cyrillic а, Greek α, ɑ
+  n = n.replace(/[è-ëе]/g,              'e'); // è-ë, Cyrillic е
+  n = n.replace(/[ì-ïіι]/g,        'i'); // ì-ï, Cyrillic і, Greek ι
+  n = n.replace(/[ò-öо]/g,              'o'); // ò-ö, Cyrillic о
+  n = n.replace(/[ù-ü]/g,                    'u'); // ù-ü
+  n = n.replace(/[ýÿ]/g,                     'y'); // ý, ÿ
+  n = n.replace(/ñ/g,                             'n'); // ñ
+  n = n.replace(/ç/g,                             'c'); // ç
+  n = n.replace(/ß/g,                             'ss'); // ß
+
+  // 3. Leet-speak substitutions
+  n = n.replace(/[@4]/g,  'a');
+  n = n.replace(/3/g,     'e');
+  n = n.replace(/[1!|]/g, 'i');
+  n = n.replace(/0/g,     'o');
+  n = n.replace(/[5]/g,   's'); // $ handled below after non-alpha strip
+  n = n.replace(/[7+]/g,  't');
+  n = n.replace(/8/g,     'b');
+  n = n.replace(/9/g,     'g');
+  n = n.replace(/2/g,     'z');
+
+  // 4. Phonetic substitutions
+  n = n.replace(/ph/g, 'f');  // phuck → fuck
+  n = n.replace(/ck/g, 'k');  // fvck → fvk
+  n = n.replace(/qu/g, 'k');
+
+  // 5. Strip everything non-alpha — removes separators like f.u.c.k, f-u-c-k,
+  //    dollar signs, and any remaining symbols
+  n = n.replace(/[^a-z]/g, '');
+
+  return n;
 }
+
 function nameIsClean(name) {
   const n = normaliseName(name);
-  return !BANNED_WORDS.some(w => n.includes(w));
+  return !BANNED_RX.some(rx => rx.test(n));
 }
 
 function isLeaderboardConfigured() {
