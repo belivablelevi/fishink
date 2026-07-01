@@ -380,6 +380,8 @@ function renderBuildPanel() {
       card.appendChild(lock);
       card.addEventListener('click', () => {
         buildMode.selectedId = id;
+        buildMode.menuOpen = false;
+        setBuildMenuOpen(false);
         refreshBuildPanel();
       });
 
