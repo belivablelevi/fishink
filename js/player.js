@@ -78,7 +78,8 @@ window.addEventListener('keydown', e => {
   KEYS[e.key] = true;
   handleBuildKey(e);
 });
-window.addEventListener('keyup', e => { KEYS[e.key] = false; });
+window.addEventListener('keyup',  e => { KEYS[e.key] = false; });
+window.addEventListener('blur',   () => { for (const k in KEYS) KEYS[k] = false; });
 
 const PLACEABLE_IDS = [B_CONCRETE, B_FISHER, B_BELT, B_SPLITTER, B_SORTER, B_CRATE,
                        B_WASHER, B_SMOKER, B_ICER, B_STAMPER,
