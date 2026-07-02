@@ -2097,24 +2097,19 @@ function drawPond(ctx, sx, sy, S, c, r) {
 
   // Draw each swimming pet
   ctx.imageSmoothingEnabled = false;
-  const SW = 12; // rendered sprite size (px)
+  const SW = 12;
+  const petMapP = new Map(game.pets.map(p => [p.uid, p]));
   for (const uid of st.pondPets) {
-    const pet = game.pets.find(p => p.uid === uid);
+    const pet = petMapP.get(uid);
     if (!pet) continue;
     const ss = _getSwimState(uid, c, r);
+    if (!ss) continue;
     const img = IMAGES[axoImgKey(pet.variant)];
     if (!img) continue;
-    const srcX = ss.frame * AXO_FRAME_W;
-    const srcY = AXO_SWIM_ROW * AXO_FRAME_H;
-    ctx.save();
-    if (ss.flipX) {
-      ctx.translate(sx + ss.px + SW, sy + ss.py);
-      ctx.scale(-1, 1);
-      ctx.drawImage(img, srcX, srcY, AXO_FRAME_W, AXO_FRAME_H, 0, 0, SW, SW);
-    } else {
-      ctx.drawImage(img, srcX, srcY, AXO_FRAME_W, AXO_FRAME_H, sx + ss.px, sy + ss.py, SW, SW);
-    }
-    ctx.restore();
+    const colStart = ss.restTimer > 0 ? AXO_IDLE_COL : 0;
+    const srcX = (colStart + ss.frame) * AXO_FRAME_W;
+    const srcY = (ss.row ?? 0) * AXO_FRAME_H;
+    ctx.drawImage(img, srcX, srcY, AXO_FRAME_W, AXO_FRAME_H, sx + ss.px, sy + ss.py, SW, SW);
   }
   ctx.imageSmoothingEnabled = true;
 }
@@ -2123,8 +2118,18 @@ function drawPond(ctx, sx, sy, S, c, r) {
 // body tiles + B_POND blocks) while petPlaceMode is active. The currently-hovered
 // valid tile also shows a white "+" cursor so the player can see where they'll drop.
 function drawPetPlaceOverlay(ctx, c0, c1, r0, r1) {
-  const pulse = (Math.sin(game.time * 4) + 1) / 2; // 0..1
+  const pulse = (Math.sin(game.time * 4) + 1) / 2;
   const baseAlpha = 0.18 + pulse * 0.14;
+
+  // Only highlight ponds that still have capacity
+  const validBlockKeys = new Set();
+  const validWaterKeys = new Set();
+  for (const p of listAvailablePonds()) {
+    if (p.count < p.capacity) {
+      if (p.type === 'block') validBlockKeys.add(`${p.c},${p.r}`);
+      else validWaterKeys.add(p.key);
+    }
+  }
 
   ctx.save();
   for (let r = r0; r <= r1; r++) {
@@ -2136,8 +2141,11 @@ function drawPetPlaceOverlay(ctx, c0, c1, r0, r1) {
       const S  = TILE_SIZE;
 
       let valid = false;
-      if (b === B_POND) valid = true;
-      else if (t === T_WATER && waterBodyAnchor(c, r)) valid = true;
+      if (b === B_POND) valid = validBlockKeys.has(`${c},${r}`);
+      else if (t === T_WATER) {
+        const anchor = waterBodyAnchor(c, r);
+        if (anchor) valid = validWaterKeys.has(anchor);
+      }
 
       if (!valid) continue;
 
@@ -2168,7 +2176,7 @@ function drawPetPlaceOverlay(ctx, c0, c1, r0, r1) {
   ctx.font = '12px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('Click a pond or tank to place  ·  Esc to cancel', ctx.canvas.width / 2, hy + hh / 2);
+  ctx.fillText('Click a pond or tank to place  ·  Esc / right-click to cancel', ctx.canvas.width / 2, hy + hh / 2);
   ctx.restore();
 }
 
@@ -2178,6 +2186,7 @@ function drawWaterPets(ctx, c0, c1, r0, r1) {
   if (typeof game === 'undefined' || !game.waterPonds) return;
   ctx.imageSmoothingEnabled = false;
   const sw = 12;
+  const petMapW = new Map(game.pets.map(p => [p.uid, p]));
   const seenAnchors = new Set();
   for (let r = r0; r <= r1; r++) {
     for (let c = c0; c <= c1; c++) {
@@ -2189,7 +2198,7 @@ function drawWaterPets(ctx, c0, c1, r0, r1) {
       if (!uids || !uids.length) continue;
       const [ancC, ancR] = anchor.split(',').map(Number);
       for (const uid of uids) {
-        const pet = game.pets.find(p => p.uid === uid);
+        const pet = petMapW.get(uid);
         if (!pet) continue;
         const img = IMAGES[axoImgKey(pet.variant)];
         if (!img) continue;
@@ -2198,20 +2207,13 @@ function drawWaterPets(ctx, c0, c1, r0, r1) {
         const wx = ss.wx, wy = ss.wy;
         const petC = Math.floor(wx / TILE_SIZE);
         const petR = Math.floor(wy / TILE_SIZE);
-        if (petC < c0 || petC > c1 || petR < r0 || petR > r1) continue; // off-screen
+        if (petC < c0 || petC > c1 || petR < r0 || petR > r1) continue;
         const sx = wx - cam.x;
         const sy = wy - cam.y;
-        const srcX = ss.frame * AXO_FRAME_W;
-        const srcY = AXO_SWIM_ROW * AXO_FRAME_H;
-        ctx.save();
-        if (ss.flipX) {
-          ctx.translate(sx + sw, sy);
-          ctx.scale(-1, 1);
-          ctx.drawImage(img, srcX, srcY, AXO_FRAME_W, AXO_FRAME_H, 0, 0, sw, sw);
-        } else {
-          ctx.drawImage(img, srcX, srcY, AXO_FRAME_W, AXO_FRAME_H, sx, sy, sw, sw);
-        }
-        ctx.restore();
+        const colStart = ss.restTimer > 0 ? AXO_IDLE_COL : 0;
+        const srcX = (colStart + ss.frame) * AXO_FRAME_W;
+        const srcY = (ss.row ?? 0) * AXO_FRAME_H;
+        ctx.drawImage(img, srcX, srcY, AXO_FRAME_W, AXO_FRAME_H, sx, sy, sw, sw);
       }
     }
   }

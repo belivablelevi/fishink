@@ -58,6 +58,7 @@ let CANVAS_W = 1280, CANVAS_H = 720;
 // Pet placement mode — entered when player clicks Place from the Pets tab.
 // While active the player clicks a water body or Tank tile to assign the pet.
 const petPlaceMode = { active: false, uid: null };
+let _placeCooldown = false; // one-frame guard prevents double-fire on touch
 
 function enterPetPlaceMode(uid) {
   petPlaceMode.active = true;
@@ -298,6 +299,7 @@ function playerOccupiesTile(c, r) {
 // don't need pixel-precise aim just to unload. Shared by the E key and the
 // mobile Interact button.
 function triggerInteract() {
+  if (_placeCooldown) return;
   const pc = Math.floor(player.wx / TILE_SIZE);
   const pr = Math.floor(player.wy / TILE_SIZE);
   const inReach = hoverTile && Math.abs(hoverTile.c - pc) <= 1 && Math.abs(hoverTile.r - pr) <= 1;
@@ -309,20 +311,28 @@ function triggerInteract() {
   if (petPlaceMode.active) {
     if (!hoverTile) return;
     if (hoveredId === B_POND) {
-      assignPetToPond(petPlaceMode.uid, hoverTile.c, hoverTile.r);
+      if (!assignPetToPond(petPlaceMode.uid, hoverTile.c, hoverTile.r)) {
+        queueToast('Pond is full!', '#e85d4a'); return;
+      }
       queueToast('Axolotl placed in tank!', '#4dca7c');
       exitPetPlaceMode();
+      _placeCooldown = true;
+      requestAnimationFrame(() => { _placeCooldown = false; });
       if (typeof renderPetsPanel === 'function') renderPetsPanel();
     } else if (hoverTerrain === T_WATER) {
       const anchor = waterBodyAnchor(hoverTile.c, hoverTile.r);
       if (anchor) {
-        assignPetToWaterPond(petPlaceMode.uid, anchor);
-        queueToast('Axolotl placed in pond!', '#4dca7c');
+        if (!assignPetToWaterPond(petPlaceMode.uid, anchor)) {
+          queueToast('Pond is full!', '#e85d4a'); return;
+        }
+        queueToast('Axolotl placed in natural pond!', '#4dca7c');
         exitPetPlaceMode();
+        _placeCooldown = true;
+        requestAnimationFrame(() => { _placeCooldown = false; });
         if (typeof renderPetsPanel === 'function') renderPetsPanel();
       }
     }
-    return; // eat the click regardless — don't open popups during placement
+    return;
   }
 
   if (kind) {

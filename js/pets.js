@@ -4,12 +4,25 @@ const PET_PULL_COST = 500;    // single pull
 const PET_BULK_COST = 4500;   // 10-pull (10% off)
 const POND_CAPACITY = 3;      // max pets per pond
 
-// Spritesheet layout: 128×256, 8 cols × 16 rows, 16×16 per frame
-// Row 0 = walk cycle used for swimming (flip horizontally for left direction)
-const AXO_FRAME_W   = 16;
-const AXO_FRAME_H   = 16;
-const AXO_SWIM_ROW  = 0;   // row index of the swimming/walk animation
-const AXO_FRAMES    = 7;   // 7 visible frames — frame 7 is blank padding in the sheet
+// Spritesheet: 128×256, 8 cols × 16 rows, 16×16 px per frame
+// Rows 0-15: 16 heading directions, 22.5° apart, counterclockwise
+//   Row 1 ≈ up, row 5 ≈ left, row 9 ≈ down, row 13 ≈ right
+// Cols 0-3: swim/moving frames  ·  Cols 4-6: idle frames  ·  Col 7: blank
+const AXO_FRAME_W     = 16;
+const AXO_FRAME_H     = 16;
+const AXO_ROWS        = 16;    // 16 heading directions
+const AXO_SWIM_FRAMES = 4;     // columns 0-3: moving animation
+const AXO_IDLE_COL    = 4;     // column start of idle section
+const AXO_IDLE_FRAMES = 3;     // columns 4-6: idle animation
+const AXO_ROW_STEP    = 22.5;  // degrees per row
+const AXO_ROW_OFFSET  = 67.5;  // center angle (°) of row 0 (≈ upper-right)
+
+// Maps a velocity vector to the spritesheet row for that heading direction.
+// Uses atan2(-vy, vx) so screen-up yields +90°, matching row 1 = up.
+function velocityToRow(vx, vy) {
+  const deg = Math.atan2(-vy, vx) * 180 / Math.PI;
+  return Math.floor(((deg - AXO_ROW_OFFSET + 360) % 360 + 360) % 360 / AXO_ROW_STEP) % AXO_ROWS;
+}
 
 const PET_VARIANTS = [
   // Common — 60 combined weight
@@ -197,7 +210,7 @@ function _randBlockTarget(S, sw, m) {
 
 function _randWaterTarget(anchorKey, m, sw) {
   const tiles = waterBodyTiles(anchorKey);
-  if (!tiles.length) return { x: 0, y: 0 };
+  if (!tiles.length) return null;
   const t = tiles[Math.floor(Math.random() * tiles.length)];
   return {
     x: t.c * TILE_SIZE + m + Math.random() * (TILE_SIZE - m * 2 - sw),
@@ -214,6 +227,7 @@ function _getSwimState(uid, pc, pr) {
     if (blockAt(pc, pr) === B_POND) {
       const S = TILE_SIZE;
       const t = _randBlockTarget(S, sw, m);
+      const initRowB    = Math.floor(Math.random() * AXO_ROWS);
       pool[uid] = {
         type: 'block',
         px: m + Math.random() * (S - m * 2 - sw),
@@ -221,23 +235,27 @@ function _getSwimState(uid, pc, pr) {
         vx: 0, vy: 0,
         tpx: t.x, tpy: t.y,
         topSpeed: 22 + Math.random() * 10,
-        frame: Math.floor(Math.random() * AXO_FRAMES),
+        frame: Math.floor(Math.random() * AXO_SWIM_FRAMES),
         frameAccum: 0,
-        flipX: Math.random() < 0.5,
+        heading: (initRowB * AXO_ROW_STEP + AXO_ROW_OFFSET) * Math.PI / 180,
+        row: initRowB,
         restTimer: 0,
       };
     } else {
-      const t = _randWaterTarget(key, m, sw);
+      const t     = _randWaterTarget(key, m, sw);
       const start = _randWaterTarget(key, m, sw);
+      if (!t || !start) return null;  // tile cache not ready yet — skip this frame
+      const initRowW = Math.floor(Math.random() * AXO_ROWS);
       pool[uid] = {
         type: 'water',
         wx: start.x, wy: start.y,
         vx: 0, vy: 0,
         twx: t.x, twy: t.y,
         topSpeed: 40 + Math.random() * 20,
-        frame: Math.floor(Math.random() * AXO_FRAMES),
+        frame: Math.floor(Math.random() * AXO_SWIM_FRAMES),
         frameAccum: 0,
-        flipX: Math.random() < 0.5,
+        heading: (initRowW * AXO_ROW_STEP + AXO_ROW_OFFSET) * Math.PI / 180,
+        row: initRowW,
         restTimer: 0,
       };
     }
@@ -261,11 +279,10 @@ function tickSwimStates(dt) {
       // ── Resting pause ──────────────────────────────────────────────────────
       if (s.restTimer > 0) {
         s.restTimer -= dt;
-        s.vx *= Math.pow(0.05, dt); // decelerate quickly
+        s.vx *= Math.pow(0.05, dt);
         s.vy *= Math.pow(0.05, dt);
-        // Still animate (tail drift) but slow
         const spd = Math.hypot(s.vx, s.vy);
-        _advanceFrame(s, spd, s.topSpeed, ANIM_MAX_FPS, dt);
+        _advanceFrame(s, spd, s.topSpeed, ANIM_MAX_FPS, dt, true);
         continue;
       }
 
@@ -292,8 +309,6 @@ function tickSwimStates(dt) {
           if (ny >= m && ny <= S - sw - m) { s.py = ny; } else { s.vy = -s.vy; const t = _randBlockTarget(S, sw, m); s.tpy = t.y; }
         }
 
-        if (Math.abs(s.vx) > 0.5) s.flipX = s.vx < 0;
-
       } else {
         // Water body — world-space steering
         const anchor = waterBodyAnchor(keyC, keyR);
@@ -304,7 +319,7 @@ function tickSwimStates(dt) {
         if (dist < 6) {
           if (Math.random() < 0.3) s.restTimer = 0.3 + Math.random() * 1.0;
           const t = _randWaterTarget(key, m, sw);
-          s.twx = t.x; s.twy = t.y;
+          if (t) { s.twx = t.x; s.twy = t.y; }
         } else {
           const steer  = Math.min(1, dt * 3.5);
           const wantVx = (dx / dist) * s.topSpeed;
@@ -314,6 +329,7 @@ function tickSwimStates(dt) {
 
           const nx = s.wx + s.vx * dt;
           const ny = s.wy + s.vy * dt;
+          const prevWx = s.wx;
 
           // Validate x step
           const txX = Math.floor((nx + (s.vx >= 0 ? sw : 0)) / S);
@@ -322,37 +338,46 @@ function tickSwimStates(dt) {
             s.wx = nx;
           } else {
             s.vx = -s.vx * 0.6;
-            const t = _randWaterTarget(key, m, sw); s.twx = t.x;
+            const t = _randWaterTarget(key, m, sw);
+            if (t) s.twx = t.x;
           }
 
-          // Validate y step
-          const txY = Math.floor((s.wx + sw / 2) / S);
+          // Validate y step — use prevWx (before X-step may have mutated s.wx)
+          const txY = Math.floor((prevWx + sw / 2) / S);
           const tyY = Math.floor((ny + (s.vy >= 0 ? sw : 0)) / S);
           if (anchor && tileAt(txY, tyY) === T_WATER && waterBodyAnchor(txY, tyY) === anchor) {
             s.wy = ny;
           } else {
             s.vy = -s.vy * 0.6;
-            const t = _randWaterTarget(key, m, sw); s.twy = t.y;
+            const t = _randWaterTarget(key, m, sw);
+            if (t) s.twy = t.y;
           }
         }
-
-        if (Math.abs(s.vx) > 0.5) s.flipX = s.vx < 0;
       }
 
       const spd = Math.hypot(s.vx, s.vy);
-      _advanceFrame(s, spd, s.topSpeed, ANIM_MAX_FPS, dt);
+      if (spd > 0.5) {
+        const targetAngle = Math.atan2(-s.vy, s.vx);
+        let hdiff = targetAngle - s.heading;
+        hdiff = ((hdiff + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
+        s.heading += Math.sign(hdiff) * Math.min(Math.abs(hdiff), Math.PI * 3 * dt);
+        const hdgDeg = s.heading * 180 / Math.PI;
+        s.row = Math.floor(((hdgDeg - AXO_ROW_OFFSET + 360) % 360 + 360) % 360 / AXO_ROW_STEP) % AXO_ROWS;
+      }
+      _advanceFrame(s, spd, s.topSpeed, ANIM_MAX_FPS, dt, false);
     }
   }
 }
 
 // Advance animation frame at a rate proportional to how fast the pet is moving.
-function _advanceFrame(s, speed, topSpeed, maxFps, dt) {
+function _advanceFrame(s, speed, topSpeed, maxFps, dt, isIdle) {
   const frac = Math.min(1, speed / (topSpeed * 0.5));
-  const fps  = 1.5 + frac * (maxFps - 1.5); // min 1.5 fps (idle drift) → maxFps
+  const fps  = 1.5 + frac * (maxFps - 1.5);
   s.frameAccum += dt * fps;
-  if (s.frameAccum >= 1) {
+  const frameCount = isIdle ? AXO_IDLE_FRAMES : AXO_SWIM_FRAMES;
+  while (s.frameAccum >= 1) {
     s.frameAccum -= 1;
-    s.frame = (s.frame + 1) % AXO_FRAMES;
+    s.frame = (s.frame + 1) % frameCount;
   }
 }
 

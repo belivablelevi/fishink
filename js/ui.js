@@ -311,6 +311,7 @@ function switchMenuTab(name) {
 }
 
 function setBuildMenuOpen(open) {
+  if (!buildMenuEl) return;
   buildMenuEl.classList.toggle('hidden', !open);
   // The full-screen build menu's bottom corners sit right where the touch
   // joystick/Interact button float on a phone — hide them while the menu
