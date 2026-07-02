@@ -130,8 +130,8 @@ html, body {
   transition: background 0.15s, color 0.15s, transform 0.15s;
 }
 .tab:hover { color: var(--c-text); }
-.tab-discord { padding: 6px 10px; text-decoration: none; display: inline-flex; align-items: center; }
-.tab-discord img { width: 20px; height: 20px; display: block; opacity: 0.65; transition: opacity 0.15s; }
+.tab-discord { padding: 6px 10px; text-decoration: none; display: inline-flex; align-items: center; align-self: flex-end; }
+.tab-discord img { width: 24px; height: 24px; display: block; opacity: 0.65; transition: opacity 0.15s; }
 .tab-discord:hover img { opacity: 1; }
 .tab.active {
   color: #fff;
