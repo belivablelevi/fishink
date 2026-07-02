@@ -551,6 +551,11 @@ function canPlaceBlock(id, c, r, dir) {
     return t === T_SHORE && isAdjacentToWater(c, r);
   }
 
+  if (id === B_POND) {
+    // Can go on any solid ground — dirt or concrete, no existing block
+    return b === B_NONE && (t === T_EMPTY || t === T_CONCRETE);
+  }
+
   // All other equipment (including the Fishing Drone, which flies to water
   // on its own — see findNearestWaterTile) requires concrete floor and no
   // existing block

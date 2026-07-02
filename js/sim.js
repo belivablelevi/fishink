@@ -859,6 +859,10 @@ function placementFailReason(id, c, r) {
     if (!isAdjacentToWater(c, r)) return 'No water adjacent to this tile';
     return 'Cannot place Fisher here';
   }
+  if (id === B_POND) {
+    if (b !== B_NONE) return 'Something is already here';
+    return 'Pond needs empty ground (dirt or concrete)';
+  }
   // All other equipment requires a concrete floor
   if (t !== T_CONCRETE) return 'Needs concrete floor — place Concrete here first';
   if (b !== B_NONE)     return 'Something is already here';
