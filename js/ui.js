@@ -2034,34 +2034,7 @@ function renderPetsPanel() {
       placeBtn.className = 'upgrade-buy pet-card-btn';
       placeBtn.textContent = 'Place';
       placeBtn.addEventListener('click', () => {
-        if (freePonds.length === 1) {
-          const fp = freePonds[0];
-          if (fp.type === 'block') assignPetToPond(pet.uid, fp.c, fp.r);
-          else assignPetToWaterPond(pet.uid, fp.key);
-          renderPetsPanel();
-          return;
-        }
-        actionsEl.innerHTML = '';
-        const sel = document.createElement('div');
-        sel.className = 'pet-pond-selector';
-        for (const fp of freePonds) {
-          const opt = document.createElement('button');
-          opt.className = 'mp-target-btn';
-          const label = fp.type === 'block' ? 'Built tank' : 'Natural pond';
-          opt.textContent = `${label} (${fp.capacity - fp.count} free)`;
-          opt.addEventListener('click', () => {
-            if (fp.type === 'block') assignPetToPond(pet.uid, fp.c, fp.r);
-            else assignPetToWaterPond(pet.uid, fp.key);
-            renderPetsPanel();
-          });
-          sel.appendChild(opt);
-        }
-        const cancelBtn = document.createElement('button');
-        cancelBtn.className = 'mp-target-btn';
-        cancelBtn.textContent = '✕ Cancel';
-        cancelBtn.addEventListener('click', () => renderPetsPanel());
-        sel.appendChild(cancelBtn);
-        actionsEl.appendChild(sel);
+        enterPetPlaceMode(pet.uid); // closes menu, enters world-click placement
       });
       actionsEl.appendChild(placeBtn);
     }

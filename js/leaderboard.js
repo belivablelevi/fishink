@@ -185,7 +185,7 @@ function submitLeaderboardScore() {
     client_id: getLeaderboardClientId(),
     name,
     lifetime_earned: game.lifetimeEarned,
-    playtime: Math.floor(game.time),
+    playtime: Math.round(game.time / 60 * 10) / 10, // minutes, 1 decimal place
   };
 
   fetch(`${SUPABASE_URL}/rest/v1/leaderboard_scores?on_conflict=client_id`, {

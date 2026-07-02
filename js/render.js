@@ -83,6 +83,14 @@ function draw(ctx, canvas, dt) {
       if (b !== B_NONE) drawBlock(ctx, b, c * TILE_SIZE - cam.x, r * TILE_SIZE - cam.y, c, r);
     }
 
+  // Water-body pets — drawn above tiles+blocks so water shimmer never overlaps
+  drawWaterPets(ctx, c0, c1, r0, r1);
+
+  // Pet placement mode overlay — teal pulse on valid target tiles
+  if (typeof petPlaceMode !== 'undefined' && petPlaceMode.active) {
+    drawPetPlaceOverlay(ctx, c0, c1, r0, r1);
+  }
+
   // Fish — separate pass so they render above all blocks at interpolated positions
   drawAllFish(ctx, c0, c1, r0, r1);
 
@@ -490,37 +498,8 @@ function drawWaterTile(ctx, sx, sy, S, c, r) {
     }
   }
 
-  // Draw any water-body pets whose current world position falls on this tile.
-  if (typeof waterBodyAnchor !== 'function' || typeof game === 'undefined') return;
-  const anchor = waterBodyAnchor(c, r);
-  if (!anchor) return; // ocean tile — skip
-  const uids = (game.waterPonds && game.waterPonds[anchor]) || [];
-  if (!uids.length) return;
-  const sw = 12;
-  const [ancC, ancR] = anchor.split(',').map(Number);
-  uids.forEach(uid => {
-    const pet = game.pets.find(p => p.uid === uid);
-    if (!pet) return;
-    const img = IMAGES[axoImgKey(pet.variant)];
-    if (!img) return;
-    const ss = _getSwimState(uid, ancC, ancR);
-    if (!ss || ss.type !== 'water') return;
-    // Only render on the tile the pet is currently occupying
-    if (Math.floor(ss.wx / TILE_SIZE) !== c || Math.floor(ss.wy / TILE_SIZE) !== r) return;
-    const localX = ss.wx - c * TILE_SIZE;
-    const localY = ss.wy - r * TILE_SIZE;
-    const srcX = ss.frame * AXO_FRAME_W;
-    const srcY = AXO_SWIM_ROW * AXO_FRAME_H;
-    ctx.save();
-    if (ss.flipX) {
-      ctx.translate(sx + localX + sw, sy + localY);
-      ctx.scale(-1, 1);
-      ctx.drawImage(img, srcX, srcY, AXO_FRAME_W, AXO_FRAME_H, 0, 0, sw, sw);
-    } else {
-      ctx.drawImage(img, srcX, srcY, AXO_FRAME_W, AXO_FRAME_H, sx + localX, sy + localY, sw, sw);
-    }
-    ctx.restore();
-  });
+  // Water-body pets are drawn in a separate post-pass (drawWaterPets) so they
+  // always appear above tile shimmer. Nothing to render here.
 }
 
 function drawTile(ctx, t, sx, sy, c, r) {
@@ -2136,6 +2115,105 @@ function drawPond(ctx, sx, sy, S, c, r) {
       ctx.drawImage(img, srcX, srcY, AXO_FRAME_W, AXO_FRAME_H, sx + ss.px, sy + ss.py, SW, SW);
     }
     ctx.restore();
+  }
+  ctx.imageSmoothingEnabled = true;
+}
+
+// Draws a teal pulsing highlight on every valid pet-placement tile (natural water
+// body tiles + B_POND blocks) while petPlaceMode is active. The currently-hovered
+// valid tile also shows a white "+" cursor so the player can see where they'll drop.
+function drawPetPlaceOverlay(ctx, c0, c1, r0, r1) {
+  const pulse = (Math.sin(game.time * 4) + 1) / 2; // 0..1
+  const baseAlpha = 0.18 + pulse * 0.14;
+
+  ctx.save();
+  for (let r = r0; r <= r1; r++) {
+    for (let c = c0; c <= c1; c++) {
+      const t = tileAt(c, r);
+      const b = blockAt(c, r);
+      const sx = c * TILE_SIZE - cam.x;
+      const sy = r * TILE_SIZE - cam.y;
+      const S  = TILE_SIZE;
+
+      let valid = false;
+      if (b === B_POND) valid = true;
+      else if (t === T_WATER && waterBodyAnchor(c, r)) valid = true;
+
+      if (!valid) continue;
+
+      // Teal pulse
+      ctx.fillStyle = `rgba(64,224,208,${baseAlpha})`;
+      ctx.fillRect(sx, sy, S, S);
+
+      // Brighter border on hover
+      if (hoverTile && hoverTile.c === c && hoverTile.r === r) {
+        ctx.strokeStyle = `rgba(100,255,230,0.9)`;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(sx + 1, sy + 1, S - 2, S - 2);
+        // "+" drop icon
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.font = `bold ${S * 0.45}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('+', sx + S / 2, sy + S / 2);
+      }
+    }
+  }
+
+  // HUD hint at top of screen
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  const hw = 260, hh = 22, hx = (ctx.canvas.width - hw) / 2, hy = 8;
+  ctx.fillRect(hx, hy, hw, hh);
+  ctx.fillStyle = '#7ff0e0';
+  ctx.font = '12px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Click a pond or tank to place  ·  Esc to cancel', ctx.canvas.width / 2, hy + hh / 2);
+  ctx.restore();
+}
+
+// Draws all natural-water-body pets in a single post-pass so they always appear
+// above tile shimmer and block graphics.
+function drawWaterPets(ctx, c0, c1, r0, r1) {
+  if (typeof game === 'undefined' || !game.waterPonds) return;
+  ctx.imageSmoothingEnabled = false;
+  const sw = 12;
+  const seenAnchors = new Set();
+  for (let r = r0; r <= r1; r++) {
+    for (let c = c0; c <= c1; c++) {
+      if (tileAt(c, r) !== T_WATER) continue;
+      const anchor = waterBodyAnchor(c, r);
+      if (!anchor || seenAnchors.has(anchor)) continue;
+      seenAnchors.add(anchor);
+      const uids = game.waterPonds[anchor];
+      if (!uids || !uids.length) continue;
+      const [ancC, ancR] = anchor.split(',').map(Number);
+      for (const uid of uids) {
+        const pet = game.pets.find(p => p.uid === uid);
+        if (!pet) continue;
+        const img = IMAGES[axoImgKey(pet.variant)];
+        if (!img) continue;
+        const ss = _getSwimState(uid, ancC, ancR);
+        if (!ss || ss.type !== 'water') continue;
+        const wx = ss.wx, wy = ss.wy;
+        const petC = Math.floor(wx / TILE_SIZE);
+        const petR = Math.floor(wy / TILE_SIZE);
+        if (petC < c0 || petC > c1 || petR < r0 || petR > r1) continue; // off-screen
+        const sx = wx - cam.x;
+        const sy = wy - cam.y;
+        const srcX = ss.frame * AXO_FRAME_W;
+        const srcY = AXO_SWIM_ROW * AXO_FRAME_H;
+        ctx.save();
+        if (ss.flipX) {
+          ctx.translate(sx + sw, sy);
+          ctx.scale(-1, 1);
+          ctx.drawImage(img, srcX, srcY, AXO_FRAME_W, AXO_FRAME_H, 0, 0, sw, sw);
+        } else {
+          ctx.drawImage(img, srcX, srcY, AXO_FRAME_W, AXO_FRAME_H, sx, sy, sw, sw);
+        }
+        ctx.restore();
+      }
+    }
   }
   ctx.imageSmoothingEnabled = true;
 }

@@ -1,6 +1,6 @@
 // Fish INK Factory — game loop
 
-const GAME_VERSION = '1.4.6';
+const GAME_VERSION = '1.4.7';
 
 let canvas, ctx;
 let lastTime = 0;

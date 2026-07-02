@@ -184,9 +184,26 @@ function listAvailablePonds() {
 }
 
 // ── Swim state (non-persisted, rebuilt each session) ──────────────────────────
-// B_POND block pools: key = "c,r", state uses tile-relative px/py (0..TILE_SIZE)
-// Water body pools:   key = anchor "c,r", state uses world pixel wx/wy
+// Each pet steers toward a waypoint, smoothly accelerating/decelerating.
+// Animation speed scales with actual velocity so the tail-swish matches motion.
+//
+// Block tank:  tile-relative (px, py), target (tpx, tpy)
+// Water body:  world-space  (wx, wy),  target (twx, twy)
 const _swimStates = {};
+
+function _randBlockTarget(S, sw, m) {
+  return { x: m + Math.random() * (S - m * 2 - sw), y: m + Math.random() * (S - m * 2 - sw) };
+}
+
+function _randWaterTarget(anchorKey, m, sw) {
+  const tiles = waterBodyTiles(anchorKey);
+  if (!tiles.length) return { x: 0, y: 0 };
+  const t = tiles[Math.floor(Math.random() * tiles.length)];
+  return {
+    x: t.c * TILE_SIZE + m + Math.random() * (TILE_SIZE - m * 2 - sw),
+    y: t.r * TILE_SIZE + m + Math.random() * (TILE_SIZE - m * 2 - sw),
+  };
+}
 
 function _getSwimState(uid, pc, pr) {
   const key = `${pc},${pr}`;
@@ -195,31 +212,33 @@ function _getSwimState(uid, pc, pr) {
   if (!pool[uid]) {
     const sw = 12, m = 4;
     if (blockAt(pc, pr) === B_POND) {
-      // Tile-relative coords for placed Tank block
       const S = TILE_SIZE;
+      const t = _randBlockTarget(S, sw, m);
       pool[uid] = {
         type: 'block',
         px: m + Math.random() * (S - m * 2 - sw),
         py: m + Math.random() * (S - m * 2 - sw),
-        vx: (Math.random() < 0.5 ? 1 : -1) * (8 + Math.random() * 10),
-        vy: (Math.random() < 0.5 ? 1 : -1) * (4 + Math.random() * 6),
+        vx: 0, vy: 0,
+        tpx: t.x, tpy: t.y,
+        topSpeed: 22 + Math.random() * 10,
         frame: Math.floor(Math.random() * AXO_FRAMES),
-        frameTimer: 0,
+        frameAccum: 0,
         flipX: Math.random() < 0.5,
+        restTimer: 0,
       };
     } else {
-      // World-space coords for natural water body
-      const tiles = waterBodyTiles(key);
-      const tile  = tiles.length ? tiles[Math.floor(Math.random() * tiles.length)] : { c: pc, r: pr };
+      const t = _randWaterTarget(key, m, sw);
+      const start = _randWaterTarget(key, m, sw);
       pool[uid] = {
         type: 'water',
-        wx: tile.c * TILE_SIZE + m + Math.random() * (TILE_SIZE - m * 2 - sw),
-        wy: tile.r * TILE_SIZE + m + Math.random() * (TILE_SIZE - m * 2 - sw),
-        vx: (Math.random() < 0.5 ? 1 : -1) * (20 + Math.random() * 20),
-        vy: (Math.random() < 0.5 ? 1 : -1) * (15 + Math.random() * 15),
+        wx: start.x, wy: start.y,
+        vx: 0, vy: 0,
+        twx: t.x, twy: t.y,
+        topSpeed: 40 + Math.random() * 20,
         frame: Math.floor(Math.random() * AXO_FRAMES),
-        frameTimer: 0,
+        frameAccum: 0,
         flipX: Math.random() < 0.5,
+        restTimer: 0,
       };
     }
   }
@@ -227,55 +246,113 @@ function _getSwimState(uid, pc, pr) {
 }
 
 function tickSwimStates(dt) {
-  const S = TILE_SIZE;
-  const sw = 12, m = 3;
-  const ANIM_FPS = 9;
+  const S    = TILE_SIZE;
+  const sw   = 12, m = 4;
+  // How fast animation runs at full speed (frames/sec). Scales linearly with speed.
+  const ANIM_MAX_FPS = 10;
 
   for (const key in _swimStates) {
-    const pool = _swimStates[key];
+    const pool   = _swimStates[key];
+    const [keyC, keyR] = key.split(',').map(Number);
+
     for (const uid in pool) {
       const s = pool[uid];
 
-      if (s.type === 'block') {
-        // Tile-relative bounce
-        s.px += s.vx * dt;
-        s.py += s.vy * dt;
-        if (s.px < m)           { s.px = m;           s.vx =  Math.abs(s.vx); s.flipX = false; }
-        if (s.px > S - sw - m)  { s.px = S - sw - m;  s.vx = -Math.abs(s.vx); s.flipX = true;  }
-        if (s.py < m)           { s.py = m;            s.vy =  Math.abs(s.vy); }
-        if (s.py > S - sw - m)  { s.py = S - sw - m;  s.vy = -Math.abs(s.vy); }
-      } else {
-        // World-space bounce off water body boundary
-        const anchor = key; // key IS the anchor for water bodies
-        const newWx = s.wx + s.vx * dt;
-        const newWy = s.wy + s.vy * dt;
-        const half = sw / 2;
+      // ── Resting pause ──────────────────────────────────────────────────────
+      if (s.restTimer > 0) {
+        s.restTimer -= dt;
+        s.vx *= Math.pow(0.05, dt); // decelerate quickly
+        s.vy *= Math.pow(0.05, dt);
+        // Still animate (tail drift) but slow
+        const spd = Math.hypot(s.vx, s.vy);
+        _advanceFrame(s, spd, s.topSpeed, ANIM_MAX_FPS, dt);
+        continue;
+      }
 
-        // Test x movement: use leading edge
-        const txLeadX = Math.floor((newWx + (s.vx >= 0 ? sw : 0)) / S);
-        const tyMidX  = Math.floor((s.wy + half) / S);
-        const xOk = tileAt(txLeadX, tyMidX) === T_WATER && waterBodyAnchor(txLeadX, tyMidX) === anchor;
-        if (xOk) {
-          s.wx = newWx;
-          s.flipX = s.vx < 0;
+      if (s.type === 'block') {
+        const dx = s.tpx - s.px;
+        const dy = s.tpy - s.py;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist < 3) {
+          // Reached waypoint — maybe rest, then pick new one
+          if (Math.random() < 0.35) s.restTimer = 0.4 + Math.random() * 0.8;
+          const t = _randBlockTarget(S, sw, m);
+          s.tpx = t.x; s.tpy = t.y;
         } else {
-          s.vx = -s.vx;
+          const steer   = Math.min(1, dt * 5);
+          const wantVx  = (dx / dist) * s.topSpeed;
+          const wantVy  = (dy / dist) * s.topSpeed;
+          s.vx += (wantVx - s.vx) * steer;
+          s.vy += (wantVy - s.vy) * steer;
+
+          const nx = s.px + s.vx * dt;
+          const ny = s.py + s.vy * dt;
+          if (nx >= m && nx <= S - sw - m) { s.px = nx; } else { s.vx = -s.vx; const t = _randBlockTarget(S, sw, m); s.tpx = t.x; }
+          if (ny >= m && ny <= S - sw - m) { s.py = ny; } else { s.vy = -s.vy; const t = _randBlockTarget(S, sw, m); s.tpy = t.y; }
         }
 
-        // Test y movement: use leading edge
-        const txMidY  = Math.floor((s.wx + half) / S);
-        const tyLeadY = Math.floor((newWy + (s.vy >= 0 ? sw : 0)) / S);
-        const yOk = tileAt(txMidY, tyLeadY) === T_WATER && waterBodyAnchor(txMidY, tyLeadY) === anchor;
-        if (yOk) { s.wy = newWy; }
-        else      { s.vy = -s.vy; }
+        if (Math.abs(s.vx) > 0.5) s.flipX = s.vx < 0;
+
+      } else {
+        // Water body — world-space steering
+        const anchor = waterBodyAnchor(keyC, keyR);
+        const dx  = s.twx - s.wx;
+        const dy  = s.twy - s.wy;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist < 6) {
+          if (Math.random() < 0.3) s.restTimer = 0.3 + Math.random() * 1.0;
+          const t = _randWaterTarget(key, m, sw);
+          s.twx = t.x; s.twy = t.y;
+        } else {
+          const steer  = Math.min(1, dt * 3.5);
+          const wantVx = (dx / dist) * s.topSpeed;
+          const wantVy = (dy / dist) * s.topSpeed;
+          s.vx += (wantVx - s.vx) * steer;
+          s.vy += (wantVy - s.vy) * steer;
+
+          const nx = s.wx + s.vx * dt;
+          const ny = s.wy + s.vy * dt;
+
+          // Validate x step
+          const txX = Math.floor((nx + (s.vx >= 0 ? sw : 0)) / S);
+          const tyX = Math.floor((s.wy + sw / 2) / S);
+          if (anchor && tileAt(txX, tyX) === T_WATER && waterBodyAnchor(txX, tyX) === anchor) {
+            s.wx = nx;
+          } else {
+            s.vx = -s.vx * 0.6;
+            const t = _randWaterTarget(key, m, sw); s.twx = t.x;
+          }
+
+          // Validate y step
+          const txY = Math.floor((s.wx + sw / 2) / S);
+          const tyY = Math.floor((ny + (s.vy >= 0 ? sw : 0)) / S);
+          if (anchor && tileAt(txY, tyY) === T_WATER && waterBodyAnchor(txY, tyY) === anchor) {
+            s.wy = ny;
+          } else {
+            s.vy = -s.vy * 0.6;
+            const t = _randWaterTarget(key, m, sw); s.twy = t.y;
+          }
+        }
+
+        if (Math.abs(s.vx) > 0.5) s.flipX = s.vx < 0;
       }
 
-      s.frameTimer += dt;
-      if (s.frameTimer >= 1 / ANIM_FPS) {
-        s.frameTimer -= 1 / ANIM_FPS;
-        s.frame = (s.frame + 1) % AXO_FRAMES;
-      }
+      const spd = Math.hypot(s.vx, s.vy);
+      _advanceFrame(s, spd, s.topSpeed, ANIM_MAX_FPS, dt);
     }
+  }
+}
+
+// Advance animation frame at a rate proportional to how fast the pet is moving.
+function _advanceFrame(s, speed, topSpeed, maxFps, dt) {
+  const frac = Math.min(1, speed / (topSpeed * 0.5));
+  const fps  = 1.5 + frac * (maxFps - 1.5); // min 1.5 fps (idle drift) → maxFps
+  s.frameAccum += dt * fps;
+  if (s.frameAccum >= 1) {
+    s.frameAccum -= 1;
+    s.frame = (s.frame + 1) % AXO_FRAMES;
   }
 }
 

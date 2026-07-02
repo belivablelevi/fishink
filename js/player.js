@@ -55,6 +55,21 @@ function resetPlayerSpawn() {
 const cam = { x: 0, y: 0 };
 let CANVAS_W = 1280, CANVAS_H = 720;
 
+// Pet placement mode — entered when player clicks Place from the Pets tab.
+// While active the player clicks a water body or Tank tile to assign the pet.
+const petPlaceMode = { active: false, uid: null };
+
+function enterPetPlaceMode(uid) {
+  petPlaceMode.active = true;
+  petPlaceMode.uid = uid;
+  exitBuildMode(); // closes the menu panel
+}
+
+function exitPetPlaceMode() {
+  petPlaceMode.active = false;
+  petPlaceMode.uid = null;
+}
+
 // Build mode — `active` lets you place/cancel even with the menu hidden;
 // `menuOpen` only controls whether the DOM panel is shown.
 const buildMode = {
@@ -162,6 +177,11 @@ function handleBuildKey(e) {
   }
   if ((e.key === 'r' || e.key === 'R') && blueprint.pasting) {
     rotateBlueprintClipboard();
+    return;
+  }
+  if (e.key === 'Escape' && petPlaceMode.active) {
+    exitPetPlaceMode();
+    queueToast('Placement cancelled', '#9aa0a8');
     return;
   }
   if (e.key === 'Escape' && !buildMode.active && blockPopup.open) {
@@ -284,6 +304,25 @@ function triggerInteract() {
   const hoveredId = hoverTile ? blockAt(hoverTile.c, hoverTile.r) : B_NONE;
   const kind = interactionKindFor(hoveredId);
   const hoverTerrain = hoverTile ? tileAt(hoverTile.c, hoverTile.r) : null;
+
+  // Pet placement mode — intercept all interactions until the player clicks a valid spot
+  if (petPlaceMode.active) {
+    if (!hoverTile) return;
+    if (hoveredId === B_POND) {
+      assignPetToPond(petPlaceMode.uid, hoverTile.c, hoverTile.r);
+      queueToast('Axolotl placed in tank!', '#4dca7c');
+      exitPetPlaceMode();
+    } else if (hoverTerrain === T_WATER) {
+      const anchor = waterBodyAnchor(hoverTile.c, hoverTile.r);
+      if (anchor) {
+        assignPetToWaterPond(petPlaceMode.uid, anchor);
+        queueToast('Axolotl placed in pond!', '#4dca7c');
+        exitPetPlaceMode();
+      }
+    }
+    return; // eat the click regardless — don't open popups during placement
+  }
+
   if (kind) {
     toggleBlockPopupAtMouse(kind, hoverTile.c, hoverTile.r);
   } else if (hoverTile && hoverTerrain === T_WATER && waterBodyAnchor(hoverTile.c, hoverTile.r)) {
