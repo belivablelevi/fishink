@@ -46,6 +46,7 @@ function serializeGame() {
     pets: game.pets,
     petNextUid: game.petNextUid,
     petPullsTotal: game.petPullsTotal,
+    waterPonds: game.waterPonds,
   };
 }
 
@@ -105,6 +106,7 @@ function deserializeGame(data) {
   game.pets         = data.pets         || [];
   game.petNextUid   = data.petNextUid   || (game.pets.reduce((m, p) => Math.max(m, p.uid), 0) + 1);
   game.petPullsTotal= data.petPullsTotal|| 0;
+  game.waterPonds   = data.waterPonds   || {};
 }
 
 function saveGame() {

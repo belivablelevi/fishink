@@ -1310,13 +1310,15 @@ function renderBlockPopup() {
   else if (kind === 'packer')    renderPackerPopupContent(c, r);
   else if (kind === 'teleporter') renderTeleporterPopupContent(c, r);
   else if (kind === 'pond')       renderPondPopupContent(c, r);
-  // "Move" button appended to every popup type — lets players relocate a block
-  // for free instead of demolishing and rebuilding it.
-  const moveBtn = document.createElement('button');
-  moveBtn.className = 'mp-move';
-  moveBtn.textContent = 'Move (free)';
-  moveBtn.addEventListener('click', () => movePickUpBlock(c, r));
-  if (blockPopupEl) blockPopupEl.appendChild(moveBtn);
+  else if (kind === 'water_pond') renderWaterPondPopupContent(c, r);
+  // "Move" button appended to block popups (not for terrain-based water ponds)
+  if (kind !== 'water_pond') {
+    const moveBtn = document.createElement('button');
+    moveBtn.className = 'mp-move';
+    moveBtn.textContent = 'Move (free)';
+    moveBtn.addEventListener('click', () => movePickUpBlock(c, r));
+    if (blockPopupEl) blockPopupEl.appendChild(moveBtn);
+  }
 }
 
 // Shared "Lv N+1: -X% time, +Y% value" + buy button block, used both as the
@@ -1789,6 +1791,81 @@ function renderPondPopupContent(c, r) {
   }
 }
 
+// ── Natural water pond popup ──────────────────────────────────────────────────
+
+function renderWaterPondPopupContent(c, r) {
+  const anchor = waterBodyAnchor(c, r);
+  blockPopupEl.innerHTML = '';
+
+  const header = document.createElement('div');
+  header.className = 'mp-header';
+  header.innerHTML = `<div class="mp-name">Natural Pond</div><button class="mp-close">&times;</button>`;
+  header.querySelector('.mp-close').addEventListener('click', closeBlockPopup);
+  blockPopupEl.appendChild(header);
+
+  const uids = game.waterPonds[anchor] || [];
+
+  const slots = document.createElement('div');
+  slots.className = 'pond-slots';
+  for (let i = 0; i < POND_CAPACITY; i++) {
+    const uid = uids[i];
+    const slot = document.createElement('div');
+    slot.className = 'pond-slot';
+    if (uid != null) {
+      const pet = game.pets.find(p => p.uid === uid);
+      const v   = pet ? getPetVariant(pet.variant) : null;
+      if (pet && v) {
+        slot.innerHTML = `
+          <div class="pond-slot-sprite" style="background-image:url('img/axolotl/${pet.variant}.png')"></div>
+          <span class="pond-slot-name" style="color:${RARITY_COLOR[v.rarity]}">${v.name}</span>
+          <button class="pond-slot-remove" data-uid="${uid}">✕</button>`;
+        slot.querySelector('.pond-slot-remove').addEventListener('click', e => {
+          unassignPet(Number(e.target.dataset.uid));
+          renderBlockPopup();
+        });
+      } else {
+        slot.innerHTML = `<span class="pond-slot-name" style="color:var(--c-muted)">Unknown pet</span>`;
+      }
+    } else {
+      slot.innerHTML = `<span class="pond-slot-empty">Empty slot</span>`;
+    }
+    slots.appendChild(slot);
+  }
+  blockPopupEl.appendChild(slots);
+
+  const available = game.pets.filter(p => !petCurrentPond(p.uid));
+  if (available.length === 0 && uids.length === 0) {
+    const hint = document.createElement('div');
+    hint.className = 'mp-effect';
+    hint.style.marginTop = '8px';
+    hint.textContent = 'No axolotls yet — pull some from the Pets tab!';
+    blockPopupEl.appendChild(hint);
+    return;
+  }
+  if (available.length > 0 && uids.length < POND_CAPACITY) {
+    const label = document.createElement('div');
+    label.className = 'mp-effect';
+    label.style.cssText = 'margin-top:10px;margin-bottom:4px;';
+    label.textContent = 'Assign a pet:';
+    blockPopupEl.appendChild(label);
+    const list = document.createElement('div');
+    list.className = 'pond-assign-list';
+    for (const pet of available) {
+      const v = getPetVariant(pet.variant);
+      if (!v) continue;
+      const btn = document.createElement('button');
+      btn.className = 'mp-target-btn';
+      btn.innerHTML = `<span class="pond-mini-sprite" style="background-image:url('img/axolotl/${pet.variant}.png')"></span> <span style="color:${RARITY_COLOR[v.rarity]}">${v.name}</span>`;
+      btn.addEventListener('click', () => {
+        assignPetToWaterPond(pet.uid, anchor);
+        renderBlockPopup();
+      });
+      list.appendChild(btn);
+    }
+    blockPopupEl.appendChild(list);
+  }
+}
+
 // ── Pets tab (gacha + collection) ─────────────────────────────────────────────
 
 let _petsPullResult = null; // last pull result for display
@@ -1881,32 +1958,81 @@ function renderPetsPanel() {
     return;
   }
 
+  const allPonds = listAvailablePonds();
+
   const grid = document.createElement('div');
   grid.className = 'pets-collection-grid';
   for (const pet of game.pets) {
     const v = getPetVariant(pet.variant);
     if (!v) continue;
     const pond = petCurrentPond(pet.uid);
+    const freePonds = allPonds.filter(p => p.count < p.capacity);
+    let statusText = 'Not assigned';
+    if (pond) statusText = pond.type === 'block' ? `In built pond` : `In natural pond`;
+
     const card = document.createElement('div');
     card.className = 'pet-card';
     card.innerHTML = `
       <div class="pet-sprite-sm" style="background-image:url('img/axolotl/${pet.variant}.png')"></div>
       <div class="pet-card-info">
         <div class="pet-card-name" style="color:${RARITY_COLOR[v.rarity]}">${v.name}</div>
-        <div class="pet-card-status">${pond ? `In pond (${pond.c},${pond.r})` : 'Not assigned'}</div>
+        <div class="pet-card-status pet-card-status-${pet.uid}">${statusText}</div>
       </div>
-      ${pond
-        ? `<button class="upgrade-buy pet-card-btn" data-uid="${pet.uid}" data-action="remove">Remove</button>`
-        : `<button class="upgrade-buy pet-card-btn" data-uid="${pet.uid}" data-action="assign" disabled title="Open a pond (E near it) to assign">Place</button>`}`;
+      <div class="pet-card-actions" data-uid="${pet.uid}"></div>`;
     grid.appendChild(card);
+
+    const actionsEl = card.querySelector('.pet-card-actions');
+    if (pond) {
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'upgrade-buy pet-card-btn';
+      removeBtn.textContent = 'Remove';
+      removeBtn.addEventListener('click', () => { unassignPet(pet.uid); renderPetsPanel(); });
+      actionsEl.appendChild(removeBtn);
+    } else if (freePonds.length === 0) {
+      const disabledBtn = document.createElement('button');
+      disabledBtn.className = 'upgrade-buy pet-card-btn';
+      disabledBtn.textContent = 'No pond';
+      disabledBtn.disabled = true;
+      disabledBtn.title = 'Walk to a pond and press E, or build an Axolotl Pond tile';
+      actionsEl.appendChild(disabledBtn);
+    } else {
+      const placeBtn = document.createElement('button');
+      placeBtn.className = 'upgrade-buy pet-card-btn';
+      placeBtn.textContent = 'Place';
+      placeBtn.addEventListener('click', () => {
+        // If only one pond with space, auto-assign
+        if (freePonds.length === 1) {
+          const fp = freePonds[0];
+          if (fp.type === 'block') assignPetToPond(pet.uid, fp.c, fp.r);
+          else assignPetToWaterPond(pet.uid, fp.key);
+          renderPetsPanel();
+          return;
+        }
+        // Multiple options: show inline selector
+        actionsEl.innerHTML = '';
+        const sel = document.createElement('div');
+        sel.className = 'pet-pond-selector';
+        for (const fp of freePonds) {
+          const opt = document.createElement('button');
+          opt.className = 'mp-target-btn';
+          const label = fp.type === 'block' ? `Built pond` : `Natural pond`;
+          opt.textContent = `${label} (${fp.capacity - fp.count} free)`;
+          opt.addEventListener('click', () => {
+            if (fp.type === 'block') assignPetToPond(pet.uid, fp.c, fp.r);
+            else assignPetToWaterPond(pet.uid, fp.key);
+            renderPetsPanel();
+          });
+          sel.appendChild(opt);
+        }
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'mp-target-btn';
+        cancelBtn.textContent = '✕ Cancel';
+        cancelBtn.addEventListener('click', () => renderPetsPanel());
+        sel.appendChild(cancelBtn);
+        actionsEl.appendChild(sel);
+      });
+      actionsEl.appendChild(placeBtn);
+    }
   }
   panel.appendChild(grid);
-
-  // Wire remove buttons
-  panel.querySelectorAll('.pet-card-btn[data-action="remove"]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      unassignPet(Number(btn.dataset.uid));
-      renderPetsPanel();
-    });
-  });
 }

@@ -523,6 +523,30 @@ function tileWalkable(t) {
   return t === T_EMPTY || t === T_SHORE || t === T_CONCRETE;
 }
 
+// Returns a stable string key "c,r" for the top-left tile of the connected
+// T_WATER body containing (startC, startR). Used as the natural-pond identity.
+const _wbAnchorCache = {};
+function waterBodyAnchor(startC, startR) {
+  const startKey = `${startC},${startR}`;
+  if (_wbAnchorCache[startKey]) return _wbAnchorCache[startKey];
+  const visited = new Set();
+  const queue = [[startC, startR]];
+  let minC = startC, minR = startR;
+  while (queue.length) {
+    const [c, r] = queue.shift();
+    const k = `${c},${r}`;
+    if (visited.has(k)) continue;
+    if (c < 0 || c >= WORLD_COLS || r < 0 || r >= WORLD_ROWS) continue;
+    if (tileAt(c, r) !== T_WATER) continue;
+    visited.add(k);
+    if (r < minR || (r === minR && c < minC)) { minR = r; minC = c; }
+    queue.push([c+1,r],[c-1,r],[c,r+1],[c,r-1]);
+  }
+  const anchor = `${minC},${minR}`;
+  for (const k of visited) _wbAnchorCache[k] = anchor;
+  return anchor;
+}
+
 // Single-cell equipment placement rule.
 function canPlaceEquipmentCell(id, c, r) {
   const t = tileAt(c, r);

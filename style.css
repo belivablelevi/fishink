@@ -1361,3 +1361,10 @@ body.touch-active .build-hint { right: 90px; bottom: 20px; }
   max-height: 160px;
   overflow-y: auto;
 }
+.pet-pond-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+}
+.pet-card-actions { display: flex; align-items: flex-start; flex-direction: column; gap: 4px; }

@@ -80,11 +80,15 @@ function pullPets(count = 1) {
 
 // ── Pond assignment ────────────────────────────────────────────────────────────
 
+// Returns location info for the pond a pet is currently in, or null.
+// type: 'block' (placed B_POND) or 'water' (natural water body)
 function petCurrentPond(uid) {
   for (let r = 0; r < WORLD_ROWS; r++)
     for (let c = 0; c < WORLD_COLS; c++)
       if (blockAt(c, r) === B_POND && stateAt(c, r).pondPets.includes(uid))
-        return { c, r };
+        return { type: 'block', c, r };
+  for (const [key, uids] of Object.entries(game.waterPonds))
+    if (uids.includes(uid)) return { type: 'water', key };
   return null;
 }
 
@@ -97,6 +101,15 @@ function assignPetToPond(uid, pc, pr) {
   return true;
 }
 
+function assignPetToWaterPond(uid, anchorKey) {
+  unassignPet(uid);
+  if (!game.waterPonds[anchorKey]) game.waterPonds[anchorKey] = [];
+  if (game.waterPonds[anchorKey].length >= POND_CAPACITY) return false;
+  game.waterPonds[anchorKey].push(uid);
+  saveGame();
+  return true;
+}
+
 function unassignPet(uid) {
   for (let r = 0; r < WORLD_ROWS; r++)
     for (let c = 0; c < WORLD_COLS; c++) {
@@ -105,6 +118,33 @@ function unassignPet(uid) {
       const i = st.pondPets.indexOf(uid);
       if (i !== -1) { st.pondPets.splice(i, 1); saveGame(); return; }
     }
+  for (const [key, uids] of Object.entries(game.waterPonds)) {
+    const i = uids.indexOf(uid);
+    if (i !== -1) { uids.splice(i, 1); saveGame(); return; }
+  }
+}
+
+// List all available ponds (block + natural water) with capacity info
+function listAvailablePonds() {
+  const ponds = [];
+  for (let r = 0; r < WORLD_ROWS; r++)
+    for (let c = 0; c < WORLD_COLS; c++)
+      if (blockAt(c, r) === B_POND) {
+        const st = stateAt(c, r);
+        ponds.push({ type: 'block', c, r, count: st.pondPets.length, capacity: POND_CAPACITY });
+      }
+  // Natural water bodies — deduplicate by anchor key
+  const seenAnchors = new Set();
+  for (let r = 0; r < WORLD_ROWS; r++)
+    for (let c = 0; c < WORLD_COLS; c++)
+      if (tileAt(c, r) === T_WATER) {
+        const key = waterBodyAnchor(c, r);
+        if (seenAnchors.has(key)) continue;
+        seenAnchors.add(key);
+        const count = (game.waterPonds[key] || []).length;
+        ponds.push({ type: 'water', key, count, capacity: POND_CAPACITY });
+      }
+  return ponds;
 }
 
 // ── Swim state (non-persisted, rebuilt each session) ──────────────────────────
@@ -155,12 +195,22 @@ function tickSwimStates(dt) {
   }
 }
 
+// Returns the pet uids assigned to a given tile via either system
+function petsAtTile(c, r) {
+  if (blockAt(c, r) === B_POND) return stateAt(c, r).pondPets;
+  if (tileAt(c, r) === T_WATER) {
+    const key = waterBodyAnchor(c, r);
+    return game.waterPonds[key] || [];
+  }
+  return [];
+}
+
 // Prune swim states for uids no longer assigned (called from pond popup close)
 function pruneSwimStates(pc, pr) {
   const key = `${pc},${pr}`;
   if (!_swimStates[key]) return;
-  const st = stateAt(pc, pr);
+  const current = petsAtTile(pc, pr);
   for (const uid in _swimStates[key])
-    if (!st.pondPets.includes(Number(uid)))
+    if (!current.includes(Number(uid)))
       delete _swimStates[key][uid];
 }

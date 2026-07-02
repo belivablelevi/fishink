@@ -489,6 +489,33 @@ function drawWaterTile(ctx, sx, sy, S, c, r) {
       ctx.fillRect(px, py, 1.5, 1.5);
     }
   }
+
+  // Draw any pets assigned to this natural water body.
+  // Only render on the anchor tile so each pet appears once.
+  if (typeof waterBodyAnchor !== 'function' || typeof game === 'undefined') return;
+  const anchor = waterBodyAnchor(c, r);
+  if (anchor !== `${c},${r}`) return; // not the anchor tile
+  const uids = (game.waterPonds && game.waterPonds[anchor]) || [];
+  if (!uids.length) return;
+  const sw = 12;
+  uids.forEach((uid, i) => {
+    const pet = game.pets.find(p => p.uid === uid);
+    if (!pet) return;
+    const img = IMAGES[axoImgKey(pet.variant)];
+    if (!img) return;
+    const ss = _getSwimState(uid, c, r);
+    const srcX = ss.frame * AXO_FRAME_W;
+    const srcY = AXO_SWIM_ROW * AXO_FRAME_H;
+    ctx.save();
+    if (ss.flipX) {
+      ctx.translate(sx + ss.px + sw, sy + ss.py);
+      ctx.scale(-1, 1);
+      ctx.drawImage(img, srcX, srcY, AXO_FRAME_W, AXO_FRAME_H, 0, 0, sw, sw);
+    } else {
+      ctx.drawImage(img, srcX, srcY, AXO_FRAME_W, AXO_FRAME_H, sx + ss.px, sy + ss.py, sw, sw);
+    }
+    ctx.restore();
+  });
 }
 
 function drawTile(ctx, t, sx, sy, c, r) {

@@ -283,8 +283,11 @@ function triggerInteract() {
   const inReach = hoverTile && Math.abs(hoverTile.c - pc) <= 1 && Math.abs(hoverTile.r - pr) <= 1;
   const hoveredId = hoverTile ? blockAt(hoverTile.c, hoverTile.r) : B_NONE;
   const kind = interactionKindFor(hoveredId);
+  const hoverTerrain = hoverTile ? tileAt(hoverTile.c, hoverTile.r) : null;
   if (kind) {
     toggleBlockPopupAtMouse(kind, hoverTile.c, hoverTile.r);
+  } else if (hoverTile && hoverTerrain === T_WATER) {
+    toggleBlockPopupAtMouse('water_pond', hoverTile.c, hoverTile.r);
   } else if (inReach && IS_TRANSPORT(hoveredId) && heldFish.length > 0) {
     dropHeldFishOnBelt(hoverTile.c, hoverTile.r);
   } else if (heldFish.length > 0) {

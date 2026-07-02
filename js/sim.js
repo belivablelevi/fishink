@@ -18,6 +18,7 @@ const game = {
   pets: [],          // owned axolotl pets [{uid, variant}]
   petNextUid: 1,
   petPullsTotal: 0,
+  waterPonds: {},    // natural water body pet assignments: { "anchorKey": [uid,...] }
 };
 
 const fisherTimers = {};
