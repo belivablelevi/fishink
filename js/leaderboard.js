@@ -151,9 +151,14 @@ function getLeaderboardName() {
   return localStorage.getItem(LEADERBOARD_NAME_KEY) || '';
 }
 
+// Only allow standard printable ASCII so Unicode "fancy font" characters
+// (𝓁𝒾𝓀𝑒 𝓽𝒽𝒾𝓈) can't slip past the profanity filter via lookalike codepoints.
+const NAME_ALLOWED_RX = /^[\x20-\x7E]+$/;
+
 function setLeaderboardName(name) {
   const trimmed = (name || '').trim().slice(0, 20);
   if (!trimmed) return false;
+  if (!NAME_ALLOWED_RX.test(trimmed)) return 'fancy';
   if (!nameIsClean(trimmed)) return 'inappropriate';
   localStorage.setItem(LEADERBOARD_NAME_KEY, trimmed);
   return true;

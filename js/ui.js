@@ -845,7 +845,11 @@ function renderLeaderboardNamePrompt() {
   joinBtn.textContent = 'Join leaderboard';
   joinBtn.addEventListener('click', () => {
     const result = setLeaderboardName(input.value);
-    if (result === 'inappropriate') {
+    if (result === 'fancy') {
+      input.style.borderColor = '#e05c5c';
+      input.value = '';
+      input.placeholder = 'Letters & numbers only!';
+    } else if (result === 'inappropriate') {
       input.style.borderColor = '#e05c5c';
       input.value = '';
       input.placeholder = 'Keep it clean!';

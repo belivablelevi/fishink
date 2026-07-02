@@ -31,7 +31,8 @@ const START_SCREENS = [
       const btn   = card.querySelector('#startNameBtn');
       const submit = () => {
         const result = setLeaderboardName(input.value);
-        if (result === 'inappropriate') { input.style.borderColor = '#e05c5c'; input.placeholder = 'Keep it clean!'; input.value = ''; return; }
+        if (result === 'fancy')         { input.style.borderColor = '#e05c5c'; input.placeholder = 'Letters & numbers only!'; input.value = ''; return; }
+        if (result === 'inappropriate') { input.style.borderColor = '#e05c5c'; input.placeholder = 'Keep it clean!';          input.value = ''; return; }
         if (result) done();
       };
       btn.addEventListener('click', submit);
