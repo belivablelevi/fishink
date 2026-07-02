@@ -326,6 +326,7 @@ function setBuildMenuOpen(open) {
     renderStatsPanel();
     renderResearchPanel();
     renderPrestigePanel();
+    renderPetsPanel();
     renderBlueprintsPanel();
     menuCashEl.textContent = `$${formatMoney(game.cash)}`;
   }

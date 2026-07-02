@@ -93,7 +93,7 @@ function init() {
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
 
-  if (hasSave()) { loadGame(); } else { buildWorld(); resetPlayerSpawn(); }
+  if (!loadGame()) { buildWorld(); resetPlayerSpawn(); }
   initMouseHandlers(canvas);
   initTouchControls(canvas);
 

@@ -312,12 +312,14 @@ function triggerInteract() {
       assignPetToPond(petPlaceMode.uid, hoverTile.c, hoverTile.r);
       queueToast('Axolotl placed in tank!', '#4dca7c');
       exitPetPlaceMode();
+      if (typeof renderPetsPanel === 'function') renderPetsPanel();
     } else if (hoverTerrain === T_WATER) {
       const anchor = waterBodyAnchor(hoverTile.c, hoverTile.r);
       if (anchor) {
         assignPetToWaterPond(petPlaceMode.uid, anchor);
         queueToast('Axolotl placed in pond!', '#4dca7c');
         exitPetPlaceMode();
+        if (typeof renderPetsPanel === 'function') renderPetsPanel();
       }
     }
     return; // eat the click regardless — don't open popups during placement
