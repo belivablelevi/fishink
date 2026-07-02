@@ -12,8 +12,8 @@ const AXO_FRAME_W     = 16;
 const AXO_FRAME_H     = 16;
 const AXO_ROWS        = 16;    // 16 heading directions
 const AXO_SWIM_FRAMES = 4;     // columns 0-3: moving animation
-const AXO_IDLE_COL    = 4;     // column start of idle section
-const AXO_IDLE_FRAMES = 3;     // columns 4-6: idle animation
+const AXO_IDLE_COL    = 5;     // column start of idle section (col 4 is blank)
+const AXO_IDLE_FRAMES = 2;     // columns 5-6: idle animation
 const AXO_ROW_STEP    = 22.5;  // degrees per row
 const AXO_ROW_OFFSET  = 67.5;  // center angle (°) of row 0 (≈ upper-right)
 
