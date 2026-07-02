@@ -75,6 +75,7 @@ function deserializeGame(data) {
   STARTER_R = data.STARTER_R;
 
   offshoreIslands = data.offshoreIslands || [];
+  computeIslandDockShores(); // backfill shoreDockC/R for saves that predate docks
 
   terrain   = data.terrain.map(row => Uint8Array.from(row));
   blocks    = data.blocks.map(row => Uint8Array.from(row));

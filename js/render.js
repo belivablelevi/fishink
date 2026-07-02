@@ -86,6 +86,9 @@ function draw(ctx, canvas, dt) {
   // Fish — separate pass so they render above all blocks at interpolated positions
   drawAllFish(ctx, c0, c1, r0, r1);
 
+  // Island docks — wooden piers on each offshore island
+  drawIslandDocks(ctx);
+
   // Shipping boat — fixed dock the Drone Delivery network sends fish to
   drawBoat(ctx);
 
@@ -1407,6 +1410,87 @@ function drawDroneSprite(ctx, cx, cy, pulse) {
     ctx.lineWidth = 1.5;
     for (const [dx, dy] of [[-8,-8],[8,-8],[-8,8],[8,8]]) {
       ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + dx * 0.7, cy + dy * 0.7); ctx.stroke();
+    }
+  }
+}
+
+// Draws a wooden pier at each offshore island's dock position.
+// The pier runs from the T_SHORE tile (shoreDockC/R) out to the water
+// approach tile (dockC/R) where the player's boat ties up.
+function drawIslandDocks(ctx) {
+  const S = TILE_SIZE;
+  const pc = player.wx / S;
+  const pr = player.wy / S;
+
+  for (const island of offshoreIslands) {
+    if (island.shoreDockC == null) continue;
+
+    const sx = (island.shoreDockC + 0.5) * S - cam.x;
+    const sy = (island.shoreDockR + 0.5) * S - cam.y;
+    const ex = (island.dockC + 0.5) * S - cam.x;
+    const ey = (island.dockR + 0.5) * S - cam.y;
+
+    // Skip if entirely off screen
+    if (ex < -S * 4 || ex > ctx.canvas.width + S * 4) continue;
+    if (ey < -S * 4 || ey > ctx.canvas.height + S * 4) continue;
+
+    const pLen = Math.hypot(ex - sx, ey - sy);
+    if (pLen < 1) continue;
+    const ux = (ex - sx) / pLen;
+    const uy = (ey - sy) / pLen;
+    const perpX = -uy * S * 0.18;
+    const perpY =  ux * S * 0.18;
+
+    // Is the player's boat near this dock? If so, highlight it.
+    const nearDock = player.inBoat &&
+      Math.hypot(pc - island.dockC, pr - island.dockR) < 3;
+
+    // ── Pier deck ─────────────────────────────────────────────────────────
+    ctx.fillStyle = '#8B6020';
+    ctx.beginPath();
+    ctx.moveTo(sx + perpX, sy + perpY);
+    ctx.lineTo(ex + perpX, ey + perpY);
+    ctx.lineTo(ex - perpX, ey - perpY);
+    ctx.lineTo(sx - perpX, sy - perpY);
+    ctx.closePath();
+    ctx.fill();
+
+    // Plank lines across the deck
+    ctx.strokeStyle = '#6a4a10';
+    ctx.lineWidth = 0.8;
+    const steps = Math.ceil(pLen / (S * 0.45));
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const bx = sx + (ex - sx) * t;
+      const by = sy + (ey - sy) * t;
+      ctx.beginPath();
+      ctx.moveTo(bx + perpX, by + perpY);
+      ctx.lineTo(bx - perpX, by - perpY);
+      ctx.stroke();
+    }
+
+    // ── Mooring posts ────────────────────────────────────────────────────
+    ctx.fillStyle = '#4a2e08';
+    for (let i = 0; i <= steps; i += 2) {
+      const t = i / steps;
+      const bx = sx + (ex - sx) * t;
+      const by = sy + (ey - sy) * t;
+      ctx.beginPath(); ctx.arc(bx + perpX, by + perpY, 2.5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(bx - perpX, by - perpY, 2.5, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // ── Dock-head platform at water end ──────────────────────────────────
+    ctx.fillStyle = '#a07828';
+    const hw = S * 0.28;
+    ctx.fillRect(ex - hw, ey - hw, hw * 2, hw * 2);
+    ctx.strokeStyle = '#6a4a10'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(ex - hw, ey - hw, hw * 2, hw * 2);
+
+    // ── Glow / highlight when player boat is near ─────────────────────────
+    if (nearDock) {
+      ctx.strokeStyle = 'rgba(120,220,255,0.55)';
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(ex - hw - 3, ey - hw - 3, hw * 2 + 6, hw * 2 + 6);
     }
   }
 }

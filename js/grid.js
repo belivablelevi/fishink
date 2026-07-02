@@ -451,7 +451,30 @@ function buildWorld() {
     island.dockC = approach.c;
     island.dockR = approach.r;
   }
+  computeIslandDockShores();
+}
 
+// Walk from each island's water-approach tile back toward its centre to find
+// the T_SHORE tile that sits at the landward end of the pier. Skips islands
+// that already have shoreDockC set (i.e. loaded from a recent save).
+function computeIslandDockShores() {
+  for (const island of offshoreIslands) {
+    if (island.shoreDockC !== undefined) continue;
+    const dx = island.cx - island.dockC;
+    const dy = island.cy - island.dockR;
+    const dist = Math.hypot(dx, dy);
+    if (dist === 0) { island.shoreDockC = island.cx; island.shoreDockR = island.cy; continue; }
+    const ux = dx / dist, uy = dy / dist;
+    let found = null;
+    for (let step = 1; step <= Math.ceil(dist) + 1; step++) {
+      const c = Math.round(island.dockC + ux * step);
+      const r = Math.round(island.dockR + uy * step);
+      if (c < 0 || c >= WORLD_COLS || r < 0 || r >= WORLD_ROWS) break;
+      if (tileAt(c, r) === T_SHORE) { found = { c, r }; break; }
+    }
+    island.shoreDockC = found ? found.c : Math.round(island.cx);
+    island.shoreDockR = found ? found.r : Math.round(island.cy);
+  }
 }
 
 function makeCellState() {
