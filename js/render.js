@@ -1906,7 +1906,7 @@ function drawHeldFish(ctx, canvas) {
   const size   = 40, pad = 6;
   const cw = canvas.width, ch = canvas.height;
   const panelW = count > 0 ? count * (size + pad) + pad : 180;
-  const panelH = size + 28;
+  const panelH = size + 12;
   const px = (cw - panelW) / 2;
   const py = ch - panelH - 14;
 
@@ -1918,19 +1918,8 @@ function drawHeldFish(ctx, canvas) {
   ctx.lineWidth = 1.5;
   roundRect(ctx, px, py, panelW, panelH, 10); ctx.stroke();
 
-  ctx.font = '10px "Segoe UI", system-ui, sans-serif';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  ctx.fillStyle = nearBelt && count > 0 ? '#4dca7c' : '#6a8a6a';
-  const maxHeld = effectiveMaxHeld();
-  ctx.fillText(
-    count === 0        ? 'Click water to fish' :
-    nearBelt           ? `Hover belt + [E], or click belt to place  (${count}/${maxHeld})` :
-                         `Walk to a belt  (${count}/${maxHeld})`,
-    px + panelW / 2, py + 5
-  );
-
   for (let i = 0; i < count; i++) {
-    drawFishSprite(ctx, heldFish[i], px + pad + i * (size + pad) + size / 2, py + 18 + size / 2, size);
+    drawFishSprite(ctx, heldFish[i], px + pad + i * (size + pad) + size / 2, py + panelH / 2, size);
   }
 }
 
