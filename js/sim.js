@@ -405,7 +405,7 @@ function cellAcceptsItem(nc, nr, nb) {
   if (nb === B_NONE)           return false;
   if (nb === B_SELLER)         return true;
   if (nb === B_DRONE_DELIVERY) return true;
-  if (nb === B_CRATE)          return stateAt(nc, nr).carrying.length < researchCrateCapacity();
+  if (nb === B_CRATE)          return stateAt(nc, nr).carrying.length < CRATE_CAPACITY;
   if (IS_TRANSPORT(nb))        return !stateAt(nc, nr).item;
   if (IS_MACHINE(nb))          { const s = stateAt(nc, nr); return !s.inputItem && !s.processing && !s.item; }
   if (IS_PACKER(nb))           { const s = stateAt(nc, nr); return s.carrying.length < s.packTarget && !s.processing && !s.item; }
@@ -588,7 +588,7 @@ function tickMachineOutput() {
           stateAt(nc, nr).item = outItem; pushed = true;
         } else if (nb === B_SELLER) { sellFish(outItem, nc, nr); pushed = true; }
         else if (nb === B_DRONE_DELIVERY) { droneSellFish(outItem, nc, nr); pushed = true; }
-        else if (nb === B_CRATE && stateAt(nc, nr).carrying.length < researchCrateCapacity()) {
+        else if (nb === B_CRATE && stateAt(nc, nr).carrying.length < CRATE_CAPACITY) {
           stateAt(nc, nr).carrying.push(outItem); pushed = true;
         }
         if (pushed) {

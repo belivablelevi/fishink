@@ -21,7 +21,7 @@ const BLOCK_QUICK_STAT = {
   [B_BELT]:           () => `${BELT_SPEED.toFixed(1)} tiles/s`,
   [B_SPLITTER]:       () => `${BELT_SPEED.toFixed(1)} tiles/s`,
   [B_SMART_ROUTER]:   () => `${BELT_SPEED.toFixed(1)} tiles/s`,
-  [B_CRATE]:          () => `Holds ${researchCrateCapacity()}`,
+  [B_CRATE]:          () => `Holds ${CRATE_CAPACITY}`,
   [B_WASHER]:         () => `${MACHINE_DEFS.WASHER.processTime.toFixed(1)}s / fish`,
   [B_SMOKER]:         () => `${MACHINE_DEFS.SMOKER.processTime.toFixed(1)}s / fish`,
   [B_ICER]:           () => `${MACHINE_DEFS.ICER.processTime.toFixed(1)}s / fish`,
@@ -1580,7 +1580,7 @@ function renderCratePopupContent(c, r) {
 
   blockPopupEl.innerHTML = `
     <div class="mp-header">
-      <div class="mp-name">Storage Crate <span class="level-badge">${st.carrying.length}/${researchCrateCapacity()}</span></div>
+      <div class="mp-name">Storage Crate <span class="level-badge">${st.carrying.length}/${CRATE_CAPACITY}</span></div>
       <button class="mp-close">&times;</button>
     </div>
     ${rows.length === 0

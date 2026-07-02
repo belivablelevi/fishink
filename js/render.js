@@ -561,7 +561,7 @@ function drawBlock(ctx, id, sx, sy, c, r, forceDir) {
     drawTeleporterBelt(ctx, BELT_DIRS[dirIdx], dirIdx, hasTarget, sx, sy, S, c, r);
 
   } else if (id === B_CRATE) {
-    const fill = st ? st.carrying.length / researchCrateCapacity() : 0;
+    const fill = st ? st.carrying.length / CRATE_CAPACITY : 0;
     if (IMAGES.crate) {
       ctx.drawImage(IMAGES.crate, sx + 1, sy + 1, S - 2, S - 2);
     } else {
