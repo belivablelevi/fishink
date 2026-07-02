@@ -760,7 +760,10 @@ function startManualCast(wx, wy) {
 function completeCast() {
   manualCast.active = false;
   if (heldFish.length >= effectiveMaxHeld()) {
-    queueToast('Hands full! Drop fish first.', '#e85d4a');
+    const msg = (typeof TUT !== 'undefined' && TUT.active)
+      ? 'Inventory full! Walk to the Belt and press E (or click it) to drop your fish.'
+      : 'Hands full! Drop fish on a Belt or Seller first.';
+    queueToast(msg, '#e8a030');
     sfxFail();
     return;
   }
@@ -782,6 +785,18 @@ function completeCast() {
     spawnParticles(manualCast.wx, manualCast.wy, 'sparkle', 10);
   }
   tutorialNotify('catch');
+  // If inventory just filled up and the tutorial is still on 'cast' or 'catch',
+  // skip ahead to 'drop' so the player isn't stuck wondering why they can't fish.
+  if (typeof TUT !== 'undefined' && TUT.active && TUT.phase === 1
+      && heldFish.length >= effectiveMaxHeld()) {
+    const steps = TUTORIAL_PHASE1_STEPS;
+    const currentId = steps[TUT.stepIndex]?.id;
+    if (currentId === 'cast' || currentId === 'catch') {
+      TUT.stepIndex = steps.findIndex(s => s.id === 'drop');
+      renderTutorialOverlay();
+      updateBuildHintUI();
+    }
+  }
 }
 
 function dropHeldFishOnBelt(c, r) {

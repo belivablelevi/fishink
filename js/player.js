@@ -575,6 +575,12 @@ function handleClick(e) {
           queueToast('Too far to cast!', '#e85d4a');
           sfxFail();
         }
+      } else if (t === T_WATER && !manualCast.active && !player.inBoat && heldFish.length >= effectiveMaxHeld()) {
+        const msg = (typeof TUT !== 'undefined' && TUT.active)
+          ? 'Inventory full! Walk to the Belt and press E (or click it) to drop your fish.'
+          : 'Hands full! Drop fish on a Belt or Seller first.';
+        queueToast(msg, '#e8a030');
+        sfxFail();
       }
     }
     return;
