@@ -2073,7 +2073,7 @@ function drawBoatHull(ctx, screenX, screenY, angle) {
   const srcX = (fi % BOAT_SHEET_COLS) * BOAT_FRAME_PX;
   const srcY = Math.floor(fi / BOAT_SHEET_COLS) * BOAT_FRAME_PX;
 
-  const S = TILE_SIZE;
+  const S = TILE_SIZE * 1.6;
   ctx.drawImage(sheet, srcX, srcY, BOAT_FRAME_PX, BOAT_FRAME_PX,
     screenX - S * 0.5, screenY - S * 0.5, S, S);
 }
