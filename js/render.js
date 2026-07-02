@@ -494,7 +494,7 @@ function drawWaterTile(ctx, sx, sy, S, c, r) {
   // Only render on the anchor tile so each pet appears once.
   if (typeof waterBodyAnchor !== 'function' || typeof game === 'undefined') return;
   const anchor = waterBodyAnchor(c, r);
-  if (anchor !== `${c},${r}`) return; // not the anchor tile
+  if (!anchor || anchor !== `${c},${r}`) return; // ocean or not the anchor tile
   const uids = (game.waterPonds && game.waterPonds[anchor]) || [];
   if (!uids.length) return;
   const sw = 12;

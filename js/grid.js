@@ -37,7 +37,7 @@ const BLOCK_NAMES = ['', 'Fisher', 'Belt',
                      'Washer', 'Smoker', 'Icer', 'Stamper', 'Seller', 'Concrete',
                      'Fishing Drone', 'Drone Delivery',
                      'Splitter', 'Sorter', 'Storage Crate', 'Recycler',
-                     'Packer', 'Smart Router', 'Teleporter', 'Axolotl Pond'];
+                     'Packer', 'Smart Router', 'Teleporter', 'Tank'];
 const BLOCK_COSTS = [0, 150, 10, 400, 1200, 600, 3000, 200, 5, 1000, 900,
                      60, 80, 250, 150, 700, 120, 2500, 800];
 
@@ -525,13 +525,14 @@ function tileWalkable(t) {
 
 // Returns a stable string key "c,r" for the top-left tile of the connected
 // T_WATER body containing (startC, startR). Used as the natural-pond identity.
-const _wbAnchorCache = {};
+// Ocean (water body touching map boundary) returns null — excluded from ponds.
+const _wbAnchorCache = {};  // tile key → anchor string or null (ocean)
 function waterBodyAnchor(startC, startR) {
   const startKey = `${startC},${startR}`;
-  if (_wbAnchorCache[startKey]) return _wbAnchorCache[startKey];
+  if (startKey in _wbAnchorCache) return _wbAnchorCache[startKey];
   const visited = new Set();
   const queue = [[startC, startR]];
-  let minC = startC, minR = startR;
+  let minC = startC, minR = startR, isOcean = false;
   while (queue.length) {
     const [c, r] = queue.shift();
     const k = `${c},${r}`;
@@ -539,10 +540,11 @@ function waterBodyAnchor(startC, startR) {
     if (c < 0 || c >= WORLD_COLS || r < 0 || r >= WORLD_ROWS) continue;
     if (tileAt(c, r) !== T_WATER) continue;
     visited.add(k);
+    if (c === 0 || c === WORLD_COLS - 1 || r === 0 || r === WORLD_ROWS - 1) isOcean = true;
     if (r < minR || (r === minR && c < minC)) { minR = r; minC = c; }
     queue.push([c+1,r],[c-1,r],[c,r+1],[c,r-1]);
   }
-  const anchor = `${minC},${minR}`;
+  const anchor = isOcean ? null : `${minC},${minR}`;
   for (const k of visited) _wbAnchorCache[k] = anchor;
   return anchor;
 }

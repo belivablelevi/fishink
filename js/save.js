@@ -47,6 +47,7 @@ function serializeGame() {
     petNextUid: game.petNextUid,
     petPullsTotal: game.petPullsTotal,
     waterPonds: game.waterPonds,
+    petAutoSell: game.petAutoSell,
   };
 }
 
@@ -107,6 +108,7 @@ function deserializeGame(data) {
   game.petNextUid   = data.petNextUid   || (game.pets.reduce((m, p) => Math.max(m, p.uid), 0) + 1);
   game.petPullsTotal= data.petPullsTotal|| 0;
   game.waterPonds   = data.waterPonds   || {};
+  game.petAutoSell  = Object.assign({ common: false, uncommon: false, rare: false, legendary: false }, data.petAutoSell || {});
 }
 
 function saveGame() {

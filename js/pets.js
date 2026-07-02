@@ -52,6 +52,31 @@ function getPetVariant(id) { return PET_VARIANTS.find(v => v.id === id) || null;
 // Returns image key for IMAGES object
 function axoImgKey(variantId) { return 'axo_' + variantId.replace(/-/g, '_'); }
 
+// ── Sell prices ──────────────────────────────────────────────────────────────
+
+const PET_SELL_PRICE = { common: 50, uncommon: 150, rare: 400, legendary: 1500 };
+
+function petSellPrice(uid) {
+  const pet = game.pets.find(p => p.uid === uid);
+  if (!pet) return 0;
+  const v = getPetVariant(pet.variant);
+  return v ? (PET_SELL_PRICE[v.rarity] || 0) : 0;
+}
+
+function sellPet(uid) {
+  unassignPet(uid);
+  const price = petSellPrice(uid);
+  const idx = game.pets.findIndex(p => p.uid === uid);
+  if (idx === -1) return;
+  const pet = game.pets[idx];
+  const v = getPetVariant(pet.variant);
+  game.pets.splice(idx, 1);
+  game.cash += price;
+  game.lifetimeEarned += price;
+  if (price > 0) queueToast(`Sold ${v ? v.name : 'pet'} +$${price}`, '#9aa0a8');
+  saveGame();
+}
+
 // ── Gacha ─────────────────────────────────────────────────────────────────────
 
 function rollGacha() {
@@ -60,20 +85,31 @@ function rollGacha() {
   return PET_VARIANTS[PET_VARIANTS.length - 1];
 }
 
-// Returns array of new pet objects, or null if can't afford.
+// Returns array of new pet objects (after auto-sell), or null if can't afford.
 function pullPets(count = 1) {
   const cost = count === 1 ? PET_PULL_COST : PET_BULK_COST;
   if (game.cash < cost) { queueToast('Not enough cash!', '#e85d4a'); sfxFail(); return null; }
   game.cash -= cost;
   const results = [];
+  const autoSell = game.petAutoSell || {};
+  let autoSoldCount = 0, autoSoldValue = 0;
   for (let i = 0; i < count; i++) {
     const v = rollGacha();
     const pet = { uid: game.petNextUid++, variant: v.id };
     game.pets.push(pet);
-    results.push({ pet, variant: v });
+    if (autoSell[v.rarity]) {
+      const price = PET_SELL_PRICE[v.rarity] || 0;
+      game.pets.splice(game.pets.indexOf(pet), 1);
+      game.cash += price;
+      game.lifetimeEarned += price;
+      autoSoldCount++;
+      autoSoldValue += price;
+    } else {
+      results.push({ pet, variant: v });
+    }
   }
   game.petPullsTotal += count;
-  if (UPGRADE_TIP && UPGRADE_TIP.active) {} // no-op, just guard
+  if (autoSoldCount > 0) queueToast(`Auto-sold ${autoSoldCount} pet${autoSoldCount > 1 ? 's' : ''} +$${autoSoldValue}`, '#9aa0a8');
   saveGame();
   return results;
 }
@@ -87,7 +123,7 @@ function petCurrentPond(uid) {
     for (let c = 0; c < WORLD_COLS; c++)
       if (blockAt(c, r) === B_POND && stateAt(c, r).pondPets.includes(uid))
         return { type: 'block', c, r };
-  for (const [key, uids] of Object.entries(game.waterPonds))
+  for (const [key, uids] of Object.entries(game.waterPonds || {}))
     if (uids.includes(uid)) return { type: 'water', key };
   return null;
 }
@@ -133,13 +169,13 @@ function listAvailablePonds() {
         const st = stateAt(c, r);
         ponds.push({ type: 'block', c, r, count: st.pondPets.length, capacity: POND_CAPACITY });
       }
-  // Natural water bodies — deduplicate by anchor key
+  // Natural water bodies — deduplicate by anchor key, skip ocean (null anchor)
   const seenAnchors = new Set();
   for (let r = 0; r < WORLD_ROWS; r++)
     for (let c = 0; c < WORLD_COLS; c++)
       if (tileAt(c, r) === T_WATER) {
         const key = waterBodyAnchor(c, r);
-        if (seenAnchors.has(key)) continue;
+        if (!key || seenAnchors.has(key)) continue;
         seenAnchors.add(key);
         const count = (game.waterPonds[key] || []).length;
         ponds.push({ type: 'water', key, count, capacity: POND_CAPACITY });

@@ -19,6 +19,7 @@ const game = {
   petNextUid: 1,
   petPullsTotal: 0,
   waterPonds: {},    // natural water body pet assignments: { "anchorKey": [uid,...] }
+  petAutoSell: { common: false, uncommon: false, rare: false, legendary: false },
 };
 
 const fisherTimers = {};

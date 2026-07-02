@@ -1368,3 +1368,36 @@ body.touch-active .build-hint { right: 90px; bottom: 20px; }
   margin-top: 2px;
 }
 .pet-card-actions { display: flex; align-items: flex-start; flex-direction: column; gap: 4px; }
+
+/* Auto-sell toggles */
+.pets-autosell {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+.pets-autosell-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pets-autosell-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  cursor: pointer;
+  user-select: none;
+}
+.pets-autosell-toggle input[type="checkbox"] {
+  accent-color: var(--c-accent);
+  width: 13px;
+  height: 13px;
+  cursor: pointer;
+}
+.pets-autosell-price { color: var(--c-muted); font-size: 10px; }
+
+/* Sell button — muted red-toned style */
+.pet-sell-btn { background: rgba(220,60,60,0.18) !important; color: #e87070 !important; }
+.pet-sell-btn:hover { background: rgba(220,60,60,0.32) !important; }

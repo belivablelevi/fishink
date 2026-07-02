@@ -1724,7 +1724,7 @@ function renderPondPopupContent(c, r) {
 
   const header = document.createElement('div');
   header.className = 'mp-header';
-  header.innerHTML = `<div class="mp-name">Axolotl Pond</div><button class="mp-close">&times;</button>`;
+  header.innerHTML = `<div class="mp-name">Tank</div><button class="mp-close">&times;</button>`;
   header.querySelector('.mp-close').addEventListener('click', closeBlockPopup);
   blockPopupEl.appendChild(header);
 
@@ -1933,20 +1933,54 @@ function renderPetsPanel() {
 
   panel.appendChild(gacha);
 
-  // ── Odds reference ──
-  const odds = document.createElement('div');
-  odds.className = 'pets-odds';
-  const pct = (w) => ((w / _TOTAL_WEIGHT) * 100).toFixed(1);
-  odds.innerHTML = `
-    <span style="color:${RARITY_COLOR.common}">Common ${(60).toFixed(0)}%</span>
+  // ── Odds + auto-sell ──
+  const oddsRow = document.createElement('div');
+  oddsRow.className = 'pets-odds';
+  oddsRow.innerHTML = `
+    <span style="color:${RARITY_COLOR.common}">Common 60%</span>
     <span style="color:${RARITY_COLOR.uncommon}">Uncommon 28%</span>
     <span style="color:${RARITY_COLOR.rare}">Rare 9%</span>
     <span style="color:${RARITY_COLOR.legendary}">Legendary 3%</span>`;
-  panel.appendChild(odds);
+  panel.appendChild(oddsRow);
+
+  const autoSell = game.petAutoSell || {};
+  const autoSellSection = document.createElement('div');
+  autoSellSection.className = 'pets-autosell';
+  const autoSellTitle = document.createElement('div');
+  autoSellTitle.className = 'pets-section-title';
+  autoSellTitle.style.marginBottom = '6px';
+  autoSellTitle.textContent = 'Auto-sell on pull';
+  autoSellSection.appendChild(autoSellTitle);
+  const rarityRow = document.createElement('div');
+  rarityRow.className = 'pets-autosell-row';
+  for (const rarity of ['common', 'uncommon', 'rare', 'legendary']) {
+    const lbl = document.createElement('label');
+    lbl.className = 'pets-autosell-toggle';
+    const chk = document.createElement('input');
+    chk.type = 'checkbox';
+    chk.checked = !!autoSell[rarity];
+    chk.addEventListener('change', () => {
+      game.petAutoSell[rarity] = chk.checked;
+      saveGame();
+    });
+    lbl.appendChild(chk);
+    const span = document.createElement('span');
+    span.style.color = RARITY_COLOR[rarity];
+    span.textContent = RARITY_LABEL[rarity];
+    lbl.appendChild(span);
+    const price = document.createElement('span');
+    price.className = 'pets-autosell-price';
+    price.textContent = ` $${PET_SELL_PRICE[rarity]}`;
+    lbl.appendChild(price);
+    rarityRow.appendChild(lbl);
+  }
+  autoSellSection.appendChild(rarityRow);
+  panel.appendChild(autoSellSection);
 
   // ── Collection ──
   const collTitle = document.createElement('div');
   collTitle.className = 'pets-section-title';
+  collTitle.style.marginTop = '10px';
   collTitle.textContent = `Collection (${game.pets.length} owned · ${game.petPullsTotal} pulls)`;
   panel.appendChild(collTitle);
 
@@ -1991,16 +2025,15 @@ function renderPetsPanel() {
     } else if (freePonds.length === 0) {
       const disabledBtn = document.createElement('button');
       disabledBtn.className = 'upgrade-buy pet-card-btn';
-      disabledBtn.textContent = 'No pond';
+      disabledBtn.textContent = 'No tank';
       disabledBtn.disabled = true;
-      disabledBtn.title = 'Walk to a pond and press E, or build an Axolotl Pond tile';
+      disabledBtn.title = 'Walk to a pond and press E, or build a Tank';
       actionsEl.appendChild(disabledBtn);
     } else {
       const placeBtn = document.createElement('button');
       placeBtn.className = 'upgrade-buy pet-card-btn';
       placeBtn.textContent = 'Place';
       placeBtn.addEventListener('click', () => {
-        // If only one pond with space, auto-assign
         if (freePonds.length === 1) {
           const fp = freePonds[0];
           if (fp.type === 'block') assignPetToPond(pet.uid, fp.c, fp.r);
@@ -2008,14 +2041,13 @@ function renderPetsPanel() {
           renderPetsPanel();
           return;
         }
-        // Multiple options: show inline selector
         actionsEl.innerHTML = '';
         const sel = document.createElement('div');
         sel.className = 'pet-pond-selector';
         for (const fp of freePonds) {
           const opt = document.createElement('button');
           opt.className = 'mp-target-btn';
-          const label = fp.type === 'block' ? `Built pond` : `Natural pond`;
+          const label = fp.type === 'block' ? 'Built tank' : 'Natural pond';
           opt.textContent = `${label} (${fp.capacity - fp.count} free)`;
           opt.addEventListener('click', () => {
             if (fp.type === 'block') assignPetToPond(pet.uid, fp.c, fp.r);
@@ -2033,6 +2065,13 @@ function renderPetsPanel() {
       });
       actionsEl.appendChild(placeBtn);
     }
+
+    // Sell button — always available
+    const sellBtn = document.createElement('button');
+    sellBtn.className = 'upgrade-buy pet-card-btn pet-sell-btn';
+    sellBtn.textContent = `Sell $${PET_SELL_PRICE[v.rarity]}`;
+    sellBtn.addEventListener('click', () => { sellPet(pet.uid); renderPetsPanel(); });
+    actionsEl.appendChild(sellBtn);
   }
   panel.appendChild(grid);
 }
