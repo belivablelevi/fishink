@@ -84,9 +84,9 @@ window.addEventListener('blur',   () => { for (const k in KEYS) KEYS[k] = false;
 const PLACEABLE_IDS = [B_CONCRETE, B_FISHER, B_BELT, B_SPLITTER, B_SORTER, B_CRATE,
                        B_WASHER, B_SMOKER, B_ICER, B_STAMPER,
                        B_SELLER, B_RECYCLER, B_PACKER, B_SMART_ROUTER, B_TELEPORTER,
-                       B_DRONE_FISHER, B_DRONE_DELIVERY];
+                       B_DRONE_FISHER, B_DRONE_DELIVERY, B_POND];
 
-const MENU_TAB_ORDER = ['build', 'upgrades', 'fishIndex', 'stats', 'controls', 'research', 'prestige'];
+const MENU_TAB_ORDER = ['build', 'upgrades', 'fishIndex', 'stats', 'controls', 'research', 'prestige', 'pets'];
 
 function toggleBoxMode() {
   buildMode.boxMode = !buildMode.boxMode;
@@ -399,6 +399,7 @@ function interactionKindFor(id) {
   if (id === B_RECYCLER) return 'recycler';
   if (id === B_PACKER) return 'packer';
   if (id === B_TELEPORTER) return 'teleporter';
+  if (id === B_POND) return 'pond';
   if (IS_MACHINE(id) || id === B_FISHER || id === B_DRONE_FISHER || id === B_DRONE_DELIVERY) return 'machine';
   return null;
 }

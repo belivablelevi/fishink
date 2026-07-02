@@ -41,6 +41,23 @@ function loadImages(cb, onProgress) {
     sorter4: 'img/sorter-4.png', sorter5: 'img/sorter-5.png',
     iconMoney: 'img/icon-money.png', rod: 'img/rod.png',
     boatSheet: 'img/boat0001-sheet.png',
+    // Axolotl pet spritesheets
+    axo_pink:         'img/axolotl/pink.png',
+    axo_albino:       'img/axolotl/albino.png',
+    axo_brown:        'img/axolotl/brown.png',
+    axo_tan:          'img/axolotl/tan.png',
+    axo_yellow:       'img/axolotl/yellow.png',
+    axo_blue00:       'img/axolotl/blue00.png',
+    axo_blue01:       'img/axolotl/blue01.png',
+    axo_red:          'img/axolotl/red.png',
+    axo_dark_orange:  'img/axolotl/dark-orange.png',
+    axo_yellow_green: 'img/axolotl/yellow-green.png',
+    axo_black:        'img/axolotl/black.png',
+    axo_greyscale:    'img/axolotl/greyscale.png',
+    axo_swamp_green:  'img/axolotl/swamp-green.png',
+    axo_rose_pink:    'img/axolotl/rose-pink.png',
+    axo_dark_purple:  'img/axolotl/dark-purple.png',
+    axo_retrogreen:   'img/axolotl/retrogreen.png',
   };
   const total = Object.keys(srcs).length;
   let loaded = 0;
@@ -148,6 +165,7 @@ function loop(ts) {
     draw(ctx, canvas, dt);
     updateBuildMenuLive();
     updateMachinesPanelLive();
+    tickSwimStates(dt);
     updateBuildHud();
     updateBlockPopupLive();
   } catch (err) {

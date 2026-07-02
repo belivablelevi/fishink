@@ -31,14 +31,15 @@ const B_PACKER         = 15; // sink-ish machine: bundles several fish into one 
 const B_SMART_ROUTER    = 16; // belt variant: auto-picks the least-jammed of up to 3 output sides
 
 const B_TELEPORTER       = 17; // belt sink/source pair: instantly relays a fish to a linked Teleporter elsewhere on the map
+const B_POND             = 18; // decorative habitat: assign Axolotl pets, they swim inside
 
 const BLOCK_NAMES = ['', 'Fisher', 'Belt',
                      'Washer', 'Smoker', 'Icer', 'Stamper', 'Seller', 'Concrete',
                      'Fishing Drone', 'Drone Delivery',
                      'Splitter', 'Sorter', 'Storage Crate', 'Recycler',
-                     'Packer', 'Smart Router', 'Teleporter'];
+                     'Packer', 'Smart Router', 'Teleporter', 'Axolotl Pond'];
 const BLOCK_COSTS = [0, 150, 10, 400, 1200, 600, 3000, 200, 5, 1000, 900,
-                     60, 80, 250, 150, 700, 120, 2500];
+                     60, 80, 250, 150, 700, 120, 2500, 800];
 
 // Category id per block (index-aligned with BLOCK_NAMES/COSTS) — drives the
 // grouped headers in the build menu.
@@ -46,7 +47,7 @@ const BLOCK_CATS = ['', 'fishing', 'floor',
                     'processing', 'processing', 'processing', 'processing',
                     'sales', 'floor', 'fishing', 'sales',
                     'floor', 'floor', 'floor', 'sales',
-                    'sales', 'floor', 'floor'];
+                    'sales', 'floor', 'floor', 'pets'];
 
 const BLOCK_DESCS = [
   "",
@@ -67,6 +68,7 @@ const BLOCK_DESCS = [
   "Collects individual fish and bundles them into a single high-value crate worth more than selling them separately. Press E to set how many fish per box. Place before a Seller at the end of a line.",
   "Reads how backed-up each connected belt is and automatically sends fish toward the least-jammed exit. Prevents one line from starving while another overflows. The blue circle marks the input side.",
   "Instantly moves fish to a linked Teleporter anywhere on the map. Press E near one to link it to another — fish enter the first and exit the second in its facing direction. Bypasses long belt runs entirely.",
+  "A home for your Axolotl pets. Place it anywhere and assign up to 3 axolotls from your Pets collection — they'll swim around inside. Press E to manage which pets live here.",
 ];
 
 const IS_MACHINE    = id => id >= B_WASHER && id <= B_STAMPER;
@@ -498,6 +500,7 @@ function makeCellState() {
     recycleRarities: [],   // B_RECYCLER only — CATEGORY_NAMES entries that get salvaged on sight
     packTarget: 5,          // B_PACKER only — fish count that triggers a bundle
     teleportTarget: null,   // B_TELEPORTER only — { c, r } of the linked destination, or null if unset/broken
+    pondPets: [],           // B_POND only — array of pet uid numbers assigned to swim here
   };
 }
 

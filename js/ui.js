@@ -10,6 +10,7 @@ const BUILD_CATS = [
   { id: 'fishing',    label: 'Fishing',       color: '#7ec8e3' },
   { id: 'processing', label: 'Processing',    color: '#e8a030' },
   { id: 'sales',      label: 'Sales',         color: '#a78bfa' },
+  { id: 'pets',       label: 'Pets',          color: '#f472b6' },
 ];
 
 // Per-block one-line quick stat shown on the Build tab's item cards, using
@@ -306,6 +307,7 @@ function switchMenuTab(name) {
   buildMenuEl.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('hidden', p.dataset.panel !== name));
   if (name === 'stats') renderStatsPanel();
   if (name === 'prestige') renderPrestigePanel();
+  if (name === 'pets') renderPetsPanel();
 }
 
 function setBuildMenuOpen(open) {
@@ -1307,6 +1309,7 @@ function renderBlockPopup() {
   else if (kind === 'recycler')  renderRecyclerPopupContent(c, r);
   else if (kind === 'packer')    renderPackerPopupContent(c, r);
   else if (kind === 'teleporter') renderTeleporterPopupContent(c, r);
+  else if (kind === 'pond')       renderPondPopupContent(c, r);
   // "Move" button appended to every popup type — lets players relocate a block
   // for free instead of demolishing and rebuilding it.
   const moveBtn = document.createElement('button');
@@ -1708,4 +1711,202 @@ function updateBuildHud() {
       : active
         ? `Active: "${active.name}" (${active.w}×${active.h})`
         : 'No blueprint active — press C to copy a selection';
+}
+
+// ── Axolotl Pond popup ────────────────────────────────────────────────────────
+
+function renderPondPopupContent(c, r) {
+  if (blockAt(c, r) !== B_POND) { closeBlockPopup(); return; }
+  const st = stateAt(c, r);
+  blockPopupEl.innerHTML = '';
+
+  const header = document.createElement('div');
+  header.className = 'mp-header';
+  header.innerHTML = `<div class="mp-name">Axolotl Pond</div><button class="mp-close">&times;</button>`;
+  header.querySelector('.mp-close').addEventListener('click', closeBlockPopup);
+  blockPopupEl.appendChild(header);
+
+  // Current occupants
+  const slots = document.createElement('div');
+  slots.className = 'pond-slots';
+  for (let i = 0; i < POND_CAPACITY; i++) {
+    const uid = st.pondPets[i];
+    const slot = document.createElement('div');
+    slot.className = 'pond-slot';
+    if (uid != null) {
+      const pet = game.pets.find(p => p.uid === uid);
+      const v   = pet ? getPetVariant(pet.variant) : null;
+      if (pet && v) {
+        slot.innerHTML = `
+          <div class="pond-slot-sprite" style="background-image:url('img/axolotl/${pet.variant}.png')" title="${v.name}"></div>
+          <span class="pond-slot-name" style="color:${RARITY_COLOR[v.rarity]}">${v.name}</span>
+          <button class="pond-slot-remove" data-uid="${uid}">✕</button>`;
+        slot.querySelector('.pond-slot-remove').addEventListener('click', e => {
+          unassignPet(Number(e.target.dataset.uid));
+          renderBlockPopup();
+        });
+      } else {
+        slot.innerHTML = `<span class="pond-slot-name" style="color:var(--c-muted)">Unknown pet</span>`;
+      }
+    } else {
+      slot.innerHTML = `<span class="pond-slot-empty">Empty slot</span>`;
+    }
+    slots.appendChild(slot);
+  }
+  blockPopupEl.appendChild(slots);
+
+  // Available pets to assign (not already in any pond)
+  const available = game.pets.filter(p => !petCurrentPond(p.uid));
+  if (available.length === 0 && st.pondPets.length === 0) {
+    const hint = document.createElement('div');
+    hint.className = 'mp-effect';
+    hint.style.marginTop = '8px';
+    hint.textContent = 'No axolotls yet — pull some from the Pets tab!';
+    blockPopupEl.appendChild(hint);
+    return;
+  }
+  if (available.length > 0 && st.pondPets.length < POND_CAPACITY) {
+    const label = document.createElement('div');
+    label.className = 'mp-effect';
+    label.style.cssText = 'margin-top:10px;margin-bottom:4px;';
+    label.textContent = 'Assign a pet:';
+    blockPopupEl.appendChild(label);
+    const list = document.createElement('div');
+    list.className = 'pond-assign-list';
+    for (const pet of available) {
+      const v = getPetVariant(pet.variant);
+      if (!v) continue;
+      const btn = document.createElement('button');
+      btn.className = 'mp-target-btn';
+      btn.innerHTML = `<span class="pond-mini-sprite" style="background-image:url('img/axolotl/${pet.variant}.png')"></span> <span style="color:${RARITY_COLOR[v.rarity]}">${v.name}</span>`;
+      btn.addEventListener('click', () => {
+        assignPetToPond(pet.uid, c, r);
+        renderBlockPopup();
+      });
+      list.appendChild(btn);
+    }
+    blockPopupEl.appendChild(list);
+  }
+}
+
+// ── Pets tab (gacha + collection) ─────────────────────────────────────────────
+
+let _petsPullResult = null; // last pull result for display
+
+function renderPetsPanel() {
+  const panel = document.getElementById('petsPanel');
+  if (!panel) return;
+  panel.innerHTML = '';
+
+  // ── Gacha section ──
+  const gacha = document.createElement('div');
+  gacha.className = 'pets-gacha';
+
+  const title = document.createElement('div');
+  title.className = 'pets-gacha-title';
+  title.textContent = 'Axolotl Gacha';
+  gacha.appendChild(title);
+
+  const costs = document.createElement('div');
+  costs.className = 'pets-gacha-costs';
+  costs.innerHTML = `
+    <span>Pull x1 — $${PET_PULL_COST.toLocaleString()}</span>
+    <span style="color:var(--c-muted)">  ·  </span>
+    <span>Pull x10 — $${PET_BULK_COST.toLocaleString()} <span style="color:var(--c-mint);font-size:10px">(10% off)</span></span>`;
+  gacha.appendChild(costs);
+
+  const btnRow = document.createElement('div');
+  btnRow.className = 'pets-btn-row';
+
+  const pull1 = document.createElement('button');
+  pull1.className = 'upgrade-buy';
+  pull1.textContent = `Pull ×1 — $${PET_PULL_COST.toLocaleString()}`;
+  pull1.addEventListener('click', () => {
+    const res = pullPets(1);
+    if (res) { _petsPullResult = res; renderPetsPanel(); sfxUpgrade(); }
+  });
+
+  const pull10 = document.createElement('button');
+  pull10.className = 'upgrade-buy';
+  pull10.textContent = `Pull ×10 — $${PET_BULK_COST.toLocaleString()}`;
+  pull10.addEventListener('click', () => {
+    const res = pullPets(10);
+    if (res) { _petsPullResult = res; renderPetsPanel(); sfxUpgrade(); }
+  });
+
+  btnRow.appendChild(pull1);
+  btnRow.appendChild(pull10);
+  gacha.appendChild(btnRow);
+
+  // Pull result reveal
+  if (_petsPullResult && _petsPullResult.length > 0) {
+    const reveal = document.createElement('div');
+    reveal.className = 'pets-reveal';
+    for (const { pet, variant: v } of _petsPullResult) {
+      const card = document.createElement('div');
+      card.className = 'pets-reveal-card';
+      card.innerHTML = `
+        <div class="pet-sprite-lg" style="background-image:url('img/axolotl/${pet.variant}.png')"></div>
+        <div class="pet-rarity-label" style="color:${RARITY_COLOR[v.rarity]}">${RARITY_LABEL[v.rarity]}</div>
+        <div class="pet-variant-name">${v.name}</div>`;
+      reveal.appendChild(card);
+    }
+    gacha.appendChild(reveal);
+  }
+
+  panel.appendChild(gacha);
+
+  // ── Odds reference ──
+  const odds = document.createElement('div');
+  odds.className = 'pets-odds';
+  const pct = (w) => ((w / _TOTAL_WEIGHT) * 100).toFixed(1);
+  odds.innerHTML = `
+    <span style="color:${RARITY_COLOR.common}">Common ${(60).toFixed(0)}%</span>
+    <span style="color:${RARITY_COLOR.uncommon}">Uncommon 28%</span>
+    <span style="color:${RARITY_COLOR.rare}">Rare 9%</span>
+    <span style="color:${RARITY_COLOR.legendary}">Legendary 3%</span>`;
+  panel.appendChild(odds);
+
+  // ── Collection ──
+  const collTitle = document.createElement('div');
+  collTitle.className = 'pets-section-title';
+  collTitle.textContent = `Collection (${game.pets.length} owned · ${game.petPullsTotal} pulls)`;
+  panel.appendChild(collTitle);
+
+  if (game.pets.length === 0) {
+    const hint = document.createElement('div');
+    hint.className = 'panel-hint';
+    hint.textContent = 'Pull your first axolotl to start your collection!';
+    panel.appendChild(hint);
+    return;
+  }
+
+  const grid = document.createElement('div');
+  grid.className = 'pets-collection-grid';
+  for (const pet of game.pets) {
+    const v = getPetVariant(pet.variant);
+    if (!v) continue;
+    const pond = petCurrentPond(pet.uid);
+    const card = document.createElement('div');
+    card.className = 'pet-card';
+    card.innerHTML = `
+      <div class="pet-sprite-sm" style="background-image:url('img/axolotl/${pet.variant}.png')"></div>
+      <div class="pet-card-info">
+        <div class="pet-card-name" style="color:${RARITY_COLOR[v.rarity]}">${v.name}</div>
+        <div class="pet-card-status">${pond ? `In pond (${pond.c},${pond.r})` : 'Not assigned'}</div>
+      </div>
+      ${pond
+        ? `<button class="upgrade-buy pet-card-btn" data-uid="${pet.uid}" data-action="remove">Remove</button>`
+        : `<button class="upgrade-buy pet-card-btn" data-uid="${pet.uid}" data-action="assign" disabled title="Open a pond (E near it) to assign">Place</button>`}`;
+    grid.appendChild(card);
+  }
+  panel.appendChild(grid);
+
+  // Wire remove buttons
+  panel.querySelectorAll('.pet-card-btn[data-action="remove"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      unassignPet(Number(btn.dataset.uid));
+      renderPetsPanel();
+    });
+  });
 }

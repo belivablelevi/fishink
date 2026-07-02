@@ -560,6 +560,9 @@ function drawBlock(ctx, id, sx, sy, c, r, forceDir) {
     const hasTarget = !!(st && st.teleportTarget && blockAt(st.teleportTarget.c, st.teleportTarget.r) === B_TELEPORTER);
     drawTeleporterBelt(ctx, BELT_DIRS[dirIdx], dirIdx, hasTarget, sx, sy, S, c, r);
 
+  } else if (id === B_POND) {
+    drawPond(ctx, sx, sy, S, c, r);
+
   } else if (id === B_CRATE) {
     const fill = st ? st.carrying.length / CRATE_CAPACITY : 0;
     if (IMAGES.crate) {
@@ -2053,6 +2056,56 @@ function drawToasts(ctx, canvas, dt) {
     y -= 34;
     ctx.globalAlpha = 1;
   }
+}
+
+// ── Axolotl Pond ─────────────────────────────────────────────────────────────
+
+function drawPond(ctx, sx, sy, S, c, r) {
+  // Water fill
+  ctx.fillStyle = '#1a5c7a';
+  ctx.fillRect(sx + 1, sy + 1, S - 2, S - 2);
+  // Highlight shimmer at top
+  ctx.fillStyle = 'rgba(100,210,255,0.18)';
+  ctx.fillRect(sx + 2, sy + 2, S - 4, 4);
+  // Subtle inner border
+  ctx.strokeStyle = 'rgba(100,200,255,0.25)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(sx + 1.5, sy + 1.5, S - 3, S - 3);
+
+  const st = r != null && stateAt(c, r);
+  if (!st || !st.pondPets || st.pondPets.length === 0) {
+    ctx.fillStyle = 'rgba(100,200,255,0.35)';
+    ctx.font = 'bold 6px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('POND', sx + S / 2, sy + S / 2);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    return;
+  }
+
+  // Draw each swimming pet
+  ctx.imageSmoothingEnabled = false;
+  const SW = 12; // rendered sprite size (px)
+  for (const uid of st.pondPets) {
+    const pet = game.pets.find(p => p.uid === uid);
+    if (!pet) continue;
+    const ss = _getSwimState(uid, c, r);
+    const img = IMAGES[axoImgKey(pet.variant)];
+    if (!img) continue;
+    const srcX = ss.frame * AXO_FRAME_W;
+    const srcY = AXO_SWIM_ROW * AXO_FRAME_H;
+    ctx.save();
+    if (ss.flipX) {
+      ctx.translate(sx + ss.px + SW, sy + ss.py);
+      ctx.scale(-1, 1);
+      ctx.drawImage(img, srcX, srcY, AXO_FRAME_W, AXO_FRAME_H, 0, 0, SW, SW);
+    } else {
+      ctx.drawImage(img, srcX, srcY, AXO_FRAME_W, AXO_FRAME_H, sx + ss.px, sy + ss.py, SW, SW);
+    }
+    ctx.restore();
+  }
+  ctx.imageSmoothingEnabled = true;
 }
 
 // ── Player boat (top-down view) ───────────────────────────────────────────────

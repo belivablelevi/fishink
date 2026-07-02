@@ -43,6 +43,9 @@ function serializeGame() {
     blocks: blocks.map(row => Array.from(row)),
     cellState,
     player: { wx: player.wx, wy: player.wy, facing: player.facing, inBoat: player.inBoat, boatAngle: player.boatAngle },
+    pets: game.pets,
+    petNextUid: game.petNextUid,
+    petPullsTotal: game.petPullsTotal,
   };
 }
 
@@ -98,6 +101,10 @@ function deserializeGame(data) {
   player.facing = data.player.facing;
   player.inBoat     = data.player.inBoat     || false;
   player.boatAngle  = data.player.boatAngle  ?? -Math.PI / 2;
+
+  game.pets         = data.pets         || [];
+  game.petNextUid   = data.petNextUid   || (game.pets.reduce((m, p) => Math.max(m, p.uid), 0) + 1);
+  game.petPullsTotal= data.petPullsTotal|| 0;
 }
 
 function saveGame() {

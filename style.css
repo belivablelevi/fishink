@@ -1200,3 +1200,164 @@ body.touch-active .build-hint { right: 90px; bottom: 20px; }
 .touch-action-btn:active { background: rgba(255,255,255,0.15); }
 #touchInteractBtn { right: 24px; bottom: 100px; }
 #touchBuildBtn    { right: 24px; bottom: 24px; }
+
+/* ─── Pets tab ──────────────────────────────────────────────────────────────── */
+
+.pets-gacha {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.pets-gacha-title {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--c-accent);
+  margin-bottom: 6px;
+}
+.pets-gacha-costs {
+  font-size: 11px;
+  color: var(--c-muted);
+  margin-bottom: 10px;
+}
+.pets-btn-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pets-reveal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--c-border);
+}
+.pets-reveal-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 6px;
+  padding: 8px 10px;
+  min-width: 60px;
+}
+.pet-sprite-lg {
+  width: 48px; height: 48px;
+  image-rendering: pixelated;
+  background-size: 384px 768px; /* 8×32 … 16×32 each */
+  background-position: 0 0;
+  background-repeat: no-repeat;
+  background-color: transparent;
+}
+.pet-sprite-sm {
+  width: 32px; height: 32px;
+  image-rendering: pixelated;
+  background-size: 256px 512px;
+  background-position: 0 0;
+  background-repeat: no-repeat;
+  flex-shrink: 0;
+}
+.pond-mini-sprite {
+  display: inline-block;
+  width: 20px; height: 20px;
+  image-rendering: pixelated;
+  background-size: 160px 320px;
+  background-position: 0 0;
+  background-repeat: no-repeat;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+.pet-rarity-label {
+  font-size: 9px;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.pet-variant-name {
+  font-size: 10px;
+  color: var(--c-text);
+}
+.pets-odds {
+  display: flex;
+  gap: 10px;
+  font-size: 10px;
+  font-family: var(--font-ui);
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.pets-section-title {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--c-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.pets-collection-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pet-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+.pet-card-info { flex: 1; }
+.pet-card-name { font-size: 12px; font-weight: 600; }
+.pet-card-status { font-size: 10px; color: var(--c-muted); margin-top: 1px; }
+.pet-card-btn { padding: 4px 10px; font-size: 10px; }
+
+/* ─── Pond popup slots ──────────────────────────────────────────────────────── */
+.pond-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+.pond-slot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  min-height: 36px;
+}
+.pond-slot-sprite {
+  width: 24px; height: 24px;
+  image-rendering: pixelated;
+  background-size: 192px 384px;
+  background-position: 0 0;
+  background-repeat: no-repeat;
+  flex-shrink: 0;
+}
+.pond-slot-name { flex: 1; font-size: 11px; font-weight: 600; }
+.pond-slot-empty { color: var(--c-muted); font-size: 11px; }
+.pond-slot-remove {
+  background: none;
+  border: none;
+  color: var(--c-red);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0 4px;
+  line-height: 1;
+}
+.pond-assign-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 160px;
+  overflow-y: auto;
+}

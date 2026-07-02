@@ -15,6 +15,9 @@ const game = {
   tutorialDone: false,
   upgradeTipDone: false,
   automationTutorialDone: false,
+  pets: [],          // owned axolotl pets [{uid, variant}]
+  petNextUid: 1,
+  petPullsTotal: 0,
 };
 
 const fisherTimers = {};
