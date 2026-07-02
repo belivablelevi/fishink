@@ -1968,7 +1968,8 @@ function drawBoatHull(ctx, screenX, screenY, angle) {
   const sheet = IMAGES.boatSheet;
   if (!sheet) return;
 
-  const norm = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  // Frame 0 points up (north = -π/2 in game coords), so shift by +π/2
+  const norm = (((angle + Math.PI / 2) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
   const fi   = Math.round(norm / (Math.PI * 2) * BOAT_SHEET_FRAMES) % BOAT_SHEET_FRAMES;
   const srcX = (fi % BOAT_SHEET_COLS) * BOAT_FRAME_PX;
   const srcY = Math.floor(fi / BOAT_SHEET_COLS) * BOAT_FRAME_PX;
