@@ -237,6 +237,7 @@ function _getSwimState(uid, pc, pr) {
         topSpeed: 22 + Math.random() * 10,
         frame: Math.floor(Math.random() * AXO_SWIM_FRAMES),
         frameAccum: 0,
+        idleFrame: 0, idleFrameAccum: 0,
         heading: (initRowB * AXO_ROW_STEP + AXO_ROW_OFFSET) * Math.PI / 180,
         row: initRowB,
         restTimer: 0,
@@ -254,6 +255,7 @@ function _getSwimState(uid, pc, pr) {
         topSpeed: 40 + Math.random() * 20,
         frame: Math.floor(Math.random() * AXO_SWIM_FRAMES),
         frameAccum: 0,
+        idleFrame: 0, idleFrameAccum: 0,
         heading: (initRowW * AXO_ROW_STEP + AXO_ROW_OFFSET) * Math.PI / 180,
         row: initRowW,
         restTimer: 0,
@@ -373,12 +375,18 @@ function tickSwimStates(dt) {
 function _advanceFrame(s, speed, topSpeed, maxFps, dt, isIdle) {
   const frac = Math.min(1, speed / (topSpeed * 0.5));
   const fps  = 1.5 + frac * (maxFps - 1.5);
-  s.frameAccum += dt * fps;
-  const frameCount = isIdle ? AXO_IDLE_FRAMES : AXO_SWIM_FRAMES;
-  s.frame = s.frame % frameCount; // clamp on mode switch so blank col 7 never shows
-  while (s.frameAccum >= 1) {
-    s.frameAccum -= 1;
-    s.frame = (s.frame + 1) % frameCount;
+  if (isIdle) {
+    s.idleFrameAccum = (s.idleFrameAccum ?? 0) + dt * fps;
+    while (s.idleFrameAccum >= 1) {
+      s.idleFrameAccum -= 1;
+      s.idleFrame = ((s.idleFrame ?? 0) + 1) % AXO_IDLE_FRAMES;
+    }
+  } else {
+    s.frameAccum += dt * fps;
+    while (s.frameAccum >= 1) {
+      s.frameAccum -= 1;
+      s.frame = (s.frame + 1) % AXO_SWIM_FRAMES;
+    }
   }
 }
 
