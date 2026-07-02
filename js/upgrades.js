@@ -107,22 +107,22 @@ function droneLuckMult(level) {
   return Math.min(1, DRONE_LUCK_PENALTY + level * 0.06);
 }
 
-function buyMachineUpgrade(c, r) {
+function buyMachineUpgrade(c, r, silent = false) {
   const id = blockAt(c, r);
   if (!IS_UPGRADABLE(id)) return false;
   const st = stateAt(c, r);
   const level = st.level || 0;
   const cost = machineUpgradeCost(id, level);
-  if (cost == null) { queueToast('Already maxed!', '#e8a030'); return false; }
-  if (game.cash < cost) { queueToast('Not enough cash!', '#e85d4a'); sfxFail(); return false; }
+  if (cost == null) { if (!silent) queueToast('Already maxed!', '#e8a030'); return false; }
+  if (game.cash < cost) { if (!silent) { queueToast('Not enough cash!', '#e85d4a'); sfxFail(); } return false; }
   game.cash -= cost;
   st.level = level + 1;
   game.maxMachineLevel = Math.max(game.maxMachineLevel, st.level);
-  sfxUpgrade();
-  queueToast(`${BLOCK_NAMES[id]} upgraded! (Lv ${st.level})`, '#4dca7c');
-  // The player just used the mechanic the upgrade tip was teaching — no need
-  // to keep showing it.
-  if (UPGRADE_TIP.active) dismissUpgradeTip();
-  saveGame();
+  if (!silent) {
+    sfxUpgrade();
+    queueToast(`${BLOCK_NAMES[id]} upgraded! (Lv ${st.level})`, '#4dca7c');
+    if (UPGRADE_TIP.active) dismissUpgradeTip();
+    saveGame();
+  }
   return true;
 }

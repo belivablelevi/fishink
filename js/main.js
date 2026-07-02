@@ -147,6 +147,7 @@ function loop(ts) {
     simUpdate(dt);
     draw(ctx, canvas, dt);
     updateBuildMenuLive();
+    updateMachinesPanelLive();
     updateBuildHud();
     updateBlockPopupLive();
   } catch (err) {

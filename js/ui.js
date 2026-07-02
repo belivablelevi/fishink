@@ -145,11 +145,14 @@ function initMachinesMenu() {
   });
 }
 
+// Cached groups for live-updating Upgrade All buttons without a full re-render.
+let _machineGroups = new Map();
+
 function renderMachinesPanel() {
   const panel = document.getElementById('machinesPanel');
   panel.innerHTML = '';
 
-  const groups = new Map(); // block id -> [{c, r, level}]
+  const groups = new Map();
   for (let r = 0; r < WORLD_ROWS; r++) {
     for (let c = 0; c < WORLD_COLS; c++) {
       const id = blockAt(c, r);
@@ -159,6 +162,7 @@ function renderMachinesPanel() {
       groups.get(id).push({ c, r, level: st.level || 0 });
     }
   }
+  _machineGroups = groups;
 
   if (groups.size === 0) {
     const empty = document.createElement('div');
@@ -176,6 +180,37 @@ function renderMachinesPanel() {
     title.textContent = `${BLOCK_NAMES[id]} (${instances.length})`;
     panel.appendChild(title);
 
+    // ── Upgrade All button ────────────────────────────────────────────────
+    if (instances.length > 1) {
+      const { count, total } = calcBulkUpgrade(id, instances);
+      const allBtn = document.createElement('button');
+      allBtn.className = 'upgrade-buy upgrade-all-btn';
+      allBtn.dataset.blockId = id;
+      allBtn.disabled = count === 0;
+      allBtn.textContent = count > 0
+        ? `Upgrade All ×${count} — $${formatMoney(total)}`
+        : 'Upgrade All';
+      allBtn.addEventListener('click', () => {
+        // Re-scan grid for fresh levels
+        const fresh = [];
+        for (let rr = 0; rr < WORLD_ROWS; rr++)
+          for (let cc = 0; cc < WORLD_COLS; cc++)
+            if (blockAt(cc, rr) === id) fresh.push({ c: cc, r: rr });
+        fresh.sort((a, b) => (stateAt(a.c, a.r).level || 0) - (stateAt(b.c, b.r).level || 0));
+        let upgraded = 0;
+        for (const inst of fresh) { if (buyMachineUpgrade(inst.c, inst.r, true)) upgraded++; }
+        if (upgraded > 0) {
+          sfxUpgrade();
+          if (UPGRADE_TIP.active) dismissUpgradeTip();
+          queueToast(`Upgraded ${upgraded}× ${BLOCK_NAMES[id]}`, '#4dca7c');
+          saveGame();
+        }
+        renderMachinesPanel();
+      });
+      panel.appendChild(allBtn);
+    }
+
+    // ── Individual rows ───────────────────────────────────────────────────
     for (const inst of instances) {
       const cost = machineUpgradeCost(id, inst.level);
       const maxed = cost == null;
@@ -189,7 +224,8 @@ function renderMachinesPanel() {
 
       const buyBtn = document.createElement('button');
       buyBtn.className = 'upgrade-buy';
-      buyBtn.textContent = maxed ? 'MAXED' : `$${cost}`;
+      buyBtn.textContent = maxed ? 'MAXED' : `$${formatMoney(cost)}`;
+      if (!maxed) buyBtn.dataset.cost = cost;
       buyBtn.disabled = maxed || game.cash < cost;
       buyBtn.addEventListener('click', () => {
         if (buyMachineUpgrade(inst.c, inst.r)) renderMachinesPanel();
@@ -200,6 +236,42 @@ function renderMachinesPanel() {
       panel.appendChild(row);
     }
   }
+}
+
+// How many machines of `id` can be upgraded given current cash (cheapest first).
+function calcBulkUpgrade(id, instances) {
+  const costs = instances
+    .map(inst => machineUpgradeCost(id, inst.level))
+    .filter(c => c != null)
+    .sort((a, b) => a - b);
+  let tempCash = game.cash, count = 0, total = 0;
+  for (const cost of costs) {
+    if (tempCash < cost) continue;
+    tempCash -= cost; total += cost; count++;
+  }
+  return { count, total };
+}
+
+// Called every frame — patches button states without rebuilding DOM.
+function updateMachinesPanelLive() {
+  const panel = document.getElementById('machinesPanel');
+  if (!panel || panel.classList.contains('hidden')) return;
+
+  // Individual upgrade buttons
+  panel.querySelectorAll('.upgrade-buy[data-cost]').forEach(btn => {
+    btn.disabled = game.cash < Number(btn.dataset.cost);
+  });
+
+  // Upgrade All buttons — update count/cost text live
+  panel.querySelectorAll('.upgrade-all-btn[data-block-id]').forEach(btn => {
+    const id = Number(btn.dataset.blockId);
+    const instances = _machineGroups.get(id) || [];
+    const { count, total } = calcBulkUpgrade(id, instances);
+    btn.disabled = count === 0;
+    btn.textContent = count > 0
+      ? `Upgrade All ×${count} — $${formatMoney(total)}`
+      : 'Upgrade All';
+  });
 }
 
 function initBuildMenu() {
@@ -1597,5 +1669,5 @@ function updateBuildHud() {
       ? `Pasting "${active.name}" (${active.w}×${active.h}) — click to stamp`
       : active
         ? `Active: "${active.name}" (${active.w}×${active.h})`
-        : 'No blueprint active — open Blueprints tab';
+        : 'No blueprint active — press C to copy a selection';
 }
