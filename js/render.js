@@ -1956,125 +1956,105 @@ function drawToasts(ctx, canvas, dt) {
   }
 }
 
-// ── Ferry boats ───────────────────────────────────────────────────────────────
+// ── Player boat (top-down view) ───────────────────────────────────────────────
 
-// Draws a single ferry boat centred at (screenX, screenY) pointing in
-// direction `angle` (radians, 0 = right). Smaller and simpler than the
-// main cargo ship — a wooden fishing vessel about 1.5×0.7 tiles.
-function drawFerryBoat(ctx, screenX, screenY, angle) {
-  const S  = TILE_SIZE;
-  const L  = S * 1.4;   // hull length bow-to-stern
-  const Hh = S * 0.42;  // hull half-height at midship
+// Top-down hull shape: pointed bow (+x when angle=0), rounded stern.
+// Drawn as a wooden canoe/skiff seen from directly above.
+function drawBoatHull(ctx, screenX, screenY, angle) {
+  const S = TILE_SIZE;
+  const HL = S * 0.9;  // half-length
+  const HW = S * 0.38; // half-width
 
   ctx.save();
   ctx.translate(screenX, screenY);
   ctx.rotate(angle);
-  ctx.translate(0, Math.sin(game.time * 1.8) * 1.2); // gentle bob
 
-  // ── Hull ─────────────────────────────────────────────────────────────────
-  ctx.fillStyle = '#7a5c2e';
+  // Outer hull (dark border)
+  ctx.fillStyle = '#3a2208';
   ctx.beginPath();
-  ctx.moveTo(-L / 2,      -Hh * 0.3);
-  ctx.lineTo(-L / 2 + L * 0.2, -Hh);
-  ctx.lineTo( L / 2 - L * 0.1, -Hh);
-  ctx.lineTo( L / 2,       0);
-  ctx.lineTo(-L / 2,       0);
+  ctx.moveTo( HL,       0);
+  ctx.bezierCurveTo( HL * 0.6, -HW * 0.95,  -HL * 0.4, -HW, -HL, 0);
+  ctx.bezierCurveTo(-HL * 0.4,  HW,          HL * 0.6,  HW * 0.95, HL, 0);
   ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = '#4a3618';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
 
-  // ── Deck ─────────────────────────────────────────────────────────────────
-  ctx.fillStyle = '#a07830';
-  ctx.fillRect(-L / 2 + L * 0.2, -Hh, L * 0.66, Hh * 0.45);
-
-  // ── Wheelhouse (cabin) ───────────────────────────────────────────────────
-  const cabX = -L / 2 + L * 0.1;
-  const cabW = L * 0.28;
-  const cabH = Hh * 0.8;
-  ctx.fillStyle = '#c4a25a';
-  ctx.fillRect(cabX, -Hh - cabH, cabW, cabH);
-  ctx.strokeStyle = '#8a6e30';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(cabX, -Hh - cabH, cabW, cabH);
-
-  // Windows
-  ctx.fillStyle = 'rgba(130,190,240,0.75)';
-  ctx.fillRect(cabX + 3,           -Hh - cabH * 0.75, cabW * 0.36, cabH * 0.38);
-  ctx.fillRect(cabX + cabW * 0.54, -Hh - cabH * 0.75, cabW * 0.32, cabH * 0.38);
-
-  // ── Mast + flag ──────────────────────────────────────────────────────────
-  const mastX = cabX + cabW * 0.5;
-  ctx.strokeStyle = '#5a4010';
-  ctx.lineWidth = 2;
+  // Main wooden hull
+  ctx.fillStyle = '#9a6424';
   ctx.beginPath();
-  ctx.moveTo(mastX, -Hh - cabH);
-  ctx.lineTo(mastX, -Hh - cabH - Hh * 1.1);
-  ctx.stroke();
-
-  ctx.fillStyle = '#e0753a';
-  ctx.beginPath();
-  ctx.moveTo(mastX,            -Hh - cabH - Hh * 1.1);
-  ctx.lineTo(mastX + L * 0.13, -Hh - cabH - Hh * 0.8);
-  ctx.lineTo(mastX,            -Hh - cabH - Hh * 0.5);
+  ctx.moveTo( HL * 0.88,  0);
+  ctx.bezierCurveTo( HL * 0.55, -HW * 0.82, -HL * 0.35, -HW * 0.86, -HL * 0.88, 0);
+  ctx.bezierCurveTo(-HL * 0.35,  HW * 0.86,  HL * 0.55,  HW * 0.82,  HL * 0.88, 0);
   ctx.closePath();
   ctx.fill();
+
+  // Inner deck (lighter — the open interior seen from above)
+  ctx.fillStyle = '#c49232';
+  ctx.beginPath();
+  ctx.moveTo( HL * 0.68,  0);
+  ctx.bezierCurveTo( HL * 0.42, -HW * 0.6, -HL * 0.25, -HW * 0.65, -HL * 0.7, 0);
+  ctx.bezierCurveTo(-HL * 0.25,  HW * 0.65,  HL * 0.42,  HW * 0.6,  HL * 0.68, 0);
+  ctx.closePath();
+  ctx.fill();
+
+  // Deck plank lines
+  ctx.strokeStyle = '#a07820';
+  ctx.lineWidth = 0.8;
+  ctx.globalAlpha = 0.55;
+  for (let i = -1; i <= 1; i++) {
+    const y = i * HW * 0.28;
+    ctx.beginPath();
+    ctx.moveTo(-HL * 0.55, y);
+    ctx.lineTo( HL * 0.55, y);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
 
   ctx.restore();
 }
 
-// Draws the player's boat when they're sailing. The player's head and hat
-// peek out of the wheelhouse so they're still recognisable on the water.
+// Renders the player as a top-down boat with their bucket hat visible inside.
 function drawPlayerBoat(ctx, px, py) {
   const angleMap = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
   const angle = angleMap[player.facing] || 0;
-  const bob   = Math.sin(game.time * 1.8) * 1.2; // kept in sync with drawFerryBoat
+  const S = TILE_SIZE;
 
-  // Wake ripples behind the stern when moving
+  // V-shaped wake spreading from the stern while moving
   if (player.moving) {
-    const S = TILE_SIZE;
     ctx.save();
-    ctx.strokeStyle = 'rgba(255,255,255,0.24)';
-    ctx.lineWidth = 1.5;
-    for (let i = 0; i < 3; i++) {
-      const ph = (game.time * 1.1 + i * 0.4) % 1;
-      ctx.globalAlpha = 1 - ph;
-      ctx.beginPath();
-      ctx.ellipse(
-        px - Math.cos(angle) * (S * 0.6 + ph * 18),
-        py - Math.sin(angle) * (S * 0.6 + ph * 18),
-        3 + ph * 7, 1.5 + ph * 2.5, angle, 0, Math.PI * 2
-      );
-      ctx.stroke();
+    const sternX = px - Math.cos(angle) * S * 0.5;
+    const sternY = py - Math.sin(angle) * S * 0.5;
+    const perpA = angle + Math.PI / 2;
+    ctx.strokeStyle = 'rgba(200,230,255,0.55)';
+    ctx.lineWidth = 1.2;
+    for (let side = -1; side <= 1; side += 2) {
+      for (let i = 0; i < 3; i++) {
+        const ph = (game.time * 0.95 + i * 0.38) % 1;
+        ctx.globalAlpha = (1 - ph) * 0.75;
+        ctx.beginPath();
+        ctx.moveTo(sternX, sternY);
+        ctx.lineTo(
+          sternX - Math.cos(angle) * ph * S * 1.1 + Math.cos(perpA) * side * ph * S * 0.55,
+          sternY - Math.sin(angle) * ph * S * 1.1 + Math.sin(perpA) * side * ph * S * 0.55
+        );
+        ctx.stroke();
+      }
     }
     ctx.globalAlpha = 1;
     ctx.restore();
   }
 
-  // Boat hull + cabin (uses the same ferry-boat helper)
-  drawFerryBoat(ctx, px, py, angle);
+  // Hull (top-down wooden boat)
+  drawBoatHull(ctx, px, py, angle);
 
-  // Player head + hat peeking above the cabin, bobbing with the boat
-  const Hh = TILE_SIZE * 0.42;
-  const headY = py - Hh - 10 + bob;
+  // Player's bucket hat seen from directly above: brim circle + crown circle
+  // Positioned slightly toward the stern so it looks like they're seated
+  const hatX = px - Math.cos(angle) * S * 0.1;
+  const hatY = py - Math.sin(angle) * S * 0.1;
 
-  ctx.fillStyle = '#2a1808';
-  ctx.fillRect(px - 5, headY - 1, 10, 10);
-  ctx.fillStyle = '#f0d090';
-  ctx.fillRect(px - 4, headY,      8,  8);
-
-  ctx.fillStyle = '#1a1a2a';
-  if      (player.facing === 'right') { ctx.fillRect(px + 2, headY + 2, 2, 2); }
-  else if (player.facing === 'left')  { ctx.fillRect(px - 4, headY + 2, 2, 2); }
-  else if (player.facing === 'up')    { ctx.fillRect(px - 2, headY + 1, 2, 2); ctx.fillRect(px + 1, headY + 1, 2, 2); }
-  else                                { ctx.fillRect(px - 2, headY + 3, 2, 2); ctx.fillRect(px + 1, headY + 3, 2, 2); }
-
-  // Bucket hat
-  ctx.fillStyle = '#8a7550';
-  ctx.fillRect(px - 6, headY - 3, 12, 2);
-  ctx.fillStyle = '#a8916a';
-  ctx.fillRect(px - 4, headY - 6,  8, 4);
-  ctx.fillStyle = '#6e5c3e';
-  ctx.fillRect(px - 4, headY - 3,  8, 1.5);
+  ctx.fillStyle = '#8a7550'; // brim
+  ctx.beginPath(); ctx.arc(hatX, hatY, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#a8916a'; // crown top
+  ctx.beginPath(); ctx.arc(hatX, hatY, 3.8, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#6e5c3e'; ctx.lineWidth = 1; // band
+  ctx.beginPath(); ctx.arc(hatX, hatY, 5, 0, Math.PI * 2); ctx.stroke();
 }
