@@ -526,6 +526,13 @@ function handleClick(e) {
   if (e.button !== 0 && e.button !== 2) return;
   const { c, r } = tileFromMouse(mouseCanvas.x, mouseCanvas.y);
 
+  // Pet placement mode — left click places the pet; right click cancels
+  if (petPlaceMode.active) {
+    if (e.button === 0) triggerInteract();
+    else { exitPetPlaceMode(); queueToast('Placement cancelled', '#9aa0a8'); }
+    return;
+  }
+
   if (blueprint.selecting) {
     if (e.button === 0) bpDragStart = { c, r };
     return;

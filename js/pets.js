@@ -9,7 +9,7 @@ const POND_CAPACITY = 3;      // max pets per pond
 const AXO_FRAME_W   = 16;
 const AXO_FRAME_H   = 16;
 const AXO_SWIM_ROW  = 0;   // row index of the swimming/walk animation
-const AXO_FRAMES    = 8;   // frames per animation row
+const AXO_FRAMES    = 7;   // 7 visible frames — frame 7 is blank padding in the sheet
 
 const PET_VARIANTS = [
   // Common — 60 combined weight
