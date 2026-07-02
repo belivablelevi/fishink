@@ -1981,8 +1981,7 @@ function drawBoatHull(ctx, screenX, screenY, angle) {
 
 // Renders the player as a top-down boat with their bucket hat visible inside.
 function drawPlayerBoat(ctx, px, py) {
-  const angleMap = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
-  const angle = angleMap[player.facing] || 0;
+  const angle = player.boatAngle;
   const S = TILE_SIZE;
 
   // V-shaped wake spreading from the stern while moving

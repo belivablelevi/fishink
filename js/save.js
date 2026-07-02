@@ -42,7 +42,7 @@ function serializeGame() {
     terrain: terrain.map(row => Array.from(row)),
     blocks: blocks.map(row => Array.from(row)),
     cellState,
-    player: { wx: player.wx, wy: player.wy, facing: player.facing, inBoat: player.inBoat },
+    player: { wx: player.wx, wy: player.wy, facing: player.facing, inBoat: player.inBoat, boatAngle: player.boatAngle },
   };
 }
 
@@ -95,7 +95,8 @@ function deserializeGame(data) {
   player.wx     = data.player.wx;
   player.wy     = data.player.wy;
   player.facing = data.player.facing;
-  player.inBoat = data.player.inBoat || false;
+  player.inBoat     = data.player.inBoat     || false;
+  player.boatAngle  = data.player.boatAngle  ?? -Math.PI / 2;
 }
 
 function saveGame() {
