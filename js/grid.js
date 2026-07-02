@@ -527,6 +527,8 @@ function tileWalkable(t) {
 // T_WATER body containing (startC, startR). Used as the natural-pond identity.
 // Ocean (water body touching map boundary) returns null — excluded from ponds.
 const _wbAnchorCache = {};  // tile key → anchor string or null (ocean)
+const _wbTileCache   = {};  // anchor key → [{c, r}] list of all tiles in body
+
 function waterBodyAnchor(startC, startR) {
   const startKey = `${startC},${startR}`;
   if (startKey in _wbAnchorCache) return _wbAnchorCache[startKey];
@@ -546,7 +548,17 @@ function waterBodyAnchor(startC, startR) {
   }
   const anchor = isOcean ? null : `${minC},${minR}`;
   for (const k of visited) _wbAnchorCache[k] = anchor;
+  if (anchor) {
+    const tiles = [];
+    for (const k of visited) { const [c, r] = k.split(',').map(Number); tiles.push({ c, r }); }
+    _wbTileCache[anchor] = tiles;
+  }
   return anchor;
+}
+
+// Returns all tile coords of the water body with the given anchor key.
+function waterBodyTiles(anchorKey) {
+  return _wbTileCache[anchorKey] || [];
 }
 
 // Single-cell equipment placement rule.

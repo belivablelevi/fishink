@@ -490,29 +490,34 @@ function drawWaterTile(ctx, sx, sy, S, c, r) {
     }
   }
 
-  // Draw any pets assigned to this natural water body.
-  // Only render on the anchor tile so each pet appears once.
+  // Draw any water-body pets whose current world position falls on this tile.
   if (typeof waterBodyAnchor !== 'function' || typeof game === 'undefined') return;
   const anchor = waterBodyAnchor(c, r);
-  if (!anchor || anchor !== `${c},${r}`) return; // ocean or not the anchor tile
+  if (!anchor) return; // ocean tile — skip
   const uids = (game.waterPonds && game.waterPonds[anchor]) || [];
   if (!uids.length) return;
   const sw = 12;
-  uids.forEach((uid, i) => {
+  const [ancC, ancR] = anchor.split(',').map(Number);
+  uids.forEach(uid => {
     const pet = game.pets.find(p => p.uid === uid);
     if (!pet) return;
     const img = IMAGES[axoImgKey(pet.variant)];
     if (!img) return;
-    const ss = _getSwimState(uid, c, r);
+    const ss = _getSwimState(uid, ancC, ancR);
+    if (!ss || ss.type !== 'water') return;
+    // Only render on the tile the pet is currently occupying
+    if (Math.floor(ss.wx / TILE_SIZE) !== c || Math.floor(ss.wy / TILE_SIZE) !== r) return;
+    const localX = ss.wx - c * TILE_SIZE;
+    const localY = ss.wy - r * TILE_SIZE;
     const srcX = ss.frame * AXO_FRAME_W;
     const srcY = AXO_SWIM_ROW * AXO_FRAME_H;
     ctx.save();
     if (ss.flipX) {
-      ctx.translate(sx + ss.px + sw, sy + ss.py);
+      ctx.translate(sx + localX + sw, sy + localY);
       ctx.scale(-1, 1);
       ctx.drawImage(img, srcX, srcY, AXO_FRAME_W, AXO_FRAME_H, 0, 0, sw, sw);
     } else {
-      ctx.drawImage(img, srcX, srcY, AXO_FRAME_W, AXO_FRAME_H, sx + ss.px, sy + ss.py, sw, sw);
+      ctx.drawImage(img, srcX, srcY, AXO_FRAME_W, AXO_FRAME_H, sx + localX, sy + localY, sw, sw);
     }
     ctx.restore();
   });

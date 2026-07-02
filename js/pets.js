@@ -184,7 +184,8 @@ function listAvailablePonds() {
 }
 
 // ── Swim state (non-persisted, rebuilt each session) ──────────────────────────
-// Key: `${c},${r}` → { [uid]: { px, py, vx, vy, frame, frameTimer, flipX } }
+// B_POND block pools: key = "c,r", state uses tile-relative px/py (0..TILE_SIZE)
+// Water body pools:   key = anchor "c,r", state uses world pixel wx/wy
 const _swimStates = {};
 
 function _getSwimState(uid, pc, pr) {
@@ -192,36 +193,83 @@ function _getSwimState(uid, pc, pr) {
   if (!_swimStates[key]) _swimStates[key] = {};
   const pool = _swimStates[key];
   if (!pool[uid]) {
-    const S = TILE_SIZE;
-    const m = 4, sw = 12;
-    pool[uid] = {
-      px: m + Math.random() * (S - m * 2 - sw),
-      py: m + Math.random() * (S - m * 2 - sw),
-      vx: (Math.random() < 0.5 ? 1 : -1) * (8 + Math.random() * 10),
-      vy: (Math.random() < 0.5 ? 1 : -1) * (4 + Math.random() * 6),
-      frame: Math.floor(Math.random() * AXO_FRAMES),
-      frameTimer: 0,
-      flipX: Math.random() < 0.5,
-    };
+    const sw = 12, m = 4;
+    if (blockAt(pc, pr) === B_POND) {
+      // Tile-relative coords for placed Tank block
+      const S = TILE_SIZE;
+      pool[uid] = {
+        type: 'block',
+        px: m + Math.random() * (S - m * 2 - sw),
+        py: m + Math.random() * (S - m * 2 - sw),
+        vx: (Math.random() < 0.5 ? 1 : -1) * (8 + Math.random() * 10),
+        vy: (Math.random() < 0.5 ? 1 : -1) * (4 + Math.random() * 6),
+        frame: Math.floor(Math.random() * AXO_FRAMES),
+        frameTimer: 0,
+        flipX: Math.random() < 0.5,
+      };
+    } else {
+      // World-space coords for natural water body
+      const tiles = waterBodyTiles(key);
+      const tile  = tiles.length ? tiles[Math.floor(Math.random() * tiles.length)] : { c: pc, r: pr };
+      pool[uid] = {
+        type: 'water',
+        wx: tile.c * TILE_SIZE + m + Math.random() * (TILE_SIZE - m * 2 - sw),
+        wy: tile.r * TILE_SIZE + m + Math.random() * (TILE_SIZE - m * 2 - sw),
+        vx: (Math.random() < 0.5 ? 1 : -1) * (20 + Math.random() * 20),
+        vy: (Math.random() < 0.5 ? 1 : -1) * (15 + Math.random() * 15),
+        frame: Math.floor(Math.random() * AXO_FRAMES),
+        frameTimer: 0,
+        flipX: Math.random() < 0.5,
+      };
+    }
   }
   return pool[uid];
 }
 
 function tickSwimStates(dt) {
   const S = TILE_SIZE;
-  const sw = 12, m = 3; // sprite draw size, margin
+  const sw = 12, m = 3;
   const ANIM_FPS = 9;
 
   for (const key in _swimStates) {
     const pool = _swimStates[key];
     for (const uid in pool) {
       const s = pool[uid];
-      s.px += s.vx * dt;
-      s.py += s.vy * dt;
-      if (s.px < m)           { s.px = m;           s.vx =  Math.abs(s.vx); s.flipX = false; }
-      if (s.px > S - sw - m)  { s.px = S - sw - m;  s.vx = -Math.abs(s.vx); s.flipX = true;  }
-      if (s.py < m)           { s.py = m;            s.vy =  Math.abs(s.vy); }
-      if (s.py > S - sw - m)  { s.py = S - sw - m;  s.vy = -Math.abs(s.vy); }
+
+      if (s.type === 'block') {
+        // Tile-relative bounce
+        s.px += s.vx * dt;
+        s.py += s.vy * dt;
+        if (s.px < m)           { s.px = m;           s.vx =  Math.abs(s.vx); s.flipX = false; }
+        if (s.px > S - sw - m)  { s.px = S - sw - m;  s.vx = -Math.abs(s.vx); s.flipX = true;  }
+        if (s.py < m)           { s.py = m;            s.vy =  Math.abs(s.vy); }
+        if (s.py > S - sw - m)  { s.py = S - sw - m;  s.vy = -Math.abs(s.vy); }
+      } else {
+        // World-space bounce off water body boundary
+        const anchor = key; // key IS the anchor for water bodies
+        const newWx = s.wx + s.vx * dt;
+        const newWy = s.wy + s.vy * dt;
+        const half = sw / 2;
+
+        // Test x movement: use leading edge
+        const txLeadX = Math.floor((newWx + (s.vx >= 0 ? sw : 0)) / S);
+        const tyMidX  = Math.floor((s.wy + half) / S);
+        const xOk = tileAt(txLeadX, tyMidX) === T_WATER && waterBodyAnchor(txLeadX, tyMidX) === anchor;
+        if (xOk) {
+          s.wx = newWx;
+          s.flipX = s.vx < 0;
+        } else {
+          s.vx = -s.vx;
+        }
+
+        // Test y movement: use leading edge
+        const txMidY  = Math.floor((s.wx + half) / S);
+        const tyLeadY = Math.floor((newWy + (s.vy >= 0 ? sw : 0)) / S);
+        const yOk = tileAt(txMidY, tyLeadY) === T_WATER && waterBodyAnchor(txMidY, tyLeadY) === anchor;
+        if (yOk) { s.wy = newWy; }
+        else      { s.vy = -s.vy; }
+      }
+
       s.frameTimer += dt;
       if (s.frameTimer >= 1 / ANIM_FPS) {
         s.frameTimer -= 1 / ANIM_FPS;
