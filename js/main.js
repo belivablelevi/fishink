@@ -40,6 +40,7 @@ function loadImages(cb, onProgress) {
     sorter2: 'img/sorter-2.png', sorter3: 'img/sorter-3.png',
     sorter4: 'img/sorter-4.png', sorter5: 'img/sorter-5.png',
     iconMoney: 'img/icon-money.png', rod: 'img/rod.png',
+    boatSheet: 'img/boat0001-sheet.png',
   };
   const total = Object.keys(srcs).length;
   let loaded = 0;

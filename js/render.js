@@ -1958,58 +1958,24 @@ function drawToasts(ctx, canvas, dt) {
 
 // ── Player boat (top-down view) ───────────────────────────────────────────────
 
-// Top-down hull shape: pointed bow (+x when angle=0), rounded stern.
-// Drawn as a wooden canoe/skiff seen from directly above.
+// Sheet: 7 cols × 7 rows, 64×64 px per frame, 48 valid frames (last slot empty).
+// Frame 0 = pointing right; frames advance clockwise through 360°.
+const BOAT_SHEET_COLS   = 7;
+const BOAT_SHEET_FRAMES = 48;
+const BOAT_FRAME_PX     = 64;
+
 function drawBoatHull(ctx, screenX, screenY, angle) {
+  const sheet = IMAGES.boatSheet;
+  if (!sheet) return;
+
+  const norm = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  const fi   = Math.round(norm / (Math.PI * 2) * BOAT_SHEET_FRAMES) % BOAT_SHEET_FRAMES;
+  const srcX = (fi % BOAT_SHEET_COLS) * BOAT_FRAME_PX;
+  const srcY = Math.floor(fi / BOAT_SHEET_COLS) * BOAT_FRAME_PX;
+
   const S = TILE_SIZE;
-  const HL = S * 0.9;  // half-length
-  const HW = S * 0.38; // half-width
-
-  ctx.save();
-  ctx.translate(screenX, screenY);
-  ctx.rotate(angle);
-
-  // Outer hull (dark border)
-  ctx.fillStyle = '#3a2208';
-  ctx.beginPath();
-  ctx.moveTo( HL,       0);
-  ctx.bezierCurveTo( HL * 0.6, -HW * 0.95,  -HL * 0.4, -HW, -HL, 0);
-  ctx.bezierCurveTo(-HL * 0.4,  HW,          HL * 0.6,  HW * 0.95, HL, 0);
-  ctx.closePath();
-  ctx.fill();
-
-  // Main wooden hull
-  ctx.fillStyle = '#9a6424';
-  ctx.beginPath();
-  ctx.moveTo( HL * 0.88,  0);
-  ctx.bezierCurveTo( HL * 0.55, -HW * 0.82, -HL * 0.35, -HW * 0.86, -HL * 0.88, 0);
-  ctx.bezierCurveTo(-HL * 0.35,  HW * 0.86,  HL * 0.55,  HW * 0.82,  HL * 0.88, 0);
-  ctx.closePath();
-  ctx.fill();
-
-  // Inner deck (lighter — the open interior seen from above)
-  ctx.fillStyle = '#c49232';
-  ctx.beginPath();
-  ctx.moveTo( HL * 0.68,  0);
-  ctx.bezierCurveTo( HL * 0.42, -HW * 0.6, -HL * 0.25, -HW * 0.65, -HL * 0.7, 0);
-  ctx.bezierCurveTo(-HL * 0.25,  HW * 0.65,  HL * 0.42,  HW * 0.6,  HL * 0.68, 0);
-  ctx.closePath();
-  ctx.fill();
-
-  // Deck plank lines
-  ctx.strokeStyle = '#a07820';
-  ctx.lineWidth = 0.8;
-  ctx.globalAlpha = 0.55;
-  for (let i = -1; i <= 1; i++) {
-    const y = i * HW * 0.28;
-    ctx.beginPath();
-    ctx.moveTo(-HL * 0.55, y);
-    ctx.lineTo( HL * 0.55, y);
-    ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-
-  ctx.restore();
+  ctx.drawImage(sheet, srcX, srcY, BOAT_FRAME_PX, BOAT_FRAME_PX,
+    screenX - S * 0.5, screenY - S * 0.5, S, S);
 }
 
 // Renders the player as a top-down boat with their bucket hat visible inside.
