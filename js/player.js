@@ -40,8 +40,9 @@ const player = {
   walkPhase: 0,  // continuous stride angle — advances only while moving
   walkAmp: 0,    // 0..1, eases toward 1 while moving / 0 while idle, so steps fade out smoothly instead of snapping
   moving: false,
-  inBoat: false,    // true while player is sailing on water
-  boatAngle: -Math.PI / 2, // continuous heading in radians; defaults to north
+  inBoat: false,          // true while player is sailing on water
+  boatAngle: -Math.PI / 2, // current visual heading (smoothly animated)
+  boatTargetAngle: -Math.PI / 2, // where the boat wants to face
 };
 
 // Re-centers the player on the starter dock — call after buildWorld(), since
@@ -313,7 +314,17 @@ function updatePlayer(dt) {
     else if (dx < 0) player.facing = 'left';
     else if (dy > 0) player.facing = 'down';
     else              player.facing = 'up';
-    if (player.inBoat) player.boatAngle = Math.atan2(dy, dx);
+    if (player.inBoat) player.boatTargetAngle = Math.atan2(dy, dx);
+  }
+
+  // Smoothly rotate the boat's visual heading toward the target angle.
+  // Takes the shortest arc so it never spins the long way around.
+  if (player.inBoat) {
+    let diff = player.boatTargetAngle - player.boatAngle;
+    while (diff >  Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    const step = 6 * dt; // radians/sec — full 360° spin takes ~1 s
+    player.boatAngle += Math.abs(diff) < step ? diff : Math.sign(diff) * step;
   }
 
   player.moving = moved;
