@@ -3,7 +3,7 @@
 const UPGRADES = [
   { id: 'castSpeed',   name: 'Quick Cast',         desc: 'Casting lands a catch faster', baseCost: 200, costMult: 1.8, maxLevel: 5, perLevel: 0.15, suffix: ' cast time' },
   { id: 'beltSpeed',   name: 'Belt Motors',        desc: 'Belts move fish faster',      baseCost: 250, costMult: 1.8, maxLevel: 5, perLevel: 0.15, suffix: ' belt speed' },
-  { id: 'maxHeld',     name: 'Tackle Bag',         desc: 'Carry more fish by hand',     baseCost: 180, costMult: 1.6, maxLevel: 4, perLevel: 2,    suffix: ' max held', flat: true },
+  { id: 'maxHeld',     name: 'Tackle Bag',         desc: 'Carry more fish by hand',     baseCost: 180, costMult: 1.7, maxLevel: 8, perLevel: 2,    suffix: ' max held', flat: true },
   { id: 'fisherSpeed', name: 'Auto-Fisher Tuning', desc: 'Auto-fishers catch faster',   baseCost: 300, costMult: 1.8, maxLevel: 5, perLevel: 0.12, suffix: ' catch interval' },
   { id: 'sellPrice',   name: 'Market Contacts',    desc: 'Sell fish for more cash',     baseCost: 350, costMult: 2.0, maxLevel: 5, perLevel: 0.10, suffix: ' sell price' },
   { id: 'droneFisherSpeed',   name: 'Drone Engine Tuning', desc: 'Fishing Drones fly and fish faster',

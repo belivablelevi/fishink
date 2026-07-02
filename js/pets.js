@@ -375,6 +375,7 @@ function _advanceFrame(s, speed, topSpeed, maxFps, dt, isIdle) {
   const fps  = 1.5 + frac * (maxFps - 1.5);
   s.frameAccum += dt * fps;
   const frameCount = isIdle ? AXO_IDLE_FRAMES : AXO_SWIM_FRAMES;
+  s.frame = s.frame % frameCount; // clamp on mode switch so blank col 7 never shows
   while (s.frameAccum >= 1) {
     s.frameAccum -= 1;
     s.frame = (s.frame + 1) % frameCount;
