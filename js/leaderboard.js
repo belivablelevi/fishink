@@ -185,6 +185,7 @@ function submitLeaderboardScore() {
     client_id: getLeaderboardClientId(),
     name,
     lifetime_earned: game.lifetimeEarned,
+    playtime: Math.floor(game.time),
   };
 
   fetch(`${SUPABASE_URL}/rest/v1/leaderboard_scores?on_conflict=client_id`, {

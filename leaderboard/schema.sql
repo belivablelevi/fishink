@@ -5,6 +5,7 @@ create table leaderboard_scores (
   client_id uuid primary key,
   name text not null check (char_length(name) between 1 and 20),
   lifetime_earned numeric not null default 0,
+  playtime numeric not null default 0,
   updated_at timestamptz not null default now()
 );
 
