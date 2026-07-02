@@ -558,7 +558,7 @@ function drawBlock(ctx, id, sx, sy, c, r, forceDir) {
   } else if (id === B_TELEPORTER) {
     const dirIdx = forceDir != null ? forceDir : (st && st.dir) || 0;
     const hasTarget = !!(st && st.teleportTarget && blockAt(st.teleportTarget.c, st.teleportTarget.r) === B_TELEPORTER);
-    drawTeleporterBelt(ctx, BELT_DIRS[dirIdx], dirIdx, hasTarget, sx, sy, S);
+    drawTeleporterBelt(ctx, BELT_DIRS[dirIdx], dirIdx, hasTarget, sx, sy, S, c, r);
 
   } else if (id === B_CRATE) {
     const fill = st ? st.carrying.length / researchCrateCapacity() : 0;
@@ -1032,7 +1032,20 @@ function drawSorterIcon(ctx, cx, cy, dirIdx, S) {
 const TELEPORTER_BASE_KEYS   = ['teleporterBase0', 'teleporterBase1', 'teleporterBase2', 'teleporterBase3', 'teleporterBase4', 'teleporterBase5'];
 const TELEPORTER_ACTIVE_KEYS = ['teleporterActive0', 'teleporterActive1', 'teleporterActive2', 'teleporterActive3', 'teleporterActive4', 'teleporterActive5'];
 
-function drawTeleporterBelt(ctx, dir, dirIdx, hasTarget, sx, sy, S) {
+// Returns the 1-based display number for a teleporter at (tc, tr), sorted
+// in row-major order across all placed teleporters. Stable across frames.
+function teleporterDisplayNum(tc, tr) {
+  let n = 1;
+  for (let r = 0; r < WORLD_ROWS; r++)
+    for (let c = 0; c < WORLD_COLS; c++) {
+      if (blockAt(c, r) !== B_TELEPORTER) continue;
+      if (c === tc && r === tr) return n;
+      n++;
+    }
+  return n;
+}
+
+function drawTeleporterBelt(ctx, dir, dirIdx, hasTarget, sx, sy, S, c, r) {
   const keys = hasTarget ? TELEPORTER_ACTIVE_KEYS : TELEPORTER_BASE_KEYS;
   const frameIdx = Math.floor((beltAnim / TILE_SIZE) * keys.length) % keys.length;
   const sprite = IMAGES[keys[frameIdx]];
@@ -1044,13 +1057,26 @@ function drawTeleporterBelt(ctx, dir, dirIdx, hasTarget, sx, sy, S) {
     ctx.rotate(angle);
     ctx.drawImage(sprite, -drawSize / 2, -drawSize / 2, drawSize, drawSize);
     ctx.restore();
-    return;
+  } else {
+    // Fallback: original belt + procedural ring icon.
+    drawBelt(ctx, dir, sx, sy, S);
+    drawTeleporterIcon(ctx, sx + S / 2, sy + S / 2, dirIdx, hasTarget, S);
   }
 
-  // Fallback: original belt + procedural ring icon, only reachable if the
-  // teleporter sprites fail to load.
-  drawBelt(ctx, dir, sx, sy, S);
-  drawTeleporterIcon(ctx, sx + S / 2, sy + S / 2, dirIdx, hasTarget, S);
+  // Number badge in top-left corner — "T1", "T2", etc.
+  if (c != null && r != null) {
+    const n = teleporterDisplayNum(c, r);
+    const label = 'T' + n;
+    const bw = 4 + label.length * 5;
+    ctx.fillStyle = 'rgba(10,18,30,0.82)';
+    ctx.fillRect(sx + 1, sy + 1, bw, 10);
+    ctx.fillStyle = '#7ee8fa';
+    ctx.font = 'bold 7px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, sx + 3, sy + 6.5);
+    ctx.textBaseline = 'alphabetic';
+  }
 }
 
 // Splitter: same treatment as the Teleporter above — a dedicated 4-frame

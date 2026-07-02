@@ -1492,26 +1492,60 @@ function renderRecyclerPopupContent(c, r) {
 // fish to. The list is rebuilt fresh every render (cheap — the map is small
 // and this only runs when the popup is opened or a button inside it is
 // clicked, never per-frame; see updateBlockPopupLive for the per-frame path).
+// Compass direction + distance from (fc,fr) to (tc,tr).
+function teleporterHint(fc, fr, tc, tr) {
+  const dc = tc - fc, dr = tr - fr;
+  const dist = Math.round(Math.hypot(dc, dr));
+  const deg = Math.atan2(dr, dc) * 180 / Math.PI;
+  const dirs = ['E','SE','S','SW','W','NW','N','NE'];
+  const compass = dirs[Math.round(((deg + 360) % 360) / 45) % 8];
+  return `${compass} · ${dist} tile${dist !== 1 ? 's' : ''}`;
+}
+
+// 1-based display number for teleporter at (tc,tr) in row-major order.
+function teleporterDisplayNumUI(tc, tr) {
+  let n = 1;
+  for (let rr = 0; rr < WORLD_ROWS; rr++)
+    for (let cc = 0; cc < WORLD_COLS; cc++) {
+      if (blockAt(cc, rr) !== B_TELEPORTER) continue;
+      if (cc === tc && rr === tr) return n;
+      n++;
+    }
+  return n;
+}
+
 function renderTeleporterPopupContent(c, r) {
   if (blockAt(c, r) !== B_TELEPORTER) { closeBlockPopup(); return; }
   const st = stateAt(c, r);
   const others = teleporterTiles(c, r);
+  const thisNum = teleporterDisplayNumUI(c, r);
+
+  // Linked-destination summary shown above the list
+  let linkedLabel = '';
+  if (st.teleportTarget) {
+    const { c: tc, r: tr } = st.teleportTarget;
+    const destNum = teleporterDisplayNumUI(tc, tr);
+    linkedLabel = `<div class="mp-effect" style="color:#7ee8fa">Linked → T${destNum} (${teleporterHint(c, r, tc, tr)})</div>`;
+  }
 
   const targetRows = others.length === 0
     ? `<div class="mp-target-empty">No other Teleporters placed yet.</div>`
     : others.map(({ c: tc, r: tr }) => {
         const active = st.teleportTarget && st.teleportTarget.c === tc && st.teleportTarget.r === tr;
-        return `<button class="mp-target-btn ${active ? 'active' : ''}" data-c="${tc}" data-r="${tr}">Teleporter @ (${tc}, ${tr})</button>`;
+        const destNum = teleporterDisplayNumUI(tc, tr);
+        const hint = teleporterHint(c, r, tc, tr);
+        return `<button class="mp-target-btn ${active ? 'active' : ''}" data-c="${tc}" data-r="${tr}">T${destNum} — ${hint}</button>`;
       }).join('');
 
   blockPopupEl.innerHTML = `
     <div class="mp-header">
-      <div class="mp-name">Teleporter Settings</div>
+      <div class="mp-name">T${thisNum} — Teleporter</div>
       <button class="mp-close">&times;</button>
     </div>
-    <div class="mp-effect">Fish landing here are instantly sent to the linked Teleporter, then exit it in that block's own facing direction.</div>
+    <div class="mp-effect">Fish landing here are instantly sent to the linked Teleporter, then exit in that block's facing direction.</div>
+    ${linkedLabel}
     <div class="mp-target-list">
-      <button class="mp-target-btn mp-target-clear ${!st.teleportTarget ? 'active' : ''}" data-clear="1">No destination</button>
+      <button class="mp-target-btn mp-target-clear ${!st.teleportTarget ? 'active' : ''}" data-clear="1">Unlinked</button>
       ${targetRows}
     </div>
   `;
