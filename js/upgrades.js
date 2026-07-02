@@ -10,10 +10,12 @@ const UPGRADES = [
     baseCost: 500, costMult: 1.8, maxLevel: 5, perLevel: 0.15, suffix: ' drone speed' },
   { id: 'droneDeliveryBonus', name: 'Delivery Network',    desc: 'Delivery Drones sell for more',
     baseCost: 600, costMult: 1.8, maxLevel: 5, perLevel: 0.08, suffix: ' drone delivery bonus' },
+  { id: 'pondCapacity', name: 'Habitat Expansion', desc: 'Increase pet slots in every pond and tank',
+    baseCost: 500, costMult: 2.2, maxLevel: 3, perLevel: 1, suffix: ' pond slots', flat: true },
 ];
 
 const upgradeLevels = { castSpeed: 0, beltSpeed: 0, maxHeld: 0, fisherSpeed: 0, sellPrice: 0,
-                        droneFisherSpeed: 0, droneDeliveryBonus: 0 };
+                        droneFisherSpeed: 0, droneDeliveryBonus: 0, pondCapacity: 0 };
 
 function upgradeCost(def) {
   const lvl = upgradeLevels[def.id];
@@ -57,6 +59,7 @@ function effectiveFisherInterval() { return FISHER_INTERVAL * (1 - upgradeLevels
 function effectiveSellMult()       { return (1 + upgradeLevels.sellPrice * 0.10) * prestigeSellMult(); }
 function effectiveDroneSpeedMult()      { return 1 + upgradeLevels.droneFisherSpeed * 0.15; }
 function effectiveDroneDeliveryBonus()  { return 1.10 + upgradeLevels.droneDeliveryBonus * 0.08; }
+function effectivePondCapacity()        { return POND_CAPACITY + upgradeLevels.pondCapacity; }
 
 // ─── Per-instance upgrades ───────────────────────────────────────────────────
 // Separate from the global tree above — click/E a placed instance of any

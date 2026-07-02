@@ -2,7 +2,7 @@
 
 const PET_PULL_COST = 500;    // single pull
 const PET_BULK_COST = 4500;   // 10-pull (10% off)
-const POND_CAPACITY = 3;      // max pets per pond
+const POND_CAPACITY = 3;      // base max pets per pond (see effectivePondCapacity() in upgrades.js)
 
 // Spritesheet: 128×256, 8 cols × 16 rows, 16×16 px per frame
 // Rows 0-15: 16 heading directions, 22.5° apart, counterclockwise
@@ -144,7 +144,7 @@ function petCurrentPond(uid) {
 function assignPetToPond(uid, pc, pr) {
   unassignPet(uid);
   const st = stateAt(pc, pr);
-  if (st.pondPets.length >= POND_CAPACITY) return false;
+  if (st.pondPets.length >= effectivePondCapacity()) return false;
   st.pondPets.push(uid);
   saveGame();
   return true;
@@ -153,7 +153,7 @@ function assignPetToPond(uid, pc, pr) {
 function assignPetToWaterPond(uid, anchorKey) {
   unassignPet(uid);
   if (!game.waterPonds[anchorKey]) game.waterPonds[anchorKey] = [];
-  if (game.waterPonds[anchorKey].length >= POND_CAPACITY) return false;
+  if (game.waterPonds[anchorKey].length >= effectivePondCapacity()) return false;
   game.waterPonds[anchorKey].push(uid);
   saveGame();
   return true;
@@ -180,7 +180,7 @@ function listAvailablePonds() {
     for (let c = 0; c < WORLD_COLS; c++)
       if (blockAt(c, r) === B_POND) {
         const st = stateAt(c, r);
-        ponds.push({ type: 'block', c, r, count: st.pondPets.length, capacity: POND_CAPACITY });
+        ponds.push({ type: 'block', c, r, count: st.pondPets.length, capacity: effectivePondCapacity() });
       }
   // Natural water bodies — deduplicate by anchor key, skip ocean (null anchor)
   const seenAnchors = new Set();
@@ -191,7 +191,7 @@ function listAvailablePonds() {
         if (!key || seenAnchors.has(key)) continue;
         seenAnchors.add(key);
         const count = (game.waterPonds[key] || []).length;
-        ponds.push({ type: 'water', key, count, capacity: POND_CAPACITY });
+        ponds.push({ type: 'water', key, count, capacity: effectivePondCapacity() });
       }
   return ponds;
 }

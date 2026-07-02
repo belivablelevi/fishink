@@ -1733,7 +1733,7 @@ function renderPondPopupContent(c, r) {
   // Current occupants
   const slots = document.createElement('div');
   slots.className = 'pond-slots';
-  for (let i = 0; i < POND_CAPACITY; i++) {
+  for (let i = 0; i < effectivePondCapacity(); i++) {
     const uid = st.pondPets[i];
     const slot = document.createElement('div');
     slot.className = 'pond-slot';
@@ -1769,7 +1769,7 @@ function renderPondPopupContent(c, r) {
     blockPopupEl.appendChild(hint);
     return;
   }
-  if (available.length > 0 && st.pondPets.length < POND_CAPACITY) {
+  if (available.length > 0 && st.pondPets.length < effectivePondCapacity()) {
     const label = document.createElement('div');
     label.className = 'mp-effect';
     label.style.cssText = 'margin-top:10px;margin-bottom:4px;';
@@ -1809,7 +1809,7 @@ function renderWaterPondPopupContent(c, r) {
 
   const slots = document.createElement('div');
   slots.className = 'pond-slots';
-  for (let i = 0; i < POND_CAPACITY; i++) {
+  for (let i = 0; i < effectivePondCapacity(); i++) {
     const uid = uids[i];
     const slot = document.createElement('div');
     slot.className = 'pond-slot';
@@ -1844,7 +1844,7 @@ function renderWaterPondPopupContent(c, r) {
     blockPopupEl.appendChild(hint);
     return;
   }
-  if (available.length > 0 && uids.length < POND_CAPACITY) {
+  if (available.length > 0 && uids.length < effectivePondCapacity()) {
     const label = document.createElement('div');
     label.className = 'mp-effect';
     label.style.cssText = 'margin-top:10px;margin-bottom:4px;';
