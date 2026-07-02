@@ -729,12 +729,8 @@ function renderLeaderboardPanel() {
 
   const hint = document.createElement('div');
   hint.className = 'panel-hint';
-  hint.innerHTML = `Playing as <strong>${escapeLeaderboardName(getLeaderboardName())}</strong> — <a href="#" id="lbChangeName">change name</a>`;
+  hint.innerHTML = `Playing as <strong>${escapeLeaderboardName(getLeaderboardName())}</strong>`;
   leaderboardPanelEl.appendChild(hint);
-  hint.querySelector('#lbChangeName').addEventListener('click', (e) => {
-    e.preventDefault();
-    renderLeaderboardNamePrompt();
-  });
 
   const loading = document.createElement('div');
   loading.className = 'panel-hint';
