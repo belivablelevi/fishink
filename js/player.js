@@ -333,9 +333,8 @@ function triggerInteract(fromKey = false) {
   const kind = interactionKindFor(hoveredId);
   const hoverTerrain = hoverTile ? tileAt(hoverTile.c, hoverTile.r) : null;
 
-  // Frog placement mode — intercept all interactions until the player uses E key on a valid land tile
+  // Frog placement mode — intercept all interactions until the player clicks/E-keys a valid land tile
   if (frogPlaceMode.active) {
-    if (!fromKey) return; // frogs placed by E key / Interact button only, not clicks
     if (!hoverTile) return;
     const t = tileAt(hoverTile.c, hoverTile.r);
     if ((t === T_EMPTY || t === T_SHORE) && blockAt(hoverTile.c, hoverTile.r) === B_NONE) {
