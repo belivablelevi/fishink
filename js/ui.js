@@ -1406,21 +1406,46 @@ function renderBlockPopup() {
 
 function renderWorkerDockContent() {
   if (!blockPopupEl) return;
-  const count = game.workers ? game.workers.length : 0;
-  const cost  = workerHireCost();
+  const count  = game.workers ? game.workers.length : 0;
+  const cost   = workerHireCost();
+  const depot  = game.workerIslandFish || [];
+  const depotVal = depot.reduce((s, f) => s + (f.value || 0), 0);
+  const canTake  = depot.length > 0 && heldFish.length < effectiveMaxHeld();
+
   blockPopupEl.innerHTML = `
     <div class="mp-title">Worker Island</div>
     <div class="mp-stats">
-      <div>Workers: ${count} / ${WORKER_MAX}</div>
-      <div style="color:#9aa0a8;font-size:0.85em;margin-top:3px">Workers auto-fish and sell their catch</div>
+      <div>Fishermen: ${count} / ${WORKER_MAX}</div>
+      <div style="margin-top:4px">Fish depot: <b>${depot.length}</b> fish
+        ${depot.length ? `<span style="color:#f0c030"> (~$${depotVal.toFixed(1)})</span>` : ''}
+      </div>
+      <div style="color:#9aa0a8;font-size:0.82em;margin-top:3px">
+        Workers fish the waters and return their catch here.<br>Sail over to collect and transport fish back.
+      </div>
     </div>
-    <div class="mp-effect">${count >= WORKER_MAX ? '<span class="maxed">All workers hired</span>' : `Next hire — $${cost.toLocaleString()}`}</div>
-    <button class="mp-buy" ${count >= WORKER_MAX ? 'disabled' : ''}>${count >= WORKER_MAX ? 'MAXED' : `Hire Worker — $${cost.toLocaleString()}`}</button>
+    <button class="mp-take" ${canTake ? '' : 'disabled'} style="margin-bottom:6px">
+      ${depot.length === 0 ? 'No fish to collect' : heldFish.length >= effectiveMaxHeld() ? 'Inventory full' : `Take Fish (${depot.length} waiting)`}
+    </button>
+    <div class="mp-effect">${count >= WORKER_MAX ? '<span class="maxed">All fishermen hired</span>' : `Next hire — $${cost.toLocaleString()}`}</div>
+    <button class="mp-buy" ${count >= WORKER_MAX ? 'disabled' : ''}>${count >= WORKER_MAX ? 'MAXED' : `Hire Fisherman — $${cost.toLocaleString()}`}</button>
   `;
-  const btn = blockPopupEl.querySelector('.mp-buy');
-  if (btn && count < WORKER_MAX) {
-    btn.disabled = game.cash < cost;
-    btn.addEventListener('click', () => hireWorker());
+  const takeBtn = blockPopupEl.querySelector('.mp-take');
+  if (takeBtn) {
+    takeBtn.addEventListener('click', () => {
+      const fish = (game.workerIslandFish || []);
+      let taken = 0;
+      while (fish.length > 0 && heldFish.length < effectiveMaxHeld()) {
+        heldFish.push(fish.shift());
+        taken++;
+      }
+      if (taken) queueToast(`Collected ${taken} fish!`, '#4dca7c');
+      renderWorkerDockContent();
+    });
+  }
+  const buyBtn = blockPopupEl.querySelector('.mp-buy');
+  if (buyBtn && count < WORKER_MAX) {
+    buyBtn.disabled = game.cash < cost;
+    buyBtn.addEventListener('click', () => hireWorker());
   }
 }
 
@@ -1725,8 +1750,16 @@ function updateBlockPopupLive() {
   if (!stillValid) { closeBlockPopup(); return; }
 
   if (kind === 'worker_dock') {
-    const btn = blockPopupEl && blockPopupEl.querySelector('.mp-buy');
-    if (btn) btn.disabled = game.cash < workerHireCost() || game.workers.length >= WORKER_MAX;
+    // Rebuild popup when depot count changes so fish count stays current
+    const depotLen = (game.workerIslandFish || []).length;
+    if (blockPopup._lastDepotLen !== depotLen || blockPopup._lastHeld !== heldFish.length) {
+      blockPopup._lastDepotLen = depotLen;
+      blockPopup._lastHeld = heldFish.length;
+      renderWorkerDockContent();
+    } else {
+      const btn = blockPopupEl && blockPopupEl.querySelector('.mp-buy');
+      if (btn) btn.disabled = game.cash < workerHireCost() || game.workers.length >= WORKER_MAX;
+    }
     return;
   }
 

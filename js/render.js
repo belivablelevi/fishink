@@ -1554,6 +1554,36 @@ function drawWorkers(ctx) {
     }
   }
 
+  // Fish piled at the island depot
+  const depot = game.workerIslandFish || [];
+  if (wisl && depot.length > 0) {
+    const dx = (wisl.cx + 0.5) * S - cam.x;
+    const dy = (wisl.cy + 0.5) * S - cam.y;
+    if (dx > -S * 3 && dx < VW + S * 3 && dy > -S * 3 && dy < VH + S * 3) {
+      // Draw a small pile of colored fish dots
+      const show = Math.min(depot.length, 6);
+      for (let i = 0; i < show; i++) {
+        const f = depot[i];
+        const offX = (i % 3) * 5 - 5;
+        const offY = Math.floor(i / 3) * 4 + 6;
+        ctx.fillStyle = f.color || '#aaa';
+        ctx.beginPath();
+        ctx.ellipse(dx + offX, dy + offY, 4, 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Count badge
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.beginPath();
+      ctx.roundRect(dx - 10, dy + 12, 20, 9, 3);
+      ctx.fill();
+      ctx.fillStyle = '#4dca7c';
+      ctx.font = 'bold 6px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${depot.length}`, dx, dy + 19);
+      ctx.textAlign = 'left';
+    }
+  }
+
   if (!game.workers || !game.workers.length) return;
 
   for (const w of game.workers) {
@@ -1562,7 +1592,7 @@ function drawWorkers(ctx) {
     if (sx < -S * 2 || sx > VW + S * 2 || sy < -S * 2 || sy > VH + S * 2) continue;
 
     if (w.state === 'idle') {
-      // Small person on the island
+      // Small fisherman standing on the island
       ctx.fillStyle = '#e8c87a';
       ctx.beginPath();
       ctx.arc(sx, sy - 5, 3, 0, Math.PI * 2);
@@ -1570,7 +1600,7 @@ function drawWorkers(ctx) {
       ctx.fillStyle = '#4a7ac8';
       ctx.fillRect(sx - 3, sy - 2, 6, 6);
     } else {
-      // Small rowboat pointing toward target
+      // Rowboat pointing toward target
       const angle = Math.atan2(w.targetWy - w.wy, w.targetWx - w.wx);
       ctx.save();
       ctx.translate(sx, sy);
@@ -1588,12 +1618,38 @@ function drawWorkers(ctx) {
       ctx.lineTo(5, 2);
       ctx.closePath();
       ctx.fill();
-      // Fishing dot when at rest
+      // Fisherman head in boat
+      ctx.fillStyle = '#e8c87a';
+      ctx.beginPath();
+      ctx.arc(-1, -1, 2, 0, Math.PI * 2);
+      ctx.fill();
+
       if (w.state === 'fishing') {
-        ctx.fillStyle = '#4dca7c';
+        // Fishing line
+        ctx.strokeStyle = '#aaa';
+        ctx.lineWidth = 0.5;
         ctx.beginPath();
-        ctx.arc(0, -6, 2, 0, Math.PI * 2);
+        ctx.moveTo(4, 0);
+        ctx.lineTo(10, 5);
+        ctx.stroke();
+        // Bobber
+        ctx.fillStyle = '#e85d4a';
+        ctx.beginPath();
+        ctx.arc(10, 5, 1.5, 0, Math.PI * 2);
         ctx.fill();
+      } else if (w.state === 'inbound' && w.fish && w.fish.length) {
+        // Show caught fish count as a small green badge on the boat
+        ctx.restore();
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.beginPath();
+        ctx.roundRect(sx - 7, sy - 12, 14, 8, 3);
+        ctx.fill();
+        ctx.fillStyle = '#4dca7c';
+        ctx.font = 'bold 5px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`+${w.fish.length}🐟`, sx, sy - 6);
+        ctx.textAlign = 'left';
+        continue;
       }
       ctx.restore();
     }

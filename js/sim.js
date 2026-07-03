@@ -22,9 +22,10 @@ const game = {
   petAutoSell: { common: false, uncommon: false, rare: false, legendary: false },
   frogs: [],         // owned frog pets [{uid, variant, wx, wy}]
   frogNextUid: 1,
-  workers: [],       // hired workers on the worker island [{uid, state, wx, wy, targetWx, targetWy, fishCount, timer}]
+  workers: [],         // hired workers [{uid, state, wx, wy, targetWx, targetWy, fish:[], timer}]
   workerNextUid: 1,
-  islandChests: {},  // chest state keyed by "cx,cy": { nextOpen: gameTime }
+  workerIslandFish: [], // fish waiting at the worker island for player to collect (max 30)
+  islandChests: {},    // chest state keyed by "cx,cy": { nextOpen: gameTime }
 };
 
 const fisherTimers = {};
@@ -180,7 +181,7 @@ function hireWorker() {
     wx: (isl.cx + 0.5) * TILE_SIZE,
     wy: (isl.cy + 0.5) * TILE_SIZE,
     targetWx: 0, targetWy: 0,
-    fishCount: 0,
+    fish: [],
     timer: 5,
   });
   queueToast(`Worker hired! (${game.workers.length}/${WORKER_MAX})`, '#4dca7c');
@@ -189,18 +190,22 @@ function hireWorker() {
   }
 }
 
+const WORKER_DEPOT_CAP = 30;
+
 function simUpdateWorkers(dt) {
   if (!game.workers || !game.workers.length) return;
   const isl = offshoreIslands[0];
   if (!isl) return;
   const dockWx = (isl.cx + 0.5) * TILE_SIZE;
   const dockWy = (isl.cy + 0.5) * TILE_SIZE;
+  if (!game.workerIslandFish) game.workerIslandFish = [];
 
   for (const w of game.workers) {
+    if (!w.fish) w.fish = []; // migrate old saves
+
     if (w.state === 'idle') {
       w.timer -= dt;
       if (w.timer > 0) continue;
-      // Pick a random water tile within 12 tiles of island center
       const candidates = [];
       const islC = Math.floor(isl.cx), islR = Math.floor(isl.cy);
       for (let dc = -12; dc <= 12; dc++) {
@@ -217,8 +222,8 @@ function simUpdateWorkers(dt) {
       const t = candidates[Math.floor(Math.random() * candidates.length)];
       w.targetWx = (t.c + 0.5) * TILE_SIZE;
       w.targetWy = (t.r + 0.5) * TILE_SIZE;
+      w.fish = [];
       w.state = 'outbound';
-      w.fishCount = 1 + Math.floor(Math.random() * 3);
 
     } else if (w.state === 'outbound' || w.state === 'inbound') {
       const dx = w.targetWx - w.wx;
@@ -231,12 +236,14 @@ function simUpdateWorkers(dt) {
           w.state = 'fishing';
           w.timer = WORKER_FISH_TIME;
         } else {
-          // Returned to dock — sell catch silently
-          const earnings = w.fishCount * Math.floor(8 + Math.random() * 14);
-          game.cash += earnings;
-          game.lifetimeEarned += earnings;
-          game.fishSold += w.fishCount;
-          spawnFloatText(`+$${earnings}`, w.wx, w.wy - 8, '#f0c030');
+          // Arrived at dock — deposit caught fish into island depot
+          const depot = game.workerIslandFish;
+          let deposited = 0;
+          for (const f of w.fish) {
+            if (depot.length < WORKER_DEPOT_CAP) { depot.push(f); deposited++; }
+          }
+          if (deposited) spawnFloatText(`+${deposited} fish`, w.wx, w.wy - 10, '#4dca7c');
+          w.fish = [];
           w.state = 'idle';
           w.timer = WORKER_IDLE_TIME;
           w.wx = dockWx;
@@ -251,6 +258,10 @@ function simUpdateWorkers(dt) {
     } else if (w.state === 'fishing') {
       w.timer -= dt;
       if (w.timer <= 0) {
+        // Roll 1-3 fish when fishing completes
+        const count = 1 + Math.floor(Math.random() * 3);
+        w.fish = [];
+        for (let i = 0; i < count; i++) w.fish.push(randomFish());
         w.state = 'inbound';
         w.targetWx = dockWx;
         w.targetWy = dockWy;
