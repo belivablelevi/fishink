@@ -2306,14 +2306,16 @@ function drawFrogs(ctx) {
     if (!img) continue;
     const s = _getFrogState(frog.uid, frog.wx, frog.wy);
     let anim;
-    if (s.shockTimer > 0)      anim = FROG_ANIM.shock;
-    else if (s.crOakTimer > 0) anim = FROG_ANIM.croak;
-    else if (s.restTimer > 0)  anim = FROG_ANIM.idle;
-    else                       anim = FROG_ANIM.hop;
+    if (s.shockTimer > 0)       anim = FROG_ANIM.shock;
+    else if (s.phase === 'croak') anim = FROG_ANIM.croak;
+    else if (s.phase === 'hop')   anim = FROG_ANIM.hop;
+    else                          anim = FROG_ANIM.idle;
     const srcX = (anim.col + s.frame) * FROG_FRAME_W;
     const srcY = (anim.row + s.dir)   * FROG_FRAME_H;
+    // Rise 10px at the midpoint of each hop for a natural jump arc
+    const arcY = s.phase === 'hop' ? -10 * Math.sin(Math.PI * s.hopProgress) : 0;
     ctx.drawImage(img, srcX, srcY, FROG_FRAME_W, FROG_FRAME_H,
-                  s.wx - cam.x, s.wy - cam.y, FROG_SIZE, FROG_SIZE);
+                  s.wx - cam.x, s.wy - cam.y + arcY, FROG_SIZE, FROG_SIZE);
   }
   ctx.imageSmoothingEnabled = true;
 }

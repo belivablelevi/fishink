@@ -531,7 +531,7 @@ function tickFrogStates(dt) {
           s.hopEndX = target.x; s.hopEndY = target.y;
           s.hopProgress = 0;
           const dist = Math.hypot(target.x - s.wx, target.y - s.wy);
-          s.hopDuration = 0.1 + dist / 260;
+          s.hopDuration = 0.32 + dist / 160;
           s.dir = _vecToFrogDir(target.x - s.wx, target.y - s.wy);
           s.frame = 0; s.frameAccum = 0;
         } else {
