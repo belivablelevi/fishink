@@ -2106,7 +2106,7 @@ function drawPond(ctx, sx, sy, S, c, r) {
     if (!ss) continue;
     const img = IMAGES[axoImgKey(pet.variant)];
     if (!img) continue;
-    const srcX = (ss.restTimer > 0 ? AXO_IDLE_COL + (ss.idleFrame ?? 0) : ss.frame) * AXO_FRAME_W;
+    const srcX = ss.frame * AXO_FRAME_W;
     const srcY = (ss.row ?? 0) * AXO_FRAME_H;
     ctx.drawImage(img, srcX, srcY, AXO_FRAME_W, AXO_FRAME_H, sx + ss.px, sy + ss.py, SW, SW);
   }
@@ -2209,7 +2209,7 @@ function drawWaterPets(ctx, c0, c1, r0, r1) {
         if (petC < c0 || petC > c1 || petR < r0 || petR > r1) continue;
         const sx = wx - cam.x;
         const sy = wy - cam.y;
-        const srcX = (ss.restTimer > 0 ? AXO_IDLE_COL + (ss.idleFrame ?? 0) : ss.frame) * AXO_FRAME_W;
+        const srcX = ss.frame * AXO_FRAME_W;
         const srcY = (ss.row ?? 0) * AXO_FRAME_H;
         ctx.drawImage(img, srcX, srcY, AXO_FRAME_W, AXO_FRAME_H, sx, sy, sw, sw);
       }

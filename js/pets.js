@@ -12,8 +12,8 @@ const AXO_FRAME_W     = 16;
 const AXO_FRAME_H     = 16;
 const AXO_ROWS        = 16;    // 16 heading directions
 const AXO_SWIM_FRAMES = 3;     // columns 0-2: moving animation (col 3 is blank)
-const AXO_IDLE_COL    = 5;     // column start of idle section (col 4 is blank)
-const AXO_IDLE_FRAMES = 2;     // columns 5-6: idle animation
+// Idle section (cols 4-6) only has art for a subset of rows so we skip it
+// entirely during rest and freeze the last swim frame instead.
 const AXO_ROW_STEP    = 22.5;  // degrees per row
 const AXO_ROW_OFFSET  = 67.5;  // center angle (°) of row 0 (≈ upper-right)
 
@@ -373,20 +373,13 @@ function tickSwimStates(dt) {
 
 // Advance animation frame at a rate proportional to how fast the pet is moving.
 function _advanceFrame(s, speed, topSpeed, maxFps, dt, isIdle) {
+  if (isIdle) return; // freeze on last swim frame during rest — idle rows are incomplete
   const frac = Math.min(1, speed / (topSpeed * 0.5));
   const fps  = 1.5 + frac * (maxFps - 1.5);
-  if (isIdle) {
-    s.idleFrameAccum = (s.idleFrameAccum ?? 0) + dt * fps;
-    while (s.idleFrameAccum >= 1) {
-      s.idleFrameAccum -= 1;
-      s.idleFrame = ((s.idleFrame ?? 0) + 1) % AXO_IDLE_FRAMES;
-    }
-  } else {
-    s.frameAccum += dt * fps;
-    while (s.frameAccum >= 1) {
-      s.frameAccum -= 1;
-      s.frame = (s.frame + 1) % AXO_SWIM_FRAMES;
-    }
+  s.frameAccum += dt * fps;
+  while (s.frameAccum >= 1) {
+    s.frameAccum -= 1;
+    s.frame = (s.frame + 1) % AXO_SWIM_FRAMES;
   }
 }
 
