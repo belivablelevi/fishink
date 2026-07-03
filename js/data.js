@@ -3,103 +3,144 @@
 // sprite: column/row in fishes.png (32×32 per cell, 12×12 grid)
 // sx = (species_number - 1) % 12,  sy = floor((species_number - 1) / 12)
 const FISH = [
-  // ── Common ────────────────────────────────────────────────────────────────
-  // #1  Anchovy           (idx 0  → sx  0, sy 0)
-  { species: 'Anchovy',        category: 'Common',   value: 0.4,   rarityWeight: 100, color: '#c8c8a0', sx:  0, sy: 0 },
-  // #23 Guppy             (idx 22 → sx 10, sy 1)
-  { species: 'Guppy',          category: 'Common',   value: 0.5,   rarityWeight: 100, color: '#f0a060', sx: 10, sy: 1 },
-  // #3  Sardine           (idx 2  → sx  2, sy 0)
-  { species: 'Sardine',        category: 'Common',   value: 0.6,   rarityWeight: 100, color: '#a0b8c0', sx:  2, sy: 0 },
-  // #2  Clownfish         (idx 1  → sx  1, sy 0)
-  { species: 'Clownfish',      category: 'Common',   value: 0.8,   rarityWeight: 100, color: '#e87030', sx:  1, sy: 0 },
-  // #41 Perch             (idx 40 → sx  4, sy 3)
-  { species: 'Perch',          category: 'Common',   value: 1.0,   rarityWeight: 100, color: '#7a9a5a', sx:  4, sy: 3 },
-  // #10 Goldfish          (idx 9  → sx  9, sy 0)
-  { species: 'Goldfish',       category: 'Common',   value: 1.2,   rarityWeight: 100, color: '#f0c030', sx:  9, sy: 0 },
-  // #4  Bass              (idx 3  → sx  3, sy 0)
-  { species: 'Bass',           category: 'Common',   value: 1.3,   rarityWeight: 80,  color: '#6a8a5a', sx:  3, sy: 0 },
-  // #60 Rainbow Trout     (idx 59 → sx 11, sy 4)
-  { species: 'Rainbow Trout',  category: 'Common',   value: 1.5,   rarityWeight: 100, color: '#c898d8', sx: 11, sy: 4 },
-  // ── Uncommon ─────────────────────────────────────────────────────────────
-  // #33 Common Carp       (idx 32 → sx  8, sy 2)
-  { species: 'Common Carp',    category: 'Uncommon', value: 3.0,   rarityWeight: 35,  color: '#9a8a5a', sx:  8, sy: 2 },
-  // #8  Herring           (idx 7  → sx  7, sy 0)
-  { species: 'Herring',        category: 'Uncommon', value: 3.5,   rarityWeight: 40,  color: '#7a9ab8', sx:  7, sy: 0 },
-  // #54 Pike              (idx 53 → sx  5, sy 4)
-  { species: 'Pike',           category: 'Uncommon', value: 4.5,   rarityWeight: 35,  color: '#4a6a3a', sx:  5, sy: 4 },
-  // #7  Eel               (idx 6  → sx  6, sy 0)
-  { species: 'Eel',            category: 'Uncommon', value: 5.0,   rarityWeight: 30,  color: '#3a4a3a', sx:  6, sy: 0 },
-  // #12 Catfish           (idx 11 → sx 11, sy 0)
-  { species: 'Catfish',        category: 'Uncommon', value: 6.5,   rarityWeight: 35,  color: '#7a6a5a', sx: 11, sy: 0 },
-  // #25 Tilapia           (idx 24 → sx  0, sy 2)
-  { species: 'Tilapia',        category: 'Uncommon', value: 7.0,   rarityWeight: 30,  color: '#8a7a6a', sx:  0, sy: 2 },
-  // #28 Atlantic Salmon   (idx 27 → sx  3, sy 2)
-  { species: 'Atlantic Salmon',category: 'Uncommon', value: 8.0,   rarityWeight: 35,  color: '#e8836b', sx:  3, sy: 2 },
-  // #53 Bluefin Tuna      (idx 52 → sx  4, sy 4)
-  { species: 'Bluefin Tuna',   category: 'Uncommon', value: 12.0,  rarityWeight: 35,  color: '#4a6a9a', sx:  4, sy: 4 },
-  // ── Rare ─────────────────────────────────────────────────────────────────
-  // #43 Lake Sturgeon     (idx 42 → sx  6, sy 3)
-  { species: 'Lake Sturgeon',  category: 'Rare',     value: 25.0,  rarityWeight: 8,   color: '#8a8a9a', sx:  6, sy: 3 },
-  // #35 Koi               (idx 34 → sx 10, sy 2)
-  { species: 'Koi',            category: 'Rare',     value: 35.0,  rarityWeight: 8,   color: '#e85d30', sx: 10, sy: 2 },
-  // #45 Swordfish         (idx 44 → sx  8, sy 3)
-  { species: 'Swordfish',      category: 'Rare',     value: 50.0,  rarityWeight: 8,   color: '#7a9ac8', sx:  8, sy: 3 },
-  // ── Rare ─────────────────────────────────────────────────────────────────
-  // #14 Red Snapper       (idx 13 → sx  1, sy 1)
-  { species: 'Red Snapper',    category: 'Rare',     value: 30.0,  rarityWeight: 7,   color: '#c84040', sx:  1, sy: 1 },
-  // #15 Mahi-Mahi         (idx 14 → sx  2, sy 1)
-  { species: 'Mahi-Mahi',      category: 'Rare',     value: 40.0,  rarityWeight: 7,   color: '#30c8a0', sx:  2, sy: 1 },
-  // #58 Barracuda         (idx 57 → sx  9, sy 4)
-  { species: 'Barracuda',      category: 'Rare',     value: 45.0,  rarityWeight: 6,   color: '#4a7a8a', sx:  9, sy: 4 },
-  // ── Epic ─────────────────────────────────────────────────────────────────
-  // #86 Arapaima          (idx 85 → sx  1, sy 7)
-  { species: 'Arapaima',       category: 'Epic',     value: 150.0, rarityWeight: 1.5, color: '#8a4a3a', sx:  1, sy: 7 },
-  // #65 Oarfish           (idx 64 → sx  4, sy 5)
-  { species: 'Oarfish',        category: 'Epic',     value: 220.0, rarityWeight: 1.5, color: '#c8a0a0', sx:  4, sy: 5 },
-  // #37 Blue Marlin       (idx 36 → sx  0, sy 3)
-  { species: 'Blue Marlin',    category: 'Epic',     value: 280.0, rarityWeight: 1.0, color: '#3060c8', sx:  0, sy: 3 },
-  // #50 Giant Squid       (idx 49 → sx  1, sy 4)
-  { species: 'Giant Squid',    category: 'Epic',     value: 350.0, rarityWeight: 0.8, color: '#7020a0', sx:  1, sy: 4 },
-  // Whale Shark (sx 4, sy 6)
-  { species: 'Whale Shark',    category: 'Epic',     value: 420.0, rarityWeight: 0.6, color: '#3858a8', sx:  4, sy: 6 },
-  // ── Common (extra) ───────────────────────────────────────────────────────
-  // Angelfish (sx 4, sy 0)
-  { species: 'Angelfish',      category: 'Common',   value: 0.9,   rarityWeight: 100, color: '#c0c8c8', sx:  4, sy: 0 },
-  // Yellow Tang (sx 5, sy 0)
-  { species: 'Yellow Tang',    category: 'Common',   value: 1.1,   rarityWeight: 90,  color: '#d8c030', sx:  5, sy: 0 },
-  // Silver Bream (sx 0, sy 1)
-  { species: 'Silver Bream',   category: 'Common',   value: 0.7,   rarityWeight: 100, color: '#c0c8d0', sx:  0, sy: 1 },
-  // Parrotfish (sx 5, sy 1)
-  { species: 'Parrotfish',     category: 'Common',   value: 1.4,   rarityWeight: 80,  color: '#38c870', sx:  5, sy: 1 },
-  // ── Uncommon (extra) ─────────────────────────────────────────────────────
-  // Seahorse (sx 0, sy 5)
-  { species: 'Seahorse',       category: 'Uncommon', value: 4.0,   rarityWeight: 30,  color: '#e09830', sx:  0, sy: 5 },
-  // Pufferfish (sx 2, sy 11)
-  { species: 'Pufferfish',     category: 'Uncommon', value: 5.5,   rarityWeight: 30,  color: '#d8c870', sx:  2, sy: 11 },
-  // Moray Eel (sx 2, sy 3)
-  { species: 'Moray Eel',      category: 'Uncommon', value: 6.5,   rarityWeight: 28,  color: '#886020', sx:  2, sy: 3 },
-  // Flounder (sx 5, sy 3)
-  { species: 'Flounder',       category: 'Uncommon', value: 7.5,   rarityWeight: 28,  color: '#b8a058', sx:  5, sy: 3 },
-  // Striped Bass (sx 3, sy 1)
-  { species: 'Striped Bass',   category: 'Uncommon', value: 9.5,   rarityWeight: 25,  color: '#788060', sx:  3, sy: 1 },
-  // ── Rare (extra) ─────────────────────────────────────────────────────────
-  // Moon Jellyfish (sx 0, sy 7)
-  { species: 'Moon Jellyfish', category: 'Rare',     value: 38.0,  rarityWeight: 6,   color: '#d070b0', sx:  0, sy: 7 },
-  // Lobster (sx 6, sy 7)
-  { species: 'Lobster',        category: 'Rare',     value: 48.0,  rarityWeight: 6,   color: '#c83820', sx:  6, sy: 7 },
-  // Bottlenose Dolphin (sx 0, sy 6)
-  { species: 'Bottlenose Dolphin', category: 'Rare', value: 55.0,  rarityWeight: 5,   color: '#8090a8', sx:  0, sy: 6 },
-  // Hammerhead Shark (sx 5, sy 6)
-  { species: 'Hammerhead Shark',   category: 'Rare', value: 65.0,  rarityWeight: 5,   color: '#607080', sx:  5, sy: 6 },
-  // Manta Ray (sx 6, sy 6)
-  { species: 'Manta Ray',      category: 'Rare',     value: 75.0,  rarityWeight: 4,   color: '#a0b4c4', sx:  6, sy: 6 },
-  // ── Legendary ────────────────────────────────────────────────────────────
-  // Blue Whale (sx 1, sy 6)
-  { species: 'Blue Whale',     category: 'Legendary', value: 500.0, rarityWeight: 0.15, color: '#1840a0', sx:  1, sy: 6 },
-  // Great White Shark (sx 2, sy 6)
-  { species: 'Great White Shark', category: 'Legendary', value: 750.0, rarityWeight: 0.1, color: '#9ab0c0', sx:  2, sy: 6 },
-  // Giant Octopus (sx 9, sy 8)
-  { species: 'Giant Octopus',  category: 'Legendary', value: 1000.0, rarityWeight: 0.06, color: '#900830', sx:  9, sy: 8 },
+  // ── Common ──────────────────────────────────────────────────────
+  { species: 'Progenetica', category: 'Common', value: 0.3, rarityWeight: 110, color: '#c8d0d0', sx:  0, sy: 0 },
+  { species: 'European Anchovy', category: 'Common', value: 0.4, rarityWeight: 110, color: '#c8c8a0', sx: 11, sy: 5 },
+  { species: 'Roule\'s Goby', category: 'Common', value: 0.5, rarityWeight: 100, color: '#7890a0', sx:  4, sy: 1 },
+  { species: 'Guppy', category: 'Common', value: 0.5, rarityWeight: 100, color: '#f0a060', sx: 10, sy: 1 },
+  { species: 'Zebrafish', category: 'Common', value: 0.5, rarityWeight: 100, color: '#3050a0', sx:  2, sy: 3 },
+  { species: 'Petticoat Tetra', category: 'Common', value: 0.5, rarityWeight: 100, color: '#2040a0', sx:  3, sy: 3 },
+  { species: 'Sailfin Molly', category: 'Common', value: 0.6, rarityWeight: 90, color: '#707890', sx: 11, sy: 1 },
+  { species: 'Emperor Tetra', category: 'Common', value: 0.6, rarityWeight: 100, color: '#604880', sx:  1, sy: 3 },
+  { species: 'Sardine', category: 'Common', value: 0.6, rarityWeight: 100, color: '#a0b8c0', sx: 10, sy: 3 },
+  { species: 'Cardinal Tetra', category: 'Common', value: 0.7, rarityWeight: 100, color: '#e03020', sx:  0, sy: 3 },
+  { species: 'Atlantic Herring', category: 'Common', value: 0.7, rarityWeight: 100, color: '#7a9ab8', sx: 11, sy: 3 },
+  { species: 'Cherry Barb', category: 'Common', value: 0.7, rarityWeight: 90, color: '#c03030', sx:  8, sy: 4 },
+  { species: 'Clownfish', category: 'Common', value: 0.8, rarityWeight: 100, color: '#e87030', sx:  1, sy: 0 },
+  { species: 'Tiger Barb', category: 'Common', value: 0.8, rarityWeight: 90, color: '#e08020', sx:  7, sy: 4 },
+  { species: 'Sea Cucumber', category: 'Common', value: 0.8, rarityWeight: 90, color: '#806040', sx:  0, sy: 11 },
+  { species: 'Flying Fish', category: 'Common', value: 0.9, rarityWeight: 90, color: '#6080c0', sx:  9, sy: 1 },
+  { species: 'Blue Tang', category: 'Common', value: 1.0, rarityWeight: 100, color: '#1870c8', sx:  2, sy: 0 },
+  { species: 'Fighting Fish', category: 'Common', value: 1.0, rarityWeight: 80, color: '#9020c0', sx: 10, sy: 0 },
+  { species: 'Perch', category: 'Common', value: 1.0, rarityWeight: 90, color: '#7a9a5a', sx:  4, sy: 3 },
+  { species: 'Bartlett\'s Anthias', category: 'Common', value: 1.0, rarityWeight: 85, color: '#e06070', sx:  6, sy: 6 },
+  { species: 'Blue Acara', category: 'Common', value: 1.0, rarityWeight: 80, color: '#3078b0', sx:  9, sy: 6 },
+  { species: 'Dwarf Gourami', category: 'Common', value: 1.0, rarityWeight: 85, color: '#e06828', sx: 11, sy: 6 },
+  { species: 'Hillstream Loach', category: 'Common', value: 1.0, rarityWeight: 85, color: '#806840', sx: 10, sy: 7 },
+  { species: 'Mediterranean Mussel', category: 'Common', value: 1.0, rarityWeight: 90, color: '#504878', sx:  4, sy: 8 },
+  { species: 'Sea Sponge', category: 'Common', value: 1.0, rarityWeight: 90, color: '#f0c030', sx:  6, sy: 9 },
+  { species: 'Shrimp', category: 'Common', value: 1.0, rarityWeight: 90, color: '#f0a080', sx:  4, sy: 10 },
+  { species: 'Yellow Tang', category: 'Common', value: 1.1, rarityWeight: 90, color: '#f0d020', sx:  3, sy: 0 },
+  { species: 'Angelfish', category: 'Common', value: 1.2, rarityWeight: 80, color: '#b8c8c0', sx:  6, sy: 0 },
+  { species: 'Goldfish', category: 'Common', value: 1.2, rarityWeight: 100, color: '#f0c030', sx:  9, sy: 0 },
+  { species: 'Atlantic Trumpetfish', category: 'Common', value: 1.2, rarityWeight: 80, color: '#f0d070', sx:  5, sy: 6 },
+  { species: 'Boeseman\'s Rainbowfish', category: 'Common', value: 1.2, rarityWeight: 85, color: '#e08030', sx:  9, sy: 7 },
+  { species: 'Hard Clam', category: 'Common', value: 1.2, rarityWeight: 85, color: '#c0b8a0', sx:  2, sy: 8 },
+  { species: 'Common Starfish', category: 'Common', value: 1.2, rarityWeight: 85, color: '#e04020', sx:  5, sy: 9 },
+  { species: 'Fire Goby', category: 'Common', value: 1.3, rarityWeight: 80, color: '#e06010', sx:  7, sy: 6 },
+  { species: 'Clown Loach', category: 'Common', value: 1.3, rarityWeight: 80, color: '#e06020', sx:  0, sy: 7 },
+  { species: 'Catfish', category: 'Common', value: 1.5, rarityWeight: 70, color: '#7a6a5a', sx: 11, sy: 0 },
+  { species: 'Garfish', category: 'Common', value: 1.5, rarityWeight: 80, color: '#60a860', sx:  9, sy: 3 },
+  { species: 'Hake', category: 'Common', value: 1.5, rarityWeight: 75, color: '#909898', sx:  3, sy: 4 },
+  { species: 'Common Barbel', category: 'Common', value: 1.5, rarityWeight: 80, color: '#907848', sx:  6, sy: 4 },
+  { species: 'Rainbow Trout', category: 'Common', value: 1.5, rarityWeight: 80, color: '#c898d8', sx: 11, sy: 4 },
+  { species: 'Raccoon Butterflyfish', category: 'Common', value: 1.5, rarityWeight: 80, color: '#f0c028', sx:  4, sy: 6 },
+  { species: 'Oscar', category: 'Common', value: 1.5, rarityWeight: 80, color: '#c06818', sx: 10, sy: 6 },
+  { species: 'Bluehead Wrasse', category: 'Common', value: 1.5, rarityWeight: 80, color: '#2060a0', sx:  7, sy: 7 },
+  { species: 'Pacific Oyster', category: 'Common', value: 1.5, rarityWeight: 80, color: '#a0a8a0', sx:  0, sy: 8 },
+  { species: 'Spiny Cockle', category: 'Common', value: 1.5, rarityWeight: 85, color: '#e0c090', sx:  6, sy: 8 },
+  { species: 'Nomad Jellyfish', category: 'Common', value: 1.5, rarityWeight: 80, color: '#e08870', sx:  8, sy: 8 },
+  { species: 'Moon Jelly', category: 'Common', value: 1.5, rarityWeight: 80, color: '#d0e8f0', sx: 10, sy: 8 },
+  { species: 'Cushion Star', category: 'Common', value: 1.5, rarityWeight: 85, color: '#e07030', sx:  4, sy: 9 },
+  { species: 'Hermit Crab', category: 'Common', value: 1.5, rarityWeight: 85, color: '#c88040', sx:  9, sy: 9 },
+  { species: 'Goose Barnacle', category: 'Common', value: 1.5, rarityWeight: 80, color: '#a0b0b0', sx:  8, sy: 10 },
+  { species: 'Tench', category: 'Common', value: 1.8, rarityWeight: 70, color: '#607840', sx:  9, sy: 2 },
+  { species: 'Blackspot Seabream', category: 'Common', value: 1.8, rarityWeight: 75, color: '#a09880', sx:  0, sy: 4 },
+  { species: 'Atlantic Spadefish', category: 'Common', value: 1.8, rarityWeight: 75, color: '#a8a8a8', sx:  8, sy: 6 },
+  { species: 'Lumpfish', category: 'Common', value: 1.8, rarityWeight: 75, color: '#5880a0', sx:  8, sy: 7 },
+  { species: 'Fried Egg Jellyfish', category: 'Common', value: 1.8, rarityWeight: 80, color: '#f0e060', sx:  7, sy: 8 },
+  { species: 'Common Squid', category: 'Common', value: 1.8, rarityWeight: 80, color: '#9070b0', sx:  3, sy: 9 },
+  { species: 'Common Carp', category: 'Common', value: 2.0, rarityWeight: 70, color: '#9a8a5a', sx:  8, sy: 2 },
+  { species: 'Great Scallop', category: 'Common', value: 2.0, rarityWeight: 80, color: '#f0d0b0', sx:  5, sy: 8 },
+  { species: 'Sea Urchin', category: 'Common', value: 2.0, rarityWeight: 80, color: '#202020', sx:  7, sy: 9 },
+  { species: 'Blue Crab', category: 'Common', value: 2.0, rarityWeight: 80, color: '#3050c0', sx: 10, sy: 9 },
+  { species: 'Atlantic Crayfish', category: 'Common', value: 2.0, rarityWeight: 75, color: '#c04020', sx:  1, sy: 10 },
+  // ── Uncommon ────────────────────────────────────────────────────
+  { species: 'Greater Weever', category: 'Uncommon', value: 4.0, rarityWeight: 35, color: '#987848', sx:  0, sy: 2 },
+  { species: 'Sea Butterfly', category: 'Uncommon', value: 5.0, rarityWeight: 35, color: '#c0d8f0', sx: 10, sy: 10 },
+  { species: 'Spotted Pufferfish', category: 'Uncommon', value: 5.5, rarityWeight: 35, color: '#c8b060', sx:  1, sy: 1 },
+  { species: 'Sailfin Tang', category: 'Uncommon', value: 6.0, rarityWeight: 32, color: '#3858a8', sx:  5, sy: 0 },
+  { species: 'Japanese Trout', category: 'Uncommon', value: 6.0, rarityWeight: 30, color: '#b08868', sx:  4, sy: 2 },
+  { species: 'River Lamprey', category: 'Uncommon', value: 6.0, rarityWeight: 30, color: '#607050', sx:  3, sy: 6 },
+  { species: 'Flame Jellyfish', category: 'Uncommon', value: 6.0, rarityWeight: 32, color: '#e04020', sx: 11, sy: 8 },
+  { species: 'Porcupinefish', category: 'Uncommon', value: 6.5, rarityWeight: 35, color: '#c0a060', sx:  0, sy: 1 },
+  { species: 'Gem Tang', category: 'Uncommon', value: 7.0, rarityWeight: 32, color: '#304870', sx:  4, sy: 0 },
+  { species: 'Harlequin Snake Eel', category: 'Uncommon', value: 7.0, rarityWeight: 28, color: '#e0d0a0', sx:  3, sy: 5 },
+  { species: 'Horseshoe Crab', category: 'Uncommon', value: 7.0, rarityWeight: 30, color: '#806840', sx:  0, sy: 10 },
+  { species: 'French Angelfish', category: 'Uncommon', value: 8.0, rarityWeight: 28, color: '#202828', sx:  8, sy: 0 },
+  { species: 'Red Piranha', category: 'Uncommon', value: 8.0, rarityWeight: 28, color: '#c03020', sx:  5, sy: 1 },
+  { species: 'Atlantic Salmon', category: 'Uncommon', value: 8.0, rarityWeight: 35, color: '#e0836b', sx:  3, sy: 2 },
+  { species: 'Gilthead Seabream', category: 'Uncommon', value: 8.0, rarityWeight: 30, color: '#c0a860', sx:  1, sy: 4 },
+  { species: 'European Conger', category: 'Uncommon', value: 8.0, rarityWeight: 28, color: '#605050', sx:  2, sy: 5 },
+  { species: 'Seahorse', category: 'Uncommon', value: 8.0, rarityWeight: 30, color: '#e09830', sx: 11, sy: 7 },
+  { species: 'Common Octopus', category: 'Uncommon', value: 8.0, rarityWeight: 30, color: '#702040', sx:  0, sy: 9 },
+  { species: 'Queen Angelfish', category: 'Uncommon', value: 9.0, rarityWeight: 28, color: '#e0c020', sx:  7, sy: 0 },
+  { species: 'Mahi-Mahi', category: 'Uncommon', value: 9.0, rarityWeight: 30, color: '#30c8a0', sx:  3, sy: 1 },
+  { species: 'Sockeye Salmon', category: 'Uncommon', value: 9.0, rarityWeight: 28, color: '#e05030', sx:  1, sy: 2 },
+  { species: 'Longnose Gar', category: 'Uncommon', value: 9.0, rarityWeight: 28, color: '#687848', sx:  6, sy: 5 },
+  { species: 'Senegal Bichir', category: 'Uncommon', value: 9.0, rarityWeight: 28, color: '#7a7050', sx:  8, sy: 5 },
+  { species: 'Hogfish', category: 'Uncommon', value: 9.0, rarityWeight: 28, color: '#c05870', sx:  6, sy: 7 },
+  { species: 'Barracuda', category: 'Uncommon', value: 10.0, rarityWeight: 25, color: '#4a7a8a', sx: 11, sy: 2 },
+  { species: 'Atlantic Cod', category: 'Uncommon', value: 10.0, rarityWeight: 28, color: '#a09070', sx:  2, sy: 4 },
+  { species: 'Pike', category: 'Uncommon', value: 10.0, rarityWeight: 28, color: '#4a6a3a', sx:  5, sy: 4 },
+  { species: 'Banggai Cardinalfish', category: 'Uncommon', value: 10.0, rarityWeight: 25, color: '#202828', sx:  4, sy: 7 },
+  { species: 'Monkfish', category: 'Uncommon', value: 11.0, rarityWeight: 25, color: '#9a8060', sx:  5, sy: 2 },
+  { species: 'Saddled Bichir', category: 'Uncommon', value: 11.0, rarityWeight: 25, color: '#807040', sx:  7, sy: 5 },
+  { species: 'Common Stingray', category: 'Uncommon', value: 11.0, rarityWeight: 25, color: '#8090a8', sx:  1, sy: 6 },
+  { species: 'Koi', category: 'Uncommon', value: 12.0, rarityWeight: 25, color: '#e85d30', sx: 10, sy: 2 },
+  { species: 'Ribbon Eel', category: 'Uncommon', value: 12.0, rarityWeight: 25, color: '#f0e020', sx:  0, sy: 5 },
+  { species: 'European Seabass', category: 'Uncommon', value: 12.0, rarityWeight: 25, color: '#9898a0', sx: 10, sy: 5 },
+  { species: 'Longhorn Cowfish', category: 'Uncommon', value: 12.0, rarityWeight: 25, color: '#d0c030', sx:  5, sy: 7 },
+  { species: 'Moorish Idol', category: 'Uncommon', value: 14.0, rarityWeight: 22, color: '#f0d030', sx:  3, sy: 7 },
+  // ── Rare ────────────────────────────────────────────────────────
+  { species: 'Lionfish', category: 'Rare', value: 28.0, rarityWeight: 9, color: '#e04818', sx:  6, sy: 1 },
+  { species: 'Red Scorpionfish', category: 'Rare', value: 30.0, rarityWeight: 8, color: '#b82018', sx:  7, sy: 1 },
+  { species: 'Stonefish', category: 'Rare', value: 32.0, rarityWeight: 7, color: '#807060', sx:  8, sy: 1 },
+  { species: 'Hairy Frogfish', category: 'Rare', value: 35.0, rarityWeight: 8, color: '#c08040', sx:  7, sy: 2 },
+  { species: 'Portuguese Man-o-War', category: 'Rare', value: 35.0, rarityWeight: 9, color: '#9060d0', sx:  9, sy: 8 },
+  { species: 'Anglerfish', category: 'Rare', value: 38.0, rarityWeight: 8, color: '#201818', sx:  6, sy: 2 },
+  { species: 'Ocean Sunfish', category: 'Rare', value: 40.0, rarityWeight: 8, color: '#9ab0b8', sx:  2, sy: 1 },
+  { species: 'Giant Clam', category: 'Rare', value: 40.0, rarityWeight: 8, color: '#80c0e0', sx:  3, sy: 8 },
+  { species: 'Lake Sturgeon', category: 'Rare', value: 42.0, rarityWeight: 7, color: '#8a8a9a', sx:  6, sy: 3 },
+  { species: 'Taimen', category: 'Rare', value: 45.0, rarityWeight: 7, color: '#887060', sx:  2, sy: 2 },
+  { species: 'Starry Sturgeon', category: 'Rare', value: 45.0, rarityWeight: 7, color: '#707890', sx:  5, sy: 3 },
+  { species: 'Pearl Oyster', category: 'Rare', value: 45.0, rarityWeight: 8, color: '#f0f0e0', sx:  1, sy: 8 },
+  { species: 'Yeti Crab', category: 'Rare', value: 45.0, rarityWeight: 7, color: '#e8e8f0', sx: 11, sy: 9 },
+  { species: 'Giant Moray Eel', category: 'Rare', value: 50.0, rarityWeight: 6, color: '#604828', sx:  1, sy: 5 },
+  { species: 'Red King Crab', category: 'Rare', value: 50.0, rarityWeight: 6, color: '#c03020', sx:  8, sy: 9 },
+  { species: 'Swordfish', category: 'Rare', value: 55.0, rarityWeight: 6, color: '#7a9ac8', sx:  8, sy: 3 },
+  { species: 'Turbot', category: 'Rare', value: 55.0, rarityWeight: 7, color: '#c0a870', sx:  9, sy: 5 },
+  { species: 'Flapjack Octopus', category: 'Rare', value: 55.0, rarityWeight: 6, color: '#e07060', sx:  1, sy: 9 },
+  { species: 'Spiny Lobster', category: 'Rare', value: 55.0, rarityWeight: 6, color: '#c84020', sx:  3, sy: 10 },
+  { species: 'Opah', category: 'Rare', value: 60.0, rarityWeight: 6, color: '#c03060', sx:  9, sy: 4 },
+  { species: 'Common Lobster', category: 'Rare', value: 60.0, rarityWeight: 6, color: '#203098', sx:  2, sy: 10 },
+  { species: 'Blue Discus', category: 'Rare', value: 65.0, rarityWeight: 5, color: '#2060c0', sx: 10, sy: 4 },
+  { species: 'Giant Cuttlefish', category: 'Rare', value: 65.0, rarityWeight: 6, color: '#706858', sx: 11, sy: 10 },
+  { species: 'Humphead Wrasse', category: 'Rare', value: 70.0, rarityWeight: 5, color: '#3070a0', sx:  0, sy: 6 },
+  // ── Epic ────────────────────────────────────────────────────────
+  { species: 'Green Sea Turtle', category: 'Epic', value: 180.0, rarityWeight: 1.5, color: '#408050', sx:  5, sy: 10 },
+  { species: 'Striped Marlin', category: 'Epic', value: 200.0, rarityWeight: 1.5, color: '#3060c8', sx:  7, sy: 3 },
+  { species: 'Chambered Nautilus', category: 'Epic', value: 250.0, rarityWeight: 1.0, color: '#e0d0a0', sx:  7, sy: 10 },
+  { species: 'Mako Shark', category: 'Epic', value: 280.0, rarityWeight: 1.0, color: '#607080', sx:  2, sy: 6 },
+  { species: 'Bluefin Tuna', category: 'Epic', value: 300.0, rarityWeight: 1.0, color: '#4a6a9a', sx:  4, sy: 4 },
+  { species: 'Arapaima', category: 'Epic', value: 350.0, rarityWeight: 0.8, color: '#8a4a3a', sx:  1, sy: 7 },
+  { species: 'Asian Arowana', category: 'Epic', value: 420.0, rarityWeight: 0.5, color: '#d09030', sx:  2, sy: 7 },
+  // ── Legendary ───────────────────────────────────────────────────
+  { species: 'Oarfish', category: 'Legendary', value: 800.0, rarityWeight: 0.1, color: '#c8a0a0', sx:  4, sy: 5 },
+  { species: 'Axolotl', category: 'Legendary', value: 900.0, rarityWeight: 0.12, color: '#f090c0', sx:  6, sy: 10 },
+  { species: 'Atlantic Giant Squid', category: 'Legendary', value: 1000.0, rarityWeight: 0.08, color: '#7020a0', sx:  2, sy: 9 },
+  { species: 'Coelacanth', category: 'Legendary', value: 1200.0, rarityWeight: 0.05, color: '#204880', sx:  5, sy: 5 },
+  { species: 'Blue Sea Dragon', category: 'Legendary', value: 1500.0, rarityWeight: 0.05, color: '#3070e0', sx:  9, sy: 10 },
 ];
 
 // Display preferences — kept in their own localStorage key, separate from
