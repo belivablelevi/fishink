@@ -2,7 +2,7 @@
 
 const PLAYER_SPEED = 120;
 const BOAT_SPEED   = 150; // slightly faster than walking on land
-const PLAYER_HALF  = 10;
+const PLAYER_HALF  = 7;
 const FISHING_ROD_RANGE = 6 * TILE_SIZE; // max cast distance from the player
 let ZOOM = 2.0;
 const ZOOM_MAX = 3.5;
@@ -489,6 +489,30 @@ function updatePlayer(dt) {
     while (diff < -Math.PI) diff += Math.PI * 2;
     const step = 6 * dt; // radians/sec — full 360° spin takes ~1 s
     player.boatAngle += Math.abs(diff) < step ? diff : Math.sign(diff) * step;
+  }
+
+  // If the player is already embedded in an impassable tile (e.g. slid into a
+  // concave shore corner), push them out so they're never permanently frozen.
+  if (!player.inBoat) {
+    let pushX = 0, pushY = 0;
+    const half = PLAYER_HALF;
+    for (const [cx, cy] of [
+      [player.wx - half, player.wy - half],
+      [player.wx + half, player.wy - half],
+      [player.wx - half, player.wy + half],
+      [player.wx + half, player.wy + half],
+    ]) {
+      const tc = Math.floor(cx / TILE_SIZE), tr = Math.floor(cy / TILE_SIZE);
+      if (!tileWalkable(tileAt(tc, tr))) {
+        pushX += player.wx - (tc + 0.5) * TILE_SIZE;
+        pushY += player.wy - (tr + 0.5) * TILE_SIZE;
+      }
+    }
+    if (pushX !== 0 || pushY !== 0) {
+      const pl = Math.sqrt(pushX * pushX + pushY * pushY) || 1;
+      player.wx += (pushX / pl) * 2;
+      player.wy += (pushY / pl) * 2;
+    }
   }
 
   player.moving = moved;

@@ -216,7 +216,7 @@ function _renderMachinesDetail(panel, detail) {
     allBtn.dataset.blockId = id;
     allBtn.disabled = count === 0;
     allBtn.textContent = count > 0
-      ? `Upgrade All ×${count} — $${formatMoney(total)}`
+      ? `Upgrade All ×${count} ($${formatMoney(total)})`
       : 'Upgrade All';
     allBtn.addEventListener('click', () => {
       const fresh = [];
@@ -298,7 +298,7 @@ function updateMachinesPanelLive() {
     const { count, total } = calcBulkUpgrade(id, instances);
     allBtn.disabled = count === 0;
     allBtn.textContent = count > 0
-      ? `Upgrade All ×${count} — $${formatMoney(total)}`
+      ? `Upgrade All ×${count} ($${formatMoney(total)})`
       : 'Upgrade All';
   }
 }
@@ -600,7 +600,7 @@ function renderResearchPanel() {
     return;
   }
 
-  hint.textContent = 'One-time purchases — spend cash on late-game upgrades';
+  hint.textContent = 'One-time cash purchases for late-game upgrades';
   researchPanelEl.appendChild(hint);
 
   for (const def of RESEARCH_NODES) {
@@ -647,7 +647,7 @@ function renderPrestigePanel() {
   const hint = document.createElement('div');
   hint.className = 'panel-hint';
   const available = tokensAvailableOnReset();
-  hint.textContent = `Reset your run for Fish Tokens (permanent bonuses) — $${PRESTIGE_TOKEN_DIVISOR.toLocaleString()} lifetime earned ≈ 1 token`;
+  hint.textContent = `Reset your run for Fish Tokens (permanent bonuses). $${PRESTIGE_TOKEN_DIVISOR.toLocaleString()} lifetime earned = 1 token`;
   prestigePanelEl.appendChild(hint);
 
   const summary = document.createElement('div');
@@ -720,7 +720,7 @@ function renderBlueprintsPanel() {
 
   const hint = document.createElement('div');
   hint.className = 'panel-hint';
-  hint.textContent = 'Copy (C) saves a new entry here — pick one Active, then Paste (V) to stamp it';
+  hint.textContent = 'Copy (C) saves a layout here. Pick one Active, then Paste (V) to stamp it.';
   blueprintsPanelEl.appendChild(hint);
 
   const importRow = document.createElement('div');
@@ -739,7 +739,7 @@ function renderBlueprintsPanel() {
   if (blueprint.library.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'panel-hint';
-    empty.textContent = 'No blueprints yet — drag-select an area with Copy (C) to save one.';
+    empty.textContent = 'No blueprints yet. Drag-select an area with Copy (C) to save one.';
     blueprintsPanelEl.appendChild(empty);
     return;
   }
@@ -821,7 +821,7 @@ function renderLeaderboardPanel() {
   if (!isLeaderboardConfigured()) {
     const hint = document.createElement('div');
     hint.className = 'panel-hint';
-    hint.textContent = 'Leaderboard not set up yet — see leaderboard/SETUP.md';
+    hint.textContent = 'Leaderboard not set up yet. See leaderboard/SETUP.md';
     leaderboardPanelEl.appendChild(hint);
     return;
   }
@@ -846,7 +846,7 @@ function renderLeaderboardPanel() {
     if (result.error) {
       const err = document.createElement('div');
       err.className = 'panel-hint';
-      err.textContent = 'Could not reach the leaderboard — check your connection.';
+      err.textContent = 'Could not reach the leaderboard. Check your connection.';
       leaderboardPanelEl.appendChild(err);
       return;
     }
@@ -953,7 +953,7 @@ function renderFishIndexPanel() {
   const caughtCount = FISH.filter(f => game.fishIndex.has(f.species)).length;
   const hint = document.createElement('div');
   hint.className = 'panel-hint';
-  hint.textContent = `${caughtCount} / ${FISH.length} species discovered — catch one to reveal it`;
+  hint.textContent = `${caughtCount} / ${FISH.length} species discovered. Catch one to reveal it.`;
   fishIndexPanelEl.appendChild(hint);
 
   const grid = document.createElement('div');
@@ -973,7 +973,7 @@ function renderFishIndexPanel() {
     divider.style.setProperty('--cat-color', catColor);
     divider.innerHTML = `<span class="cat-dot"></span>${catName}` +
       (claimed ? ` <span class="panel-hint" style="display:inline;margin:0 0 0 6px;color:#4dca7c;">✓ +$${bonus} claimed</span>`
-               : ` <span class="panel-hint" style="display:inline;margin:0 0 0 6px;">${catCaught}/${specs.length} — complete for +$${bonus}</span>`);
+               : ` <span class="panel-hint" style="display:inline;margin:0 0 0 6px;">${catCaught}/${specs.length} (complete for +$${bonus})</span>`);
     grid.appendChild(divider);
 
     const row = document.createElement('div');
@@ -1048,35 +1048,39 @@ function renderStatsPanel() {
   const effDivider = document.createElement('div');
   effDivider.className = 'cat-divider';
   effDivider.style.setProperty('--cat-color', '#7ec8e3');
-  effDivider.innerHTML = `<span class="cat-dot"></span>Efficiency (last 60s)`;
+  effDivider.innerHTML = `<span class="cat-dot"></span>Factory Performance`;
   statsPanelEl.appendChild(effDivider);
 
   const perMin = earnPerMinute();
+  const sellBonus = Math.round((effectiveSellMult() - 1) * 100);
+  const chestBonus = Math.round((game.chestIncomeBonus || 0) * 100);
   const effRows = [
-    ['$/min', `$${perMin.toFixed(2)}`, 'earnPerMin'],
-    ['Footprint (tiles)', currentBlockCount, 'footprint'],
-    ['$/tile', `$${(perMin / Math.max(1, currentBlockCount)).toFixed(2)}`, 'earnPerTile'],
-    ['$/machine', `$${(perMin / Math.max(1, currentMachineCount)).toFixed(2)}`, 'earnPerMachine'],
+    ['Income Rate',     `$${perMin.toFixed(2)}/min`,  'earnPerMin',     'Cash earned over the last 60 seconds'],
+    ['Blocks Placed',   currentBlockCount,             'footprint',      'Total blocks on the map'],
+    ['Income per Block', `$${(perMin / Math.max(1, currentBlockCount)).toFixed(2)}/min`, 'earnPerTile', 'How much each placed block earns on average'],
+    ['Income per Machine', `$${(perMin / Math.max(1, currentMachineCount)).toFixed(2)}/min`, 'earnPerMachine', 'How much each processor earns on average'],
+    ['Sell Multiplier', `+${sellBonus}%`,              'sellMult',       'Total bonus applied to every fish sold'],
+    ['Chest Bonus',     `+${chestBonus}%`,             'chestBonus',     'Permanent income bonus from island chests'],
   ];
-  for (const [label, value, key] of effRows) {
+  for (const [label, value, key, desc] of effRows) {
     const row = document.createElement('div');
     row.className = 'upgrade-row';
-    row.innerHTML = `<div class="upgrade-info"><div class="name">${label}</div></div><div class="cost afford" data-stat="${key}">${value}</div>`;
+    row.innerHTML = `<div class="upgrade-info"><div class="name">${label}</div><div class="desc">${desc}</div></div><div class="cost afford" data-stat="${key}">${value}</div>`;
     statsPanelEl.appendChild(row);
   }
 
   const snapshotRow = document.createElement('div');
   snapshotRow.className = 'upgrade-row';
-  snapshotRow.innerHTML = `<div class="upgrade-info"><div class="name">Snapshot</div><div class="desc">Generate a Discord-ready efficiency card image</div></div>`;
+  snapshotRow.innerHTML = `<div class="upgrade-info"><div class="name">Share</div><div class="desc">Copy a factory performance card to your clipboard</div></div>`;
   const snapshotBtn = document.createElement('button');
   snapshotBtn.className = 'upgrade-buy';
-  snapshotBtn.textContent = 'Snapshot Image';
+  snapshotBtn.textContent = 'Copy Image';
   snapshotBtn.addEventListener('click', () => {
     const canvas = renderSnapshotCard(buildEfficiencySnapshot());
     canvas.toBlob(blob => {
       if (navigator.clipboard && window.ClipboardItem) {
         navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
-          .then(() => queueToast('Snapshot image copied — paste into Discord', '#4dca7c'))
+          .then(() => queueToast('Performance card copied to clipboard', '#4dca7c'))
           .catch(() => downloadSnapshotBlob(blob));
       } else {
         downloadSnapshotBlob(blob);
@@ -1117,10 +1121,12 @@ function updateStatsPanelLive() {
   if (!statsPanelEl.querySelector('[data-stat]')) return; // not rendered yet
   const perMin = earnPerMinute();
   const vals = {
-    earnPerMin: `$${perMin.toFixed(2)}`,
-    footprint: currentBlockCount,
-    earnPerTile: `$${(perMin / Math.max(1, currentBlockCount)).toFixed(2)}`,
-    earnPerMachine: `$${(perMin / Math.max(1, currentMachineCount)).toFixed(2)}`,
+    earnPerMin:     `$${perMin.toFixed(2)}/min`,
+    footprint:      currentBlockCount,
+    earnPerTile:    `$${(perMin / Math.max(1, currentBlockCount)).toFixed(2)}/min`,
+    earnPerMachine: `$${(perMin / Math.max(1, currentMachineCount)).toFixed(2)}/min`,
+    sellMult:       `+${Math.round((effectiveSellMult() - 1) * 100)}%`,
+    chestBonus:     `+${Math.round((game.chestIncomeBonus || 0) * 100)}%`,
   };
   for (const key in vals) {
     const el = statsPanelEl.querySelector(`[data-stat="${key}"]`);
@@ -1198,7 +1204,7 @@ const CONTROL_GROUPS = [
     label: 'Movement & Fishing', color: '#7ec8e3',
     rows: [
       [[['W'], ['A'], ['S'], ['D']], 'Walk around (arrow keys work too)'],
-      [[['Left Click']], 'Cast your line at water in range — click again to reel in'],
+      [[['Left Click']], 'Cast your line at water in range. Click again to reel in.'],
       [[['Left Click']], 'Drop a held fish onto a belt you’re hovering'],
       [[['E']], 'Hovering a Sorter / Recycler / Packer / Crate / Teleporter / Machine: open its settings popup (works from anywhere on the map)'],
       [[['E']], 'Holding fish, hovering a belt in reach: drop them on it'],
@@ -1207,22 +1213,22 @@ const CONTROL_GROUPS = [
   {
     label: 'Build Mode', color: '#e8a030',
     rows: [
-      [[['B']], 'Enter build mode (opens the menu) — press again to show/hide the menu while staying in build mode'],
+      [[['B']], 'Enter build mode (opens the menu). Press again to show/hide the menu while staying in build mode.'],
       [[['Esc']], 'Exit build mode entirely'],
       [[['1'], ['…'], ['9']], 'Select a block by its slot number'],
       [[['Q']], 'Cycle to the previous block'],
       [[['E']], 'Cycle to the next block'],
       [[['R']], 'Rotate the selected belt-type block’s facing'],
-      [[['X']], 'Toggle multi mode — drag a rectangle to place/remove over the whole area at once'],
+      [[['X']], 'Toggle multi mode. Drag a rectangle to place/remove over the whole area at once.'],
       [[['Left Click']], 'Place the selected block (drag to paint, or drag a box in multi mode)'],
-      [[['Right Click']], 'Remove/sell whatever’s on that tile — on empty ground, exits build mode'],
+      [[[‘Right Click’]], ‘Remove/sell whatever\’s on that tile. On empty ground, exits build mode.’],
     ],
   },
   {
     label: 'Blueprints (copy/paste layouts)', color: '#a78bfa',
     rows: [
       [[['C']], 'Toggle copy mode, then drag a rectangle to copy that area (settings & upgrades included)'],
-      [[['V']], 'Toggle paste mode, then click to stamp the copied layout — pasting over existing blocks replaces them'],
+      [[['V']], 'Toggle paste mode, then click to stamp the copied layout. Pasting over existing blocks replaces them.'],
       [[['Esc']], 'Cancel copy/paste mode'],
     ],
   },
@@ -1315,7 +1321,7 @@ function openFrogPopup(uid) {
   const sellBtn = document.createElement('button');
   sellBtn.className = 'upgrade-buy pet-sell-btn';
   sellBtn.style.cssText = 'width:100%;display:block;';
-  sellBtn.textContent = `Sell — $${refund}`;
+  sellBtn.textContent = `Sell ($${refund})`;
   sellBtn.addEventListener('click', () => { sellFrog(uid); closeFrogPopup(); if (typeof renderPetsPanel === 'function') renderPetsPanel(); });
   el.appendChild(sellBtn);
 
@@ -1429,8 +1435,8 @@ function renderWorkerDockContent() {
         Workers catch fish and drop them in the depot.<br>Place a <b>Belt</b> next to the depot to move fish out.
       </div>
     </div>
-    <div class="mp-effect">${count >= WORKER_MAX ? '<span class="maxed">All fishermen hired</span>' : `Next hire — $${cost.toLocaleString()}`}</div>
-    <button class="mp-buy" ${count >= WORKER_MAX ? 'disabled' : ''}>${count >= WORKER_MAX ? 'MAXED' : `Hire Fisherman — $${cost.toLocaleString()}`}</button>
+    <div class="mp-effect">${count >= WORKER_MAX ? '<span class="maxed">All fishermen hired</span>' : `Next hire: $${cost.toLocaleString()}`}</div>
+    <button class="mp-buy" ${count >= WORKER_MAX ? 'disabled' : ''}>${count >= WORKER_MAX ? 'MAXED' : `Hire Fisherman ($${cost.toLocaleString()})`}</button>
   `;
   const buyBtn = blockPopupEl.querySelector('.mp-buy');
   if (buyBtn && count < WORKER_MAX) {
@@ -1454,7 +1460,7 @@ function upgradeSectionHTML(id, level, cost) {
     <div class="mp-effect">
       ${maxed ? '<span class="maxed">Maxed out</span>' : `Lv ${level + 1}: ${parts.join(', ')}`}
     </div>
-    <button class="mp-buy" ${maxed ? 'disabled' : ''}>${maxed ? 'MAXED' : `Upgrade — $${cost}`}</button>
+    <button class="mp-buy" ${maxed ? 'disabled' : ''}>${maxed ? 'MAXED' : `Upgrade ($${cost})`}</button>
   `;
 }
 
@@ -1657,12 +1663,12 @@ function renderTeleporterPopupContent(c, r) {
         const active = st.teleportTarget && st.teleportTarget.c === tc && st.teleportTarget.r === tr;
         const destNum = teleporterDisplayNumUI(tc, tr);
         const hint = teleporterHint(c, r, tc, tr);
-        return `<button class="mp-target-btn ${active ? 'active' : ''}" data-c="${tc}" data-r="${tr}">T${destNum} — ${hint}</button>`;
+        return `<button class="mp-target-btn ${active ? 'active' : ''}" data-c="${tc}" data-r="${tr}">T${destNum}: ${hint}</button>`;
       }).join('');
 
   blockPopupEl.innerHTML = `
     <div class="mp-header">
-      <div class="mp-name">T${thisNum} — Teleporter</div>
+      <div class="mp-name">T${thisNum}: Teleporter</div>
       <button class="mp-close">&times;</button>
     </div>
     <div class="mp-effect">Fish landing here are instantly sent to the linked Teleporter, then exit in that block's facing direction.</div>
@@ -1842,10 +1848,10 @@ function updateBuildHud() {
   hudBpStatusEl.textContent = blueprint.selecting
     ? 'Drag a box to copy'
     : blueprint.pasting
-      ? `Pasting "${active.name}" (${active.w}×${active.h}) — click to stamp`
+      ? `Pasting "${active.name}" (${active.w}×${active.h}). Click to stamp.`
       : active
         ? `Active: "${active.name}" (${active.w}×${active.h})`
-        : 'No blueprint active — press C to copy a selection';
+        : 'No blueprint active. Press C to copy a selection.';
 }
 
 // ── Axolotl Pond popup ────────────────────────────────────────────────────────
@@ -1896,7 +1902,7 @@ function renderPondPopupContent(c, r) {
     const hint = document.createElement('div');
     hint.className = 'mp-effect';
     hint.style.marginTop = '8px';
-    hint.textContent = 'No axolotls yet — pull some from the Pets tab!';
+    hint.textContent = 'No axolotls yet. Pull some from the Pets tab!';
     blockPopupEl.appendChild(hint);
     return;
   }
@@ -1971,7 +1977,7 @@ function renderWaterPondPopupContent(c, r) {
     const hint = document.createElement('div');
     hint.className = 'mp-effect';
     hint.style.marginTop = '8px';
-    hint.textContent = 'No axolotls yet — pull some from the Pets tab!';
+    hint.textContent = 'No axolotls yet. Pull some from the Pets tab!';
     blockPopupEl.appendChild(hint);
     return;
   }
@@ -2208,9 +2214,9 @@ function renderPetsPanel() {
   const costs = document.createElement('div');
   costs.className = 'pets-gacha-costs';
   costs.innerHTML = `
-    <span>Pull x1 — $${PET_PULL_COST.toLocaleString()}</span>
+    <span>Pull x1: $${PET_PULL_COST.toLocaleString()}</span>
     <span style="color:var(--c-muted)">  ·  </span>
-    <span>Pull x10 — $${PET_BULK_COST.toLocaleString()} <span style="color:var(--c-mint);font-size:10px">(10% off)</span></span>`;
+    <span>Pull x10: $${PET_BULK_COST.toLocaleString()} <span style="color:var(--c-mint);font-size:10px">(10% off)</span></span>`;
   gacha.appendChild(costs);
 
   const btnRow = document.createElement('div');
@@ -2218,7 +2224,7 @@ function renderPetsPanel() {
 
   const pull1 = document.createElement('button');
   pull1.className = 'upgrade-buy';
-  pull1.textContent = `Pull ×1 — $${PET_PULL_COST.toLocaleString()}`;
+  pull1.textContent = `Pull ×1  ($${PET_PULL_COST.toLocaleString()})`;
   pull1.addEventListener('click', () => {
     const res = pullPets(1);
     if (res) { _petsPullResult = res; renderPetsPanel(); sfxUpgrade(); }
@@ -2226,7 +2232,7 @@ function renderPetsPanel() {
 
   const pull10 = document.createElement('button');
   pull10.className = 'upgrade-buy';
-  pull10.textContent = `Pull ×10 — $${PET_BULK_COST.toLocaleString()}`;
+  pull10.textContent = `Pull ×10 ($${PET_BULK_COST.toLocaleString()})`;
   pull10.addEventListener('click', () => {
     const res = pullPets(10);
     if (res) { _petsPullResult = res; renderPetsPanel(); sfxUpgrade(); }
@@ -2346,14 +2352,14 @@ function renderPetsPanel() {
 
   const frogDesc = document.createElement('div');
   frogDesc.style.cssText = 'font-size:11px;color:var(--c-muted);margin-bottom:6px;line-height:1.4';
-  frogDesc.textContent = 'Pull from the gacha above! Place on any land tile — they hop around and react to rare catches nearby.';
+  frogDesc.textContent = 'Pull from the gacha above! Place on any land tile. They hop around and react to rare catches nearby.';
   panel.appendChild(frogDesc);
 
   const ownedFrogs = (game.frogs || []);
   if (ownedFrogs.length === 0) {
     const hint = document.createElement('div');
     hint.className = 'panel-hint';
-    hint.textContent = 'No frogs yet — try your luck in the gacha!';
+    hint.textContent = 'No frogs yet. Try your luck in the gacha!';
     panel.appendChild(hint);
   } else {
     const byVariant = {};
