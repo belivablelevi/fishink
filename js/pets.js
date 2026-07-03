@@ -408,7 +408,7 @@ const FROG_ANIM = {
   hop:   { col: 12, row: 0, frames: 4 },
   shock: { col: 0,  row: 8, frames: 4 },
 };
-const FROG_SIZE          = 16;  // rendered px
+const FROG_SIZE          = 32;  // rendered px
 const FROG_SHOCK_RADIUS  = 10 * TILE_SIZE;
 
 const FROG_VARIANTS = [
@@ -422,15 +422,17 @@ const FROG_VARIANTS = [
 
 function frogImgKey(variant) { return `frog_${variant}`; }
 
-function _velToFrogDir(vx, vy) {
-  const deg = ((Math.atan2(vy, vx) * 180 / Math.PI) + 360) % 360;
+// Direction: 0=E 1=SE 2=S 3=SW 4=W 5=NW 6=N 7=NE (clockwise from east, matches spritesheet rows)
+function _vecToFrogDir(dx, dy) {
+  const deg = ((Math.atan2(dy, dx) * 180 / Math.PI) + 360) % 360;
   return Math.round(deg / 45) % FROG_DIRS;
 }
 
 const _frogStates = {};
 
+// Pick a nearby land tile center to hop to (1-3 tile range = short realistic hops)
 function _randLandTarget(wx, wy) {
-  const S = TILE_SIZE, range = 5;
+  const S = TILE_SIZE, range = 3;
   const cc = Math.floor(wx / S), cr = Math.floor(wy / S);
   const picks = [];
   for (let dr = -range; dr <= range; dr++)
@@ -439,26 +441,28 @@ function _randLandTarget(wx, wy) {
       const tc = cc + dc, tr = cr + dr;
       const t = tileAt(tc, tr);
       if ((t === T_EMPTY || t === T_SHORE) && blockAt(tc, tr) === B_NONE)
-        picks.push({ x: tc * S + 8 + Math.random() * (S - 16),
-                     y: tr * S + 8 + Math.random() * (S - 16) });
+        picks.push({ x: tc * S + S / 2 - FROG_SIZE / 2,
+                     y: tr * S + S / 2 - FROG_SIZE / 2 });
     }
   return picks.length ? picks[Math.floor(Math.random() * picks.length)] : null;
 }
 
+// phase: 'wait' (idle/croak) → 'hop' (lerp to target) → back to 'wait'
 function _getFrogState(uid, startWx, startWy) {
   if (!_frogStates[uid]) {
-    const t = _randLandTarget(startWx, startWy) || { x: startWx, y: startWy };
     _frogStates[uid] = {
       wx: startWx, wy: startWy,
-      vx: 0, vy: 0,
-      twx: t.x, twy: t.y,
-      topSpeed: 25 + Math.random() * 15,
       dir: 2,
       frame: 0, frameAccum: 0,
-      restTimer: Math.random() * 2,
-      shockTimer: 0,
+      phase: 'wait',
+      waitTimer: 0.4 + Math.random() * 1.5,
       crOakTimer: 0,
-      crOakCooldown: 3 + Math.random() * 5,
+      crOakCooldown: 3 + Math.random() * 6,
+      shockTimer: 0,
+      hopStartX: startWx, hopStartY: startWy,
+      hopEndX: startWx,   hopEndY: startWy,
+      hopProgress: 0,
+      hopDuration: 0.2,
     };
   }
   return _frogStates[uid];
@@ -477,77 +481,79 @@ function triggerFrogShock(castWx, castWy) {
     const s = _frogStates[frog.uid];
     if (!s) continue;
     const dx = s.wx - castWx, dy = s.wy - castWy;
-    if (dx*dx + dy*dy <= r2) { s.shockTimer = 1.8; s.frame = 0; s.frameAccum = 0; }
+    if (dx*dx + dy*dy <= r2) { s.shockTimer = 1.8; s.phase = 'wait'; s.frame = 0; s.frameAccum = 0; }
   }
 }
 
 function tickFrogStates(dt) {
   if (!game.frogs) return;
-  const S = TILE_SIZE, ANIM_FPS = 8;
+  const IDLE_FPS = 4, HOP_FPS = 12, SHOCK_FPS = 10, CROAK_FPS = 8;
 
   for (const frog of game.frogs) {
     if (!isFrogPlaced(frog.uid)) continue;
     const s = _getFrogState(frog.uid, frog.wx, frog.wy);
 
+    // SHOCK — plays in place, overrides everything
     if (s.shockTimer > 0) {
       s.shockTimer -= dt;
-      s.vx = 0; s.vy = 0;
-      s.frameAccum += dt * ANIM_FPS;
+      s.frameAccum += dt * SHOCK_FPS;
       while (s.frameAccum >= 1) { s.frameAccum -= 1; s.frame = (s.frame + 1) % FROG_ANIM.shock.frames; }
+      if (s.shockTimer <= 0) { s.phase = 'wait'; s.waitTimer = 0.5; s.frame = 0; s.frameAccum = 0; }
       continue;
     }
 
-    if (s.crOakTimer > 0) {
+    // CROAK — plays croak anim then returns to wait
+    if (s.phase === 'croak') {
       s.crOakTimer -= dt;
-      s.vx = 0; s.vy = 0;
-      s.frameAccum += dt * ANIM_FPS;
+      s.frameAccum += dt * CROAK_FPS;
       while (s.frameAccum >= 1) { s.frameAccum -= 1; s.frame = (s.frame + 1) % FROG_ANIM.croak.frames; }
-      if (s.crOakTimer <= 0) { s.frame = 0; s.frameAccum = 0; }
+      if (s.crOakTimer <= 0) { s.phase = 'wait'; s.waitTimer = 0.3 + Math.random() * 0.8; s.frame = 0; s.frameAccum = 0; }
       continue;
     }
 
-    if (s.restTimer > 0) {
-      s.restTimer -= dt;
-      s.vx *= Math.pow(0.02, dt);
-      s.vy *= Math.pow(0.02, dt);
+    // WAIT — idle anim, countdown to next hop, maybe croak
+    if (s.phase === 'wait') {
+      s.frameAccum += dt * IDLE_FPS;
+      while (s.frameAccum >= 1) { s.frameAccum -= 1; s.frame = (s.frame + 1) % FROG_ANIM.idle.frames; }
+      s.waitTimer -= dt;
       s.crOakCooldown -= dt;
-      if (s.crOakCooldown <= 0 && s.restTimer > 0.8) {
-        s.crOakTimer = 0.6;
-        s.crOakCooldown = 3 + Math.random() * 5;
+      if (s.crOakCooldown <= 0) {
+        s.phase = 'croak';
+        s.crOakTimer = 0.6 + Math.random() * 0.5;
+        s.crOakCooldown = 5 + Math.random() * 8;
+        s.frame = 0; s.frameAccum = 0;
+      } else if (s.waitTimer <= 0) {
+        const target = _randLandTarget(s.wx, s.wy);
+        if (target) {
+          s.phase = 'hop';
+          s.hopStartX = s.wx; s.hopStartY = s.wy;
+          s.hopEndX = target.x; s.hopEndY = target.y;
+          s.hopProgress = 0;
+          const dist = Math.hypot(target.x - s.wx, target.y - s.wy);
+          s.hopDuration = 0.1 + dist / 260;
+          s.dir = _vecToFrogDir(target.x - s.wx, target.y - s.wy);
+          s.frame = 0; s.frameAccum = 0;
+        } else {
+          s.waitTimer = 0.5 + Math.random();
+        }
+      }
+      continue;
+    }
+
+    // HOP — lerp with ease-out from start to end, play hop anim
+    if (s.phase === 'hop') {
+      s.hopProgress = Math.min(1, s.hopProgress + dt / s.hopDuration);
+      const ease = 1 - (1 - s.hopProgress) * (1 - s.hopProgress); // ease-out quad
+      s.wx = s.hopStartX + (s.hopEndX - s.hopStartX) * ease;
+      s.wy = s.hopStartY + (s.hopEndY - s.hopStartY) * ease;
+      s.frameAccum += dt * HOP_FPS;
+      while (s.frameAccum >= 1) { s.frameAccum -= 1; s.frame = (s.frame + 1) % FROG_ANIM.hop.frames; }
+      if (s.hopProgress >= 1) {
+        s.wx = s.hopEndX; s.wy = s.hopEndY;
+        s.phase = 'wait';
+        s.waitTimer = 0.5 + Math.random() * 1.8;
         s.frame = 0; s.frameAccum = 0;
       }
-      s.frameAccum += dt * 3;
-      while (s.frameAccum >= 1) { s.frameAccum -= 1; s.frame = (s.frame + 1) % FROG_ANIM.idle.frames; }
-      continue;
-    }
-
-    // Hopping
-    const dx = s.twx - s.wx, dy = s.twy - s.wy;
-    const dist = Math.hypot(dx, dy);
-    if (dist < 4) {
-      if (Math.random() < 0.65) s.restTimer = 0.6 + Math.random() * 2;
-      s.frame = 0; s.frameAccum = 0;
-      const t = _randLandTarget(s.wx, s.wy);
-      if (t) { s.twx = t.x; s.twy = t.y; }
-    } else {
-      const steer = Math.min(1, dt * 5);
-      s.vx += ((dx / dist) * s.topSpeed - s.vx) * steer;
-      s.vy += ((dy / dist) * s.topSpeed - s.vy) * steer;
-      const nx = s.wx + s.vx * dt, ny = s.wy + s.vy * dt;
-      const tc = Math.floor((nx + FROG_SIZE / 2) / S);
-      const tr = Math.floor((ny + FROG_SIZE / 2) / S);
-      const tt = tileAt(tc, tr);
-      if ((tt === T_EMPTY || tt === T_SHORE) && blockAt(tc, tr) === B_NONE) {
-        s.wx = nx; s.wy = ny;
-      } else {
-        s.vx = 0; s.vy = 0;
-        const t = _randLandTarget(s.wx, s.wy);
-        if (t) { s.twx = t.x; s.twy = t.y; }
-      }
-      const spd = Math.hypot(s.vx, s.vy);
-      if (spd > 0.5) s.dir = _velToFrogDir(s.vx, s.vy);
-      s.frameAccum += dt * ANIM_FPS;
-      while (s.frameAccum >= 1) { s.frameAccum -= 1; s.frame = (s.frame + 1) % FROG_ANIM.hop.frames; }
     }
   }
 }
