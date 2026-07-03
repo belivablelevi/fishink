@@ -517,15 +517,10 @@ function updatePlayer(dt) {
       const nearIsland = offshoreIslands.find(isl =>
         Math.hypot(pc - isl.cx, pr - isl.cy) < 8
       );
-      // Are we at that island's specific dock shore tile?
-      const atDock = nearIsland && nearIsland.shoreDockC != null &&
-        Math.hypot(pc - nearIsland.shoreDockC, pr - nearIsland.shoreDockR) < 2;
 
-      if (nearIsland && !atDock) {
-        queueToast('Sail to the island dock to land', '#9aa0a8');
-      } else if (t === T_SHORE || tileWalkable(t)) {
+      if (t === T_SHORE || tileWalkable(t)) {
         player.inBoat = false;
-        queueToast(nearIsland ? 'Docked at island' : 'Back on land', '#7ec8e3');
+        queueToast(nearIsland ? 'Landed on island' : 'Back on land', '#7ec8e3');
       } else {
         queueToast('Sail to shore to disembark', '#9aa0a8');
       }

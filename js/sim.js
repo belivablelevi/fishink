@@ -24,7 +24,6 @@ const game = {
   frogNextUid: 1,
   workers: [],         // hired workers [{uid, state, wx, wy, targetWx, targetWy, fish:[], timer}]
   workerNextUid: 1,
-  workerIslandFish: [], // fish waiting at the worker island for player to collect (max 30)
   islandChests: {},    // chest state keyed by "cx,cy": { nextOpen: gameTime }
 };
 
@@ -190,15 +189,12 @@ function hireWorker() {
   }
 }
 
-const WORKER_DEPOT_CAP = 30;
-
 function simUpdateWorkers(dt) {
   if (!game.workers || !game.workers.length) return;
   const isl = offshoreIslands[0];
   if (!isl) return;
   const dockWx = (isl.cx + 0.5) * TILE_SIZE;
   const dockWy = (isl.cy + 0.5) * TILE_SIZE;
-  if (!game.workerIslandFish) game.workerIslandFish = [];
 
   for (const w of game.workers) {
     if (!w.fish) w.fish = []; // migrate old saves
@@ -236,11 +232,13 @@ function simUpdateWorkers(dt) {
           w.state = 'fishing';
           w.timer = WORKER_FISH_TIME;
         } else {
-          // Arrived at dock — deposit caught fish into island depot
-          const depot = game.workerIslandFish;
+          // Arrived at dock — deposit caught fish into the depot block
+          const depotC = isl.depotC ?? Math.floor(isl.cx);
+          const depotR = isl.depotR ?? Math.floor(isl.cy);
+          const depotSt = stateAt(depotC, depotR);
           let deposited = 0;
           for (const f of w.fish) {
-            if (depot.length < WORKER_DEPOT_CAP) { depot.push(f); deposited++; }
+            if (depotSt.carrying.length < DEPOT_CAPACITY) { depotSt.carrying.push(f); deposited++; }
           }
           if (deposited) spawnFloatText(`+${deposited} fish`, w.wx, w.wy - 10, '#4dca7c');
           w.fish = [];

@@ -1,7 +1,7 @@
 // Fish INK Factory — save/load (localStorage), separate from device audio prefs
 
 const SAVE_KEY = 'fishink_save';
-const SAVE_VERSION = 2;
+const SAVE_VERSION = 3;
 
 // Each entry mutates `data` in place from its key's version to key+1.
 const SAVE_MIGRATIONS = {
@@ -11,6 +11,10 @@ const SAVE_MIGRATIONS = {
     if (data.game?.unlockedAchievements) {
       data.game.unlockedAchievements = data.game.unlockedAchievements.filter(id => id !== 'contracts10');
     }
+  },
+  2: (data) => {
+    // workerIslandFish replaced by B_FISH_DEPOT block state; drop the stale array
+    if (data.game) delete data.game.workerIslandFish;
   },
 };
 
@@ -55,7 +59,6 @@ function serializeGame() {
     frogNextUid: game.frogNextUid,
     workers: (game.workers || []).map(w => ({ ...w, fish: w.fish || [] })),
     workerNextUid: game.workerNextUid || 1,
-    workerIslandFish: game.workerIslandFish || [],
     islandChests: game.islandChests || {},
   };
 }
@@ -89,7 +92,6 @@ function deserializeGame(data) {
   STARTER_R = data.STARTER_R;
 
   offshoreIslands = data.offshoreIslands || [];
-  computeIslandDockShores(); // backfill shoreDockC/R for saves that predate docks
 
   terrain   = data.terrain.map(row => Uint8Array.from(row));
   blocks    = data.blocks.map(row => Uint8Array.from(row));
@@ -122,8 +124,8 @@ function deserializeGame(data) {
   game.frogNextUid  = data.frogNextUid  || (game.frogs.reduce((m, f) => Math.max(m, f.uid), 0) + 1);
   game.workers      = (data.workers || []).map(w => ({ ...w, fish: w.fish || [] }));
   game.workerNextUid    = data.workerNextUid    || (game.workers.reduce((m, w) => Math.max(m, w.uid), 0) + 1);
-  game.workerIslandFish = data.workerIslandFish || [];
   game.islandChests     = data.islandChests     || {};
+  ensureWorkerIslandDepot(); // backfills B_FISH_DEPOT for saves that predate the depot block
 }
 
 function saveGame() {

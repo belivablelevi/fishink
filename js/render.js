@@ -595,6 +595,43 @@ function drawBlock(ctx, id, sx, sy, c, r, forceDir) {
   } else if (id === B_POND) {
     drawPond(ctx, sx, sy, S, c, r);
 
+  } else if (id === B_FISH_DEPOT) {
+    const carry = st ? st.carrying : [];
+    const fillFrac = Math.min(carry.length / DEPOT_CAPACITY, 1);
+    // Dark hull
+    ctx.fillStyle = '#1c3d3a';
+    ctx.fillRect(sx + 1, sy + 1, S - 2, S - 2);
+    // Border
+    ctx.strokeStyle = '#2a7a6a';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(sx + 2.5, sy + 2.5, S - 5, S - 5);
+    // Slat lines
+    ctx.strokeStyle = 'rgba(42,122,106,0.4)';
+    ctx.lineWidth = 0.7;
+    for (const fx of [sx + S * 0.33, sx + S * 0.66]) {
+      ctx.beginPath(); ctx.moveTo(fx, sy + 4); ctx.lineTo(fx, sy + S - 4); ctx.stroke();
+    }
+    // Fish icon
+    ctx.font = `${Math.round(S * 0.38)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('🐟', sx + S / 2, sy + S / 2 + 4);
+    ctx.textAlign = 'left';
+    // Fill bar
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(sx + 3, sy + S - 6, S - 6, 3);
+    if (fillFrac > 0) {
+      ctx.fillStyle = fillFrac >= 1 ? '#e85d4a' : '#4dca7c';
+      ctx.fillRect(sx + 3, sy + S - 6, (S - 6) * fillFrac, 3);
+    }
+    // Count badge
+    if (carry.length > 0) {
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${Math.round(S * 0.22)}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText(carry.length, sx + S / 2, sy + S - 8);
+      ctx.textAlign = 'left';
+    }
+
   } else if (id === B_CRATE) {
     const fill = st ? st.carrying.length / CRATE_CAPACITY : 0;
     if (IMAGES.crate) {
@@ -1554,36 +1591,6 @@ function drawWorkers(ctx) {
     }
   }
 
-  // Fish piled at the island depot
-  const depot = game.workerIslandFish || [];
-  if (wisl && depot.length > 0) {
-    const dx = (wisl.cx + 0.5) * S - cam.x;
-    const dy = (wisl.cy + 0.5) * S - cam.y;
-    if (dx > -S * 3 && dx < VW + S * 3 && dy > -S * 3 && dy < VH + S * 3) {
-      // Draw a small pile of colored fish dots
-      const show = Math.min(depot.length, 6);
-      for (let i = 0; i < show; i++) {
-        const f = depot[i];
-        const offX = (i % 3) * 5 - 5;
-        const offY = Math.floor(i / 3) * 4 + 6;
-        ctx.fillStyle = f.color || '#aaa';
-        ctx.beginPath();
-        ctx.ellipse(dx + offX, dy + offY, 4, 2, 0, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      // Count badge
-      ctx.fillStyle = 'rgba(0,0,0,0.55)';
-      ctx.beginPath();
-      ctx.roundRect(dx - 10, dy + 12, 20, 9, 3);
-      ctx.fill();
-      ctx.fillStyle = '#4dca7c';
-      ctx.font = 'bold 6px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(`${depot.length}`, dx, dy + 19);
-      ctx.textAlign = 'left';
-    }
-  }
-
   if (!game.workers || !game.workers.length) return;
 
   for (const w of game.workers) {
@@ -1592,148 +1599,87 @@ function drawWorkers(ctx) {
     if (sx < -S * 2 || sx > VW + S * 2 || sy < -S * 2 || sy > VH + S * 2) continue;
 
     if (w.state === 'idle') {
-      // Small fisherman standing on the island
-      ctx.fillStyle = '#e8c87a';
-      ctx.beginPath();
-      ctx.arc(sx, sy - 5, 3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#4a7ac8';
-      ctx.fillRect(sx - 3, sy - 2, 6, 6);
+      // Mini player character standing on island
+      _drawMiniPlayer(ctx, sx, sy, 0.45);
     } else {
-      // Rowboat pointing toward target
+      // Worker in a boat — scaled-down player boat
       const angle = Math.atan2(w.targetWy - w.wy, w.targetWx - w.wx);
+      // Draw scaled boat hull
       ctx.save();
       ctx.translate(sx, sy);
-      ctx.rotate(angle);
-      // Hull
-      ctx.fillStyle = '#8B6020';
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 7, 3.5, 0, 0, Math.PI * 2);
-      ctx.fill();
-      // Bow tip
-      ctx.fillStyle = '#6a4010';
-      ctx.beginPath();
-      ctx.moveTo(7, 0);
-      ctx.lineTo(5, -2);
-      ctx.lineTo(5, 2);
-      ctx.closePath();
-      ctx.fill();
-      // Fisherman head in boat
-      ctx.fillStyle = '#e8c87a';
-      ctx.beginPath();
-      ctx.arc(-1, -1, 2, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.scale(0.62, 0.62);
+      drawBoatHull(ctx, 0, 0, angle);
+      // Bucket hat centered in boat
+      const hatOff = TILE_SIZE * 1.6 * 0.08;
+      const hx = -Math.cos(angle) * hatOff;
+      const hy = -Math.sin(angle) * hatOff;
+      ctx.fillStyle = '#8a7550'; // brim
+      ctx.beginPath(); ctx.arc(hx, hy, 5.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#a8916a'; // crown
+      ctx.beginPath(); ctx.arc(hx, hy, 3.5, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#6e5c3e'; ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.arc(hx, hy, 4.8, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
 
       if (w.state === 'fishing') {
-        // Fishing line
-        ctx.strokeStyle = '#aaa';
-        ctx.lineWidth = 0.5;
+        // Fishing line from boat
+        const lineAng = angle + Math.PI / 4;
+        const lx = sx + Math.cos(angle) * 10;
+        const ly = sy + Math.sin(angle) * 10;
+        ctx.strokeStyle = '#aaa'; ctx.lineWidth = 0.6;
         ctx.beginPath();
-        ctx.moveTo(4, 0);
-        ctx.lineTo(10, 5);
+        ctx.moveTo(lx, ly);
+        ctx.lineTo(lx + Math.cos(lineAng) * 8, ly + Math.sin(lineAng) * 8);
         ctx.stroke();
-        // Bobber
         ctx.fillStyle = '#e85d4a';
         ctx.beginPath();
-        ctx.arc(10, 5, 1.5, 0, Math.PI * 2);
+        ctx.arc(lx + Math.cos(lineAng) * 8, ly + Math.sin(lineAng) * 8, 1.8, 0, Math.PI * 2);
         ctx.fill();
       } else if (w.state === 'inbound' && w.fish && w.fish.length) {
-        // Show caught fish count as a small green badge on the boat
-        ctx.restore();
+        // Fish count badge above boat
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
         ctx.beginPath();
-        ctx.roundRect(sx - 7, sy - 12, 14, 8, 3);
+        ctx.roundRect(sx - 9, sy - 14, 18, 9, 3);
         ctx.fill();
         ctx.fillStyle = '#4dca7c';
-        ctx.font = 'bold 5px sans-serif';
+        ctx.font = 'bold 6px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(`+${w.fish.length}🐟`, sx, sy - 6);
+        ctx.fillText(`+${w.fish.length}🐟`, sx, sy - 7);
         ctx.textAlign = 'left';
-        continue;
       }
-      ctx.restore();
     }
   }
 }
 
-// The pier runs from the T_SHORE tile (shoreDockC/R) out to the water
-// approach tile (dockC/R) where the player's boat ties up.
-function drawIslandDocks(ctx) {
-  const S = TILE_SIZE;
-  const pc = player.wx / S;
-  const pr = player.wy / S;
-
-  for (const island of offshoreIslands) {
-    if (island.shoreDockC == null) continue;
-
-    const sx = (island.shoreDockC + 0.5) * S - cam.x;
-    const sy = (island.shoreDockR + 0.5) * S - cam.y;
-    const ex = (island.dockC + 0.5) * S - cam.x;
-    const ey = (island.dockR + 0.5) * S - cam.y;
-
-    // Skip if entirely off screen
-    if (ex < -S * 4 || ex > ctx.canvas.width + S * 4) continue;
-    if (ey < -S * 4 || ey > ctx.canvas.height + S * 4) continue;
-
-    const pLen = Math.hypot(ex - sx, ey - sy);
-    if (pLen < 1) continue;
-    const ux = (ex - sx) / pLen;
-    const uy = (ey - sy) / pLen;
-    const perpX = -uy * S * 0.18;
-    const perpY =  ux * S * 0.18;
-
-    // Is the player's boat near this dock? If so, highlight it.
-    const nearDock = player.inBoat &&
-      Math.hypot(pc - island.dockC, pr - island.dockR) < 3;
-
-    // ── Pier deck ─────────────────────────────────────────────────────────
-    ctx.fillStyle = '#8B6020';
-    ctx.beginPath();
-    ctx.moveTo(sx + perpX, sy + perpY);
-    ctx.lineTo(ex + perpX, ey + perpY);
-    ctx.lineTo(ex - perpX, ey - perpY);
-    ctx.lineTo(sx - perpX, sy - perpY);
-    ctx.closePath();
-    ctx.fill();
-
-    // Plank lines across the deck
-    ctx.strokeStyle = '#6a4a10';
-    ctx.lineWidth = 0.8;
-    const steps = Math.ceil(pLen / (S * 0.45));
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps;
-      const bx = sx + (ex - sx) * t;
-      const by = sy + (ey - sy) * t;
-      ctx.beginPath();
-      ctx.moveTo(bx + perpX, by + perpY);
-      ctx.lineTo(bx - perpX, by - perpY);
-      ctx.stroke();
-    }
-
-    // ── Mooring posts ────────────────────────────────────────────────────
-    ctx.fillStyle = '#4a2e08';
-    for (let i = 0; i <= steps; i += 2) {
-      const t = i / steps;
-      const bx = sx + (ex - sx) * t;
-      const by = sy + (ey - sy) * t;
-      ctx.beginPath(); ctx.arc(bx + perpX, by + perpY, 2.5, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(bx - perpX, by - perpY, 2.5, 0, Math.PI * 2); ctx.fill();
-    }
-
-    // ── Dock-head platform at water end ──────────────────────────────────
-    ctx.fillStyle = '#a07828';
-    const hw = S * 0.28;
-    ctx.fillRect(ex - hw, ey - hw, hw * 2, hw * 2);
-    ctx.strokeStyle = '#6a4a10'; ctx.lineWidth = 1.5;
-    ctx.strokeRect(ex - hw, ey - hw, hw * 2, hw * 2);
-
-    // ── Glow / highlight when player boat is near ─────────────────────────
-    if (nearDock) {
-      ctx.strokeStyle = 'rgba(120,220,255,0.55)';
-      ctx.lineWidth = 2.5;
-      ctx.strokeRect(ex - hw - 3, ey - hw - 3, hw * 2 + 6, hw * 2 + 6);
-    }
-  }
+// Draws a miniature version of the player character centered at (sx, sy).
+// scale: 0.45 gives a small idle fisherman; adjust as needed.
+function _drawMiniPlayer(ctx, sx, sy, scale) {
+  ctx.save();
+  ctx.translate(sx, sy);
+  ctx.scale(scale, scale);
+  // Legs
+  ctx.fillStyle = '#5c4a30';
+  ctx.fillRect(-4, 4, 3, 8);
+  ctx.fillRect(1, 4, 3, 8);
+  // Body / vest
+  ctx.fillStyle = '#a8784a';
+  ctx.fillRect(-6, -8, 12, 14);
+  ctx.fillStyle = '#7a5c38';
+  ctx.fillRect(-4, -6, 8, 12);
+  // Arms
+  ctx.fillStyle = '#f0d090';
+  ctx.fillRect(-9, -7, 4, 10);
+  ctx.fillRect(5, -7, 4, 10);
+  // Head
+  ctx.fillStyle = '#f0d090';
+  ctx.fillRect(-5, -18, 10, 10);
+  // Bucket hat brim
+  ctx.fillStyle = '#8a7550';
+  ctx.fillRect(-7, -22, 14, 2);
+  // Hat crown
+  ctx.fillStyle = '#a8916a';
+  ctx.fillRect(-4, -28, 8, 7);
+  ctx.restore();
 }
 
 // Fixed shipping boat that the Drone Delivery network sends fish to — sits

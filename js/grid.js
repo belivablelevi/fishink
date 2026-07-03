@@ -32,12 +32,13 @@ const B_SMART_ROUTER    = 16; // belt variant: auto-picks the least-jammed of up
 
 const B_TELEPORTER       = 17; // belt sink/source pair: instantly relays a fish to a linked Teleporter elsewhere on the map
 const B_POND             = 18; // decorative habitat: assign Axolotl pets, they swim inside
+const B_FISH_DEPOT       = 19; // auto-placed on worker island; fish drop here, belt out via adjacent belt
 
 const BLOCK_NAMES = ['', 'Fisher', 'Belt',
                      'Washer', 'Smoker', 'Icer', 'Stamper', 'Seller', 'Concrete',
                      'Fishing Drone', 'Drone Delivery',
                      'Splitter', 'Sorter', 'Storage Crate', 'Recycler',
-                     'Packer', 'Smart Router', 'Teleporter', 'Tank'];
+                     'Packer', 'Smart Router', 'Teleporter', 'Tank', 'Fish Depot'];
 const BLOCK_COSTS = [0, 150, 10, 400, 1200, 600, 3000, 200, 5, 1000, 900,
                      60, 80, 250, 150, 700, 120, 2500, 800];
 
@@ -74,7 +75,7 @@ const BLOCK_DESCS = [
 const IS_MACHINE    = id => id >= B_WASHER && id <= B_STAMPER;
 const IS_BELT       = id => id === B_BELT;
 const IS_TRANSPORT  = id => IS_BELT(id) || id === B_SPLITTER || id === B_SORTER || id === B_RECYCLER || id === B_SMART_ROUTER || id === B_TELEPORTER;
-const IS_CRATE       = id => id === B_CRATE;
+const IS_CRATE       = id => id === B_CRATE || id === B_FISH_DEPOT;
 const IS_PACKER      = id => id === B_PACKER;
 
 // Every block type with a per-instance level (click/E to buy, see upgrades.js
@@ -113,6 +114,7 @@ function teleporterTiles(excludeC, excludeR) {
 }
 
 const CRATE_CAPACITY = 20;
+const DEPOT_CAPACITY = 50; // larger than crate — workers keep depositing
 
 // Rotation order for belts (clockwise), indexed by cellState.dir
 const BELT_DIRS = [
@@ -162,10 +164,8 @@ const BOAT_CLEAR = 5; // tiles radius kept as open ocean around the boat
 
 const ISLAND_EDGE_MARGIN = 3; // tiles of guaranteed ocean kept around the world border
 
-// Offshore islands discovered by buildWorld() — each entry gets cx/cy (island
-// centre) and dockC/dockR (first open-water tile on the side facing the cargo
-// ship, where the ferry boat parks).  Persisted in the save file so ferry
-// boats survive reloads without re-running buildWorld().
+// Offshore islands discovered by buildWorld() — each entry has cx/cy (island
+// centre) and depotC/depotR (tile where B_FISH_DEPOT is placed). Persisted in save.
 let offshoreIslands = [];
 
 function randRange(min, max) { return min + Math.random() * (max - min); }
@@ -297,32 +297,6 @@ function carveOffshoreIsland(cx, cy, maxR) {
   return { cx: centC, cy: centR };
 }
 
-// Walks from island centre toward the cargo ship and returns the first
-// T_WATER tile it crosses, stepped one tile further offshore so the ferry
-// boat parks just off the beach rather than right on the shoreline.
-// Must be called AFTER applyShorePass() so T_SHORE tiles are already set.
-function findIslandDockApproach(cx, cy) {
-  const dx = BOAT_C - cx, dy = BOAT_R - cy;
-  const dist = Math.hypot(dx, dy);
-  if (dist === 0) return { c: Math.round(cx), r: Math.round(cy) };
-  const ux = dx / dist, uy = dy / dist;
-  let firstWater = null;
-  for (let step = 0; step <= Math.ceil(dist) + 2; step++) {
-    const c = Math.round(cx + ux * step);
-    const r = Math.round(cy + uy * step);
-    if (c < 0 || c >= WORLD_COLS || r < 0 || r >= WORLD_ROWS) break;
-    if (tileAt(c, r) === T_WATER) {
-      if (firstWater === null) firstWater = { c, r };
-      // One extra tile further into open water
-      const c2 = Math.round(cx + ux * (step + 2));
-      const r2 = Math.round(cy + uy * (step + 2));
-      if (c2 >= 0 && c2 < WORLD_COLS && r2 >= 0 && r2 < WORLD_ROWS && tileAt(c2, r2) === T_WATER)
-        return { c: c2, r: r2 };
-      return { c, r };
-    }
-  }
-  return firstWater || { c: Math.round(cx), r: Math.round(cy) };
-}
 
 // Any land tile touching water becomes sand — covers the coastline and every
 // pond bank in one pass, so Fisher placement (T_SHORE adjacent to T_WATER)
@@ -446,36 +420,27 @@ function buildWorld() {
   blocks[STARTER_R][STARTER_C + 3] = B_SELLER;
   // default dir (0 = right) from makeCellState() already points them the right way
 
-  // Compute dock approach positions for each offshore island. Must be done
-  // after applyShorePass() so T_SHORE tiles are already set.
-  for (const island of offshoreIslands) {
-    const approach = findIslandDockApproach(island.cx, island.cy);
-    island.dockC = approach.c;
-    island.dockR = approach.r;
-  }
-  computeIslandDockShores();
+  ensureWorkerIslandDepot();
 }
 
-// Walk from each island's water-approach tile back toward its centre to find
-// the T_SHORE tile that sits at the landward end of the pier. Skips islands
-// that already have shoreDockC set (i.e. loaded from a recent save).
-function computeIslandDockShores() {
-  for (const island of offshoreIslands) {
-    if (island.shoreDockC !== undefined) continue;
-    const dx = island.cx - island.dockC;
-    const dy = island.cy - island.dockR;
-    const dist = Math.hypot(dx, dy);
-    if (dist === 0) { island.shoreDockC = island.cx; island.shoreDockR = island.cy; continue; }
-    const ux = dx / dist, uy = dy / dist;
-    let found = null;
-    for (let step = 1; step <= Math.ceil(dist) + 1; step++) {
-      const c = Math.round(island.dockC + ux * step);
-      const r = Math.round(island.dockR + uy * step);
-      if (c < 0 || c >= WORLD_COLS || r < 0 || r >= WORLD_ROWS) break;
-      if (tileAt(c, r) === T_SHORE) { found = { c, r }; break; }
-    }
-    island.shoreDockC = found ? found.c : Math.round(island.cx);
-    island.shoreDockR = found ? found.r : Math.round(island.cy);
+// Places B_FISH_DEPOT at the center of the worker island if it isn't already there.
+// Called on new world gen and on save load so old saves get backfilled automatically.
+function ensureWorkerIslandDepot() {
+  const isl = offshoreIslands && offshoreIslands[0];
+  if (!isl) return;
+  if (isl.depotC !== undefined && blocks[isl.depotR] && blocks[isl.depotR][isl.depotC] === B_FISH_DEPOT) return;
+  // Search center-out for an empty land tile
+  const offsets = [[0,0],[0,-1],[1,0],[0,1],[-1,0],[1,-1],[-1,-1],[1,1],[-1,1],[0,-2],[2,0],[0,2],[-2,0]];
+  for (const [dc, dr] of offsets) {
+    const c = Math.floor(isl.cx) + dc, r = Math.floor(isl.cy) + dr;
+    if (c < 0 || c >= WORLD_COLS || r < 0 || r >= WORLD_ROWS) continue;
+    if (terrain[r][c] === T_WATER) continue;
+    if (blocks[r][c] !== B_NONE && blocks[r][c] !== B_FISH_DEPOT) continue;
+    blocks[r][c] = B_FISH_DEPOT;
+    cellState[r][c] = makeCellState();
+    isl.depotC = c;
+    isl.depotR = r;
+    return;
   }
 }
 
@@ -617,6 +582,7 @@ function placeBlock(id, c, r, dir) {
 
 function removeBlock(c, r) {
   if (c < 0 || r < 0 || c >= WORLD_COLS || r >= WORLD_ROWS) return false;
+  if (blocks[r][c] === B_FISH_DEPOT) return false; // immovable world block
   if (blocks[r][c] !== B_NONE) {
     if (IS_AUTO_FISHER(blocks[r][c])) autoFisherCount--;
     blocks[r][c] = B_NONE;
