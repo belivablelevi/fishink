@@ -175,4 +175,8 @@ function resetRun() {
 // Without the restarting guard, reload()'s beforeunload would re-save the
 // (still in-memory, pre-wipe) game state right back into localStorage,
 // undoing restartGame()'s removeItem before the page actually unloads.
-window.addEventListener('beforeunload', () => { if (!restarting) saveGame(); });
+window.addEventListener('beforeunload', () => {
+  if (restarting) return;
+  saveGame();
+  if (typeof cloudPushSaveImmediate === 'function') cloudPushSaveImmediate();
+});

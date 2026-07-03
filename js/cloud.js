@@ -82,14 +82,35 @@ async function cloudLoadSave() {
   } catch { return null; }
 }
 
-// Pushes the current in-memory game state to the cloud. Silent on failure.
-function cloudPushSave() {
-  if (!isLeaderboardConfigured() || !cloudUsername()) return;
+// Upserts the current in-memory game state to the cloud. Resolves on client_id
+// so it creates the row if missing (fixes players who predate the players table)
+// and updates it if the row already exists. Silent on failure.
+let _pushTimer = null;
+
+function _doCloudPush(keepalive) {
+  if (!isLeaderboardConfigured()) return;
+  const username = cloudUsername();
+  if (!username) return;
   const saveData = typeof serializeGame === 'function' ? serializeGame() : {};
-  _cloudFetch(`${CLOUD_TABLE}?client_id=eq.${encodeURIComponent(cloudId())}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ save_data: saveData }),
+  _cloudFetch(CLOUD_TABLE, {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({ client_id: cloudId(), username, save_data: saveData }),
+    keepalive: keepalive || false,
   }).catch(() => {});
+}
+
+// Debounced version for in-game saves — batches rapid save calls.
+function cloudPushSave() {
+  clearTimeout(_pushTimer);
+  _pushTimer = setTimeout(() => _doCloudPush(false), 8000);
+}
+
+// Immediate version for beforeunload — keepalive lets the request survive
+// the page close without being aborted by the browser.
+function cloudPushSaveImmediate() {
+  clearTimeout(_pushTimer);
+  _doCloudPush(true);
 }
 
 // ── Dev console ────────────────────────────────────────────────────────────────

@@ -7,7 +7,10 @@
 // synthesize the existing mouse handlers so casting, build-mode painting,
 // and fish-dropping need no new targeting logic.
 
-const IS_TOUCH = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+// `pointer: fine` = primary pointer is a mouse or trackpad (laptops with
+// touchscreens, ThinkPads, etc.) — don't treat those as mobile.
+const IS_TOUCH = (('ontouchstart' in window) || navigator.maxTouchPoints > 0)
+  && !window.matchMedia('(pointer: fine)').matches;
 
 // Normalized movement input from the joystick, each axis in [-1, 1].
 // Read by updatePlayer() in player.js as a fallback when no movement key
