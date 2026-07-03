@@ -149,6 +149,7 @@ function initMachinesMenu() {
 // Cached groups + currently selected machine type for the dropdown panel.
 let _machineGroups = new Map();
 let _machinesSelectedId = null;
+let _highlightedMachineTile = null;
 
 function renderMachinesPanel() {
   const panel = document.getElementById('machinesPanel');
@@ -243,6 +244,8 @@ function _renderMachinesDetail(panel, detail) {
 
     const row = document.createElement('div');
     row.className = 'upgrade-row';
+    row.addEventListener('mouseenter', () => { _highlightedMachineTile = { c: inst.c, r: inst.r }; });
+    row.addEventListener('mouseleave', () => { _highlightedMachineTile = null; });
 
     const info = document.createElement('div');
     info.className = 'upgrade-info';

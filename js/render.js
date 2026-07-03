@@ -83,6 +83,18 @@ function draw(ctx, canvas, dt) {
       if (b !== B_NONE) drawBlock(ctx, b, c * TILE_SIZE - cam.x, r * TILE_SIZE - cam.y, c, r);
     }
 
+  // Machine panel hover highlight — pulse the hovered tile above blocks
+  if (_highlightedMachineTile) {
+    const { c, r } = _highlightedMachineTile;
+    const sx = c * TILE_SIZE - cam.x, sy = r * TILE_SIZE - cam.y;
+    const pulse = 0.18 + 0.1 * Math.sin(performance.now() / 220);
+    ctx.fillStyle = `rgba(255,210,80,${pulse.toFixed(3)})`;
+    ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
+    ctx.strokeStyle = 'rgba(255,210,80,0.85)';
+    ctx.lineWidth = 1.5 / ZOOM;
+    ctx.strokeRect(sx + 0.75, sy + 0.75, TILE_SIZE - 1.5, TILE_SIZE - 1.5);
+  }
+
   // Water-body pets — drawn above tiles+blocks so water shimmer never overlaps
   drawWaterPets(ctx, c0, c1, r0, r1);
 
