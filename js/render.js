@@ -86,9 +86,17 @@ function draw(ctx, canvas, dt) {
   // Water-body pets — drawn above tiles+blocks so water shimmer never overlaps
   drawWaterPets(ctx, c0, c1, r0, r1);
 
+  // Land frogs — drawn on top of terrain
+  drawFrogs(ctx);
+
   // Pet placement mode overlay — teal pulse on valid target tiles
   if (typeof petPlaceMode !== 'undefined' && petPlaceMode.active) {
     drawPetPlaceOverlay(ctx, c0, c1, r0, r1);
+  }
+
+  // Frog placement mode overlay — green pulse on valid land tiles
+  if (typeof frogPlaceMode !== 'undefined' && frogPlaceMode.active) {
+    drawFrogPlaceOverlay(ctx, c0, c1, r0, r1);
   }
 
   // Fish — separate pass so they render above all blocks at interpolated positions
@@ -2285,4 +2293,62 @@ function drawPlayerBoat(ctx, px, py) {
   ctx.beginPath(); ctx.arc(hatX, hatY, 3.8, 0, Math.PI * 2); ctx.fill();
   ctx.strokeStyle = '#6e5c3e'; ctx.lineWidth = 1; // band
   ctx.beginPath(); ctx.arc(hatX, hatY, 5, 0, Math.PI * 2); ctx.stroke();
+}
+
+// ─── Frog pets ────────────────────────────────────────────────────────────────
+
+function drawFrogs(ctx) {
+  if (!game.frogs || !game.frogs.length) return;
+  ctx.imageSmoothingEnabled = false;
+  for (const frog of game.frogs) {
+    if (!isFrogPlaced(frog.uid)) continue;
+    const img = IMAGES[frogImgKey(frog.variant)];
+    if (!img) continue;
+    const s = _getFrogState(frog.uid, frog.wx, frog.wy);
+    let anim;
+    if (s.shockTimer > 0)      anim = FROG_ANIM.shock;
+    else if (s.crOakTimer > 0) anim = FROG_ANIM.croak;
+    else if (s.restTimer > 0)  anim = FROG_ANIM.idle;
+    else                       anim = FROG_ANIM.hop;
+    const srcX = (anim.col + s.frame) * FROG_FRAME_W;
+    const srcY = (anim.row + s.dir)   * FROG_FRAME_H;
+    ctx.drawImage(img, srcX, srcY, FROG_FRAME_W, FROG_FRAME_H,
+                  s.wx - cam.x, s.wy - cam.y, FROG_SIZE, FROG_SIZE);
+  }
+  ctx.imageSmoothingEnabled = true;
+}
+
+function drawFrogPlaceOverlay(ctx, c0, c1, r0, r1) {
+  const pulse = (Math.sin(game.time * 4) + 1) / 2;
+  const alpha = 0.15 + pulse * 0.15;
+  const S = TILE_SIZE;
+  ctx.save();
+  for (let r = r0; r <= r1; r++) {
+    for (let c = c0; c <= c1; c++) {
+      const t = tileAt(c, r);
+      if ((t !== T_EMPTY && t !== T_SHORE) || blockAt(c, r) !== B_NONE) continue;
+      const sx = c * S - cam.x, sy = r * S - cam.y;
+      ctx.fillStyle = `rgba(100,220,100,${alpha})`;
+      ctx.fillRect(sx, sy, S, S);
+      if (hoverTile && hoverTile.c === c && hoverTile.r === r) {
+        ctx.fillStyle = 'rgba(160,255,160,0.35)';
+        ctx.fillRect(sx, sy, S, S);
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🐸', sx + S/2, sy + S/2);
+        ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      }
+    }
+  }
+  // Cancel hint
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(CANVAS_W/2 - 120, 10, 240, 26);
+  ctx.fillStyle = '#fff';
+  ctx.font = '12px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Click land to place frog · Esc to cancel', CANVAS_W/2, 27);
+  ctx.textAlign = 'left';
+  ctx.restore();
 }

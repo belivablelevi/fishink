@@ -393,6 +393,208 @@ function petsAtTile(c, r) {
   return [];
 }
 
+// ═══ Frog Pets ════════════════════════════════════════════════════════════════
+// Spritesheet: 512×512, 32×32 frames, 16 cols × 16 rows
+//   Rows 0-7: 8 directions (clockwise from east: E SE S SW W NW N NE)
+//   IDLE cols 0-3 · CROAK cols 4-7 · HOP cols 12-15  (rows 0-7)
+//   SHOCK cols 0-3  (rows 8-15)
+
+const FROG_FRAME_W = 32;
+const FROG_FRAME_H = 32;
+const FROG_DIRS    = 8;
+const FROG_ANIM = {
+  idle:  { col: 0,  row: 0, frames: 4 },
+  croak: { col: 4,  row: 0, frames: 4 },
+  hop:   { col: 12, row: 0, frames: 4 },
+  shock: { col: 0,  row: 8, frames: 4 },
+};
+const FROG_SIZE          = 16;  // rendered px
+const FROG_SHOCK_RADIUS  = 10 * TILE_SIZE;
+
+const FROG_VARIANTS = [
+  { id: 'green',         name: 'Green',        rarity: 'common',    cost: 200 },
+  { id: 'brown',         name: 'Brown',        rarity: 'common',    cost: 200 },
+  { id: 'blue',          name: 'Blue',         rarity: 'uncommon',  cost: 350 },
+  { id: 'purple',        name: 'Purple',       rarity: 'rare',      cost: 600 },
+  { id: 'gameboy_green', name: 'Game Boy',     rarity: 'rare',      cost: 600 },
+  { id: 'gameboy_bw',    name: 'Game Boy B&W', rarity: 'legendary', cost: 1000 },
+];
+
+function frogImgKey(variant) { return `frog_${variant}`; }
+
+function _velToFrogDir(vx, vy) {
+  const deg = ((Math.atan2(vy, vx) * 180 / Math.PI) + 360) % 360;
+  return Math.round(deg / 45) % FROG_DIRS;
+}
+
+const _frogStates = {};
+
+function _randLandTarget(wx, wy) {
+  const S = TILE_SIZE, range = 5;
+  const cc = Math.floor(wx / S), cr = Math.floor(wy / S);
+  const picks = [];
+  for (let dr = -range; dr <= range; dr++)
+    for (let dc = -range; dc <= range; dc++) {
+      if (dc === 0 && dr === 0) continue;
+      const tc = cc + dc, tr = cr + dr;
+      const t = tileAt(tc, tr);
+      if ((t === T_EMPTY || t === T_SHORE) && blockAt(tc, tr) === B_NONE)
+        picks.push({ x: tc * S + 8 + Math.random() * (S - 16),
+                     y: tr * S + 8 + Math.random() * (S - 16) });
+    }
+  return picks.length ? picks[Math.floor(Math.random() * picks.length)] : null;
+}
+
+function _getFrogState(uid, startWx, startWy) {
+  if (!_frogStates[uid]) {
+    const t = _randLandTarget(startWx, startWy) || { x: startWx, y: startWy };
+    _frogStates[uid] = {
+      wx: startWx, wy: startWy,
+      vx: 0, vy: 0,
+      twx: t.x, twy: t.y,
+      topSpeed: 25 + Math.random() * 15,
+      dir: 2,
+      frame: 0, frameAccum: 0,
+      restTimer: Math.random() * 2,
+      shockTimer: 0,
+      crOakTimer: 0,
+      crOakCooldown: 3 + Math.random() * 5,
+    };
+  }
+  return _frogStates[uid];
+}
+
+function isFrogPlaced(uid) {
+  const f = (game.frogs || []).find(f => f.uid === uid);
+  return f && f.wx !== -9999;
+}
+
+function triggerFrogShock(castWx, castWy) {
+  if (!game.frogs) return;
+  const r2 = FROG_SHOCK_RADIUS * FROG_SHOCK_RADIUS;
+  for (const frog of game.frogs) {
+    if (!isFrogPlaced(frog.uid)) continue;
+    const s = _frogStates[frog.uid];
+    if (!s) continue;
+    const dx = s.wx - castWx, dy = s.wy - castWy;
+    if (dx*dx + dy*dy <= r2) { s.shockTimer = 1.8; s.frame = 0; s.frameAccum = 0; }
+  }
+}
+
+function tickFrogStates(dt) {
+  if (!game.frogs) return;
+  const S = TILE_SIZE, ANIM_FPS = 8;
+
+  for (const frog of game.frogs) {
+    if (!isFrogPlaced(frog.uid)) continue;
+    const s = _getFrogState(frog.uid, frog.wx, frog.wy);
+
+    if (s.shockTimer > 0) {
+      s.shockTimer -= dt;
+      s.vx = 0; s.vy = 0;
+      s.frameAccum += dt * ANIM_FPS;
+      while (s.frameAccum >= 1) { s.frameAccum -= 1; s.frame = (s.frame + 1) % FROG_ANIM.shock.frames; }
+      continue;
+    }
+
+    if (s.crOakTimer > 0) {
+      s.crOakTimer -= dt;
+      s.vx = 0; s.vy = 0;
+      s.frameAccum += dt * ANIM_FPS;
+      while (s.frameAccum >= 1) { s.frameAccum -= 1; s.frame = (s.frame + 1) % FROG_ANIM.croak.frames; }
+      if (s.crOakTimer <= 0) { s.frame = 0; s.frameAccum = 0; }
+      continue;
+    }
+
+    if (s.restTimer > 0) {
+      s.restTimer -= dt;
+      s.vx *= Math.pow(0.02, dt);
+      s.vy *= Math.pow(0.02, dt);
+      s.crOakCooldown -= dt;
+      if (s.crOakCooldown <= 0 && s.restTimer > 0.8) {
+        s.crOakTimer = 0.6;
+        s.crOakCooldown = 3 + Math.random() * 5;
+        s.frame = 0; s.frameAccum = 0;
+      }
+      s.frameAccum += dt * 3;
+      while (s.frameAccum >= 1) { s.frameAccum -= 1; s.frame = (s.frame + 1) % FROG_ANIM.idle.frames; }
+      continue;
+    }
+
+    // Hopping
+    const dx = s.twx - s.wx, dy = s.twy - s.wy;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 4) {
+      if (Math.random() < 0.65) s.restTimer = 0.6 + Math.random() * 2;
+      s.frame = 0; s.frameAccum = 0;
+      const t = _randLandTarget(s.wx, s.wy);
+      if (t) { s.twx = t.x; s.twy = t.y; }
+    } else {
+      const steer = Math.min(1, dt * 5);
+      s.vx += ((dx / dist) * s.topSpeed - s.vx) * steer;
+      s.vy += ((dy / dist) * s.topSpeed - s.vy) * steer;
+      const nx = s.wx + s.vx * dt, ny = s.wy + s.vy * dt;
+      const tc = Math.floor((nx + FROG_SIZE / 2) / S);
+      const tr = Math.floor((ny + FROG_SIZE / 2) / S);
+      const tt = tileAt(tc, tr);
+      if ((tt === T_EMPTY || tt === T_SHORE) && blockAt(tc, tr) === B_NONE) {
+        s.wx = nx; s.wy = ny;
+      } else {
+        s.vx = 0; s.vy = 0;
+        const t = _randLandTarget(s.wx, s.wy);
+        if (t) { s.twx = t.x; s.twy = t.y; }
+      }
+      const spd = Math.hypot(s.vx, s.vy);
+      if (spd > 0.5) s.dir = _velToFrogDir(s.vx, s.vy);
+      s.frameAccum += dt * ANIM_FPS;
+      while (s.frameAccum >= 1) { s.frameAccum -= 1; s.frame = (s.frame + 1) % FROG_ANIM.hop.frames; }
+    }
+  }
+}
+
+function buyFrog(variantId) {
+  const v = FROG_VARIANTS.find(f => f.id === variantId);
+  if (!v) return false;
+  if (game.cash < v.cost) { queueToast('Not enough cash!', '#e85d4a'); sfxFail(); return false; }
+  game.cash -= v.cost;
+  if (!game.frogs) game.frogs = [];
+  if (!game.frogNextUid) game.frogNextUid = 1;
+  const uid = game.frogNextUid++;
+  game.frogs.push({ uid, variant: variantId, wx: -9999, wy: -9999 });
+  sfxUpgrade();
+  saveGame();
+  return uid;
+}
+
+function placeFrogAt(uid, wx, wy) {
+  const frog = (game.frogs || []).find(f => f.uid === uid);
+  if (!frog) return false;
+  frog.wx = wx; frog.wy = wy;
+  delete _frogStates[uid];
+  saveGame();
+  return true;
+}
+
+function pickUpFrog(uid) {
+  const frog = (game.frogs || []).find(f => f.uid === uid);
+  if (!frog) return;
+  frog.wx = -9999; frog.wy = -9999;
+  delete _frogStates[uid];
+  saveGame();
+}
+
+function sellFrog(uid) {
+  const frog = (game.frogs || []).find(f => f.uid === uid);
+  if (!frog) return;
+  const v = FROG_VARIANTS.find(f => f.id === frog.variant);
+  const refund = v ? Math.floor(v.cost * 0.5) : 0;
+  game.cash += refund;
+  game.frogs = game.frogs.filter(f => f.uid !== uid);
+  delete _frogStates[uid];
+  queueToast(`Frog sold for $${refund}`, '#4dca7c');
+  saveGame();
+}
+
 // Prune swim states for uids no longer assigned (called from pond popup close)
 function pruneSwimStates(pc, pr) {
   const key = `${pc},${pr}`;

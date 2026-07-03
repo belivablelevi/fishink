@@ -20,6 +20,8 @@ const game = {
   petPullsTotal: 0,
   waterPonds: {},    // natural water body pet assignments: { "anchorKey": [uid,...] }
   petAutoSell: { common: false, uncommon: false, rare: false, legendary: false },
+  frogs: [],         // owned frog pets [{uid, variant, wx, wy}]
+  frogNextUid: 1,
 };
 
 const fisherTimers = {};
@@ -783,6 +785,7 @@ function completeCast() {
   if (rare) {
     game.rareCatches++;
     spawnParticles(manualCast.wx, manualCast.wy, 'sparkle', 10);
+    if (typeof triggerFrogShock === 'function') triggerFrogShock(manualCast.wx, manualCast.wy);
   }
   tutorialNotify('catch');
   // If inventory just filled up and the tutorial is still on 'cast' or 'catch',

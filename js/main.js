@@ -1,6 +1,6 @@
 // Fish INK Factory — game loop
 
-const GAME_VERSION = '1.4.19';
+const GAME_VERSION = '1.4.20';
 
 let canvas, ctx;
 let lastTime = 0;
@@ -58,6 +58,13 @@ function loadImages(cb, onProgress) {
     axo_rose_pink:    'img/axolotl/rose-pink.png',
     axo_dark_purple:  'img/axolotl/dark-purple.png',
     axo_retrogreen:   'img/axolotl/retrogreen.png',
+    // Frog pet spritesheets
+    frog_green:        'img/frogs/green.png',
+    frog_blue:         'img/frogs/blue.png',
+    frog_brown:        'img/frogs/brown.png',
+    frog_purple:       'img/frogs/purple.png',
+    frog_gameboy_green:'img/frogs/gameboy_green.png',
+    frog_gameboy_bw:   'img/frogs/gameboy_bw.png',
   };
   const total = Object.keys(srcs).length;
   let loaded = 0;
@@ -166,6 +173,7 @@ function loop(ts) {
     updateBuildMenuLive();
     updateMachinesPanelLive();
     tickSwimStates(dt);
+    tickFrogStates(dt);
     updateBuildHud();
     updateBlockPopupLive();
   } catch (err) {

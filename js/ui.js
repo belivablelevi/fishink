@@ -2049,4 +2049,110 @@ function renderPetsPanel() {
     actionsEl.appendChild(sellBtn);
   }
   panel.appendChild(grid);
+
+  // ── Frogs section ──────────────────────────────────────────────────────────
+  const frogSep = document.createElement('hr');
+  frogSep.style.cssText = 'border:none;border-top:1px solid rgba(255,255,255,0.08);margin:16px 0 12px';
+  panel.appendChild(frogSep);
+
+  const frogHeader = document.createElement('div');
+  frogHeader.className = 'pets-gacha-title';
+  frogHeader.textContent = 'Frogs';
+  panel.appendChild(frogHeader);
+
+  const frogDesc = document.createElement('div');
+  frogDesc.style.cssText = 'font-size:11px;color:var(--c-muted);margin-bottom:10px;line-height:1.4';
+  frogDesc.textContent = 'Place on any land tile — no limit! They hop around and react to rare catches nearby.';
+  panel.appendChild(frogDesc);
+
+  // Shop grid — one card per variant
+  const frogShop = document.createElement('div');
+  frogShop.className = 'pets-collection-grid';
+  for (const v of FROG_VARIANTS) {
+    const card = document.createElement('div');
+    card.className = 'pets-collection-card';
+    card.style.opacity = game.cash >= v.cost ? '1' : '0.55';
+
+    const rLabel = document.createElement('div');
+    rLabel.className = 'pet-rarity-label';
+    rLabel.textContent = v.rarity.charAt(0).toUpperCase() + v.rarity.slice(1);
+    rLabel.style.color = RARITY_COLOR[v.rarity] || '#aaa';
+    card.appendChild(rLabel);
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'pet-variant-name';
+    nameEl.textContent = v.name;
+    card.appendChild(nameEl);
+
+    const costEl = document.createElement('div');
+    costEl.style.cssText = 'font-size:11px;color:var(--c-coin);margin-bottom:6px';
+    costEl.textContent = `$${v.cost.toLocaleString()}`;
+    card.appendChild(costEl);
+
+    const buyBtn = document.createElement('button');
+    buyBtn.className = 'upgrade-buy';
+    buyBtn.textContent = 'Buy & Place';
+    buyBtn.addEventListener('click', () => {
+      const uid = buyFrog(v.id);
+      if (uid !== false) {
+        enterFrogPlaceMode(uid);
+        setBuildMenuOpen(false);
+        renderPetsPanel();
+      }
+    });
+    card.appendChild(buyBtn);
+    frogShop.appendChild(card);
+  }
+  panel.appendChild(frogShop);
+
+  // Owned frogs list
+  const ownedFrogs = (game.frogs || []);
+  if (ownedFrogs.length > 0) {
+    const ownedHeader = document.createElement('div');
+    ownedHeader.className = 'pets-section-title';
+    ownedHeader.style.marginTop = '14px';
+    ownedHeader.textContent = `Your Frogs (${ownedFrogs.length})`;
+    panel.appendChild(ownedHeader);
+
+    const frogGrid = document.createElement('div');
+    frogGrid.className = 'pets-collection-grid';
+    for (const frog of ownedFrogs) {
+      const v = FROG_VARIANTS.find(f => f.id === frog.variant) || {};
+      const card = document.createElement('div');
+      card.className = 'pets-collection-card';
+
+      const nameEl = document.createElement('div');
+      nameEl.className = 'pet-variant-name';
+      nameEl.textContent = v.name || frog.variant;
+      card.appendChild(nameEl);
+
+      const statusEl = document.createElement('div');
+      statusEl.style.cssText = 'font-size:10px;color:var(--c-muted);margin-bottom:6px';
+      statusEl.textContent = isFrogPlaced(frog.uid) ? 'On island' : 'Not placed';
+      card.appendChild(statusEl);
+
+      const actRow = document.createElement('div');
+      actRow.className = 'pet-card-actions';
+
+      const placeBtn = document.createElement('button');
+      placeBtn.className = 'upgrade-buy pet-card-btn';
+      placeBtn.textContent = isFrogPlaced(frog.uid) ? 'Move' : 'Place';
+      placeBtn.addEventListener('click', () => {
+        enterFrogPlaceMode(frog.uid);
+        setBuildMenuOpen(false);
+      });
+      actRow.appendChild(placeBtn);
+
+      const sellBtn = document.createElement('button');
+      sellBtn.className = 'upgrade-buy pet-card-btn pet-sell-btn';
+      const refund = Math.floor((v.cost || 0) * 0.5);
+      sellBtn.textContent = `Sell $${refund}`;
+      sellBtn.addEventListener('click', () => { sellFrog(frog.uid); renderPetsPanel(); });
+      actRow.appendChild(sellBtn);
+
+      card.appendChild(actRow);
+      frogGrid.appendChild(card);
+    }
+    panel.appendChild(frogGrid);
+  }
 }

@@ -63,12 +63,27 @@ let _placeCooldown = false; // one-frame guard prevents double-fire on touch
 function enterPetPlaceMode(uid) {
   petPlaceMode.active = true;
   petPlaceMode.uid = uid;
-  exitBuildMode(); // closes the menu panel
+  exitBuildMode();
 }
 
 function exitPetPlaceMode() {
   petPlaceMode.active = false;
   petPlaceMode.uid = null;
+}
+
+// Frog placement mode — entered when player clicks Place for a frog.
+// While active the player clicks any land tile (T_EMPTY or T_SHORE, no block).
+const frogPlaceMode = { active: false, uid: null };
+
+function enterFrogPlaceMode(uid) {
+  frogPlaceMode.active = true;
+  frogPlaceMode.uid = uid;
+  exitBuildMode();
+}
+
+function exitFrogPlaceMode() {
+  frogPlaceMode.active = false;
+  frogPlaceMode.uid = null;
 }
 
 // Build mode — `active` lets you place/cancel even with the menu hidden;
@@ -182,6 +197,11 @@ function handleBuildKey(e) {
   }
   if (e.key === 'Escape' && petPlaceMode.active) {
     exitPetPlaceMode();
+    queueToast('Placement cancelled', '#9aa0a8');
+    return;
+  }
+  if (e.key === 'Escape' && frogPlaceMode.active) {
+    exitFrogPlaceMode();
     queueToast('Placement cancelled', '#9aa0a8');
     return;
   }
@@ -306,6 +326,23 @@ function triggerInteract() {
   const hoveredId = hoverTile ? blockAt(hoverTile.c, hoverTile.r) : B_NONE;
   const kind = interactionKindFor(hoveredId);
   const hoverTerrain = hoverTile ? tileAt(hoverTile.c, hoverTile.r) : null;
+
+  // Frog placement mode — intercept all interactions until the player clicks a valid land tile
+  if (frogPlaceMode.active) {
+    if (!hoverTile) return;
+    const t = tileAt(hoverTile.c, hoverTile.r);
+    if ((t === T_EMPTY || t === T_SHORE) && blockAt(hoverTile.c, hoverTile.r) === B_NONE) {
+      const wx = hoverTile.c * TILE_SIZE + FROG_SIZE / 2;
+      const wy = hoverTile.r * TILE_SIZE + FROG_SIZE / 2;
+      placeFrogAt(frogPlaceMode.uid, wx, wy);
+      queueToast('Frog placed!', '#4dca7c');
+      exitFrogPlaceMode();
+      _placeCooldown = true;
+      requestAnimationFrame(() => { _placeCooldown = false; });
+      if (typeof renderPetsPanel === 'function') renderPetsPanel();
+    }
+    return;
+  }
 
   // Pet placement mode — intercept all interactions until the player clicks a valid spot
   if (petPlaceMode.active) {
