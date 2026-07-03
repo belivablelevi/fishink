@@ -114,9 +114,6 @@ function draw(ctx, canvas, dt) {
   // Fish — separate pass so they render above all blocks at interpolated positions
   drawAllFish(ctx, c0, c1, r0, r1);
 
-  // Island docks — wooden piers on each offshore island
-  drawIslandDocks(ctx);
-
   // Island chests and worker boats — drawn over terrain, under particles
   drawChests(ctx);
   drawWorkers(ctx);
@@ -1524,32 +1521,40 @@ function drawChests(ctx) {
 // Worker boats (when outbound/fishing/inbound) and idle worker sprites
 // on the worker island (offshoreIslands[0]).
 function drawWorkers(ctx) {
-  if (!game.workers || !game.workers.length) return;
   const S = TILE_SIZE;
   const VW = ctx.canvas.width / ZOOM;
   const VH = ctx.canvas.height / ZOOM;
 
-  // Worker island flag
+  // Worker island flag — always visible so players can find the island
   const wisl = offshoreIslands && offshoreIslands[0];
   if (wisl) {
     const fx = (wisl.cx + 0.5) * S - cam.x - 4;
     const fy = (wisl.cy - 0.5) * S - cam.y;
     if (fx > -S * 2 && fx < VW + S * 2 && fy > -S * 2 && fy < VH + S * 2) {
-      ctx.strokeStyle = '#606060';
-      ctx.lineWidth = 1;
+      // Pole
+      ctx.strokeStyle = '#808080';
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(fx, fy + 16);
+      ctx.moveTo(fx, fy + 18);
       ctx.lineTo(fx, fy);
       ctx.stroke();
+      // Flag
       ctx.fillStyle = '#e85d4a';
       ctx.beginPath();
       ctx.moveTo(fx, fy);
-      ctx.lineTo(fx + 10, fy + 4);
-      ctx.lineTo(fx, fy + 8);
+      ctx.lineTo(fx + 12, fy + 5);
+      ctx.lineTo(fx, fy + 10);
       ctx.closePath();
       ctx.fill();
+      // "W" label on the flag
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${5 / ZOOM > 5 ? 5 : 5}px sans-serif`;
+      ctx.font = 'bold 5px sans-serif';
+      ctx.fillText('W', fx + 2, fy + 8);
     }
   }
+
+  if (!game.workers || !game.workers.length) return;
 
   for (const w of game.workers) {
     const sx = w.wx - cam.x;
