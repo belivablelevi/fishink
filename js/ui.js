@@ -2122,48 +2122,8 @@ function renderPetsPanel() {
 
   const frogDesc = document.createElement('div');
   frogDesc.style.cssText = 'font-size:11px;color:var(--c-muted);margin-bottom:10px;line-height:1.4';
-  frogDesc.textContent = 'Place on any land tile — no limit! They hop around and react to rare catches nearby.';
+  frogDesc.textContent = 'Pull from the gacha above! Place on any land tile — they hop around and react to rare catches nearby.';
   panel.appendChild(frogDesc);
-
-  // Shop grid — one card per variant
-  const frogShop = document.createElement('div');
-  frogShop.className = 'pets-collection-grid';
-  for (const v of FROG_VARIANTS) {
-    const card = document.createElement('div');
-    card.className = 'pets-collection-card';
-    card.style.opacity = game.cash >= v.cost ? '1' : '0.55';
-
-    const rLabel = document.createElement('div');
-    rLabel.className = 'pet-rarity-label';
-    rLabel.textContent = v.rarity.charAt(0).toUpperCase() + v.rarity.slice(1);
-    rLabel.style.color = RARITY_COLOR[v.rarity] || '#aaa';
-    card.appendChild(rLabel);
-
-    const nameEl = document.createElement('div');
-    nameEl.className = 'pet-variant-name';
-    nameEl.textContent = v.name;
-    card.appendChild(nameEl);
-
-    const costEl = document.createElement('div');
-    costEl.style.cssText = 'font-size:11px;color:var(--c-coin);margin-bottom:6px';
-    costEl.textContent = `$${v.cost.toLocaleString()}`;
-    card.appendChild(costEl);
-
-    const buyBtn = document.createElement('button');
-    buyBtn.className = 'upgrade-buy';
-    buyBtn.textContent = 'Buy & Place';
-    buyBtn.addEventListener('click', () => {
-      const uid = buyFrog(v.id);
-      if (uid !== false) {
-        enterFrogPlaceMode(uid);
-        setBuildMenuOpen(false);
-        renderPetsPanel();
-      }
-    });
-    card.appendChild(buyBtn);
-    frogShop.appendChild(card);
-  }
-  panel.appendChild(frogShop);
 
   // Owned frogs — grouped by variant, stacked count
   const ownedFrogs = (game.frogs || []);
