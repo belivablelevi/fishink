@@ -65,8 +65,8 @@ const FISH = [
   // ── Common (extra) ───────────────────────────────────────────────────────
   // Angelfish (sx 4, sy 0)
   { species: 'Angelfish',      category: 'Common',   value: 0.9,   rarityWeight: 100, color: '#c0c8c8', sx:  4, sy: 0 },
-  // Blue Tang (sx 5, sy 0)
-  { species: 'Blue Tang',      category: 'Common',   value: 1.1,   rarityWeight: 90,  color: '#1870c8', sx:  5, sy: 0 },
+  // Yellow Tang (sx 5, sy 0)
+  { species: 'Yellow Tang',    category: 'Common',   value: 1.1,   rarityWeight: 90,  color: '#d8c030', sx:  5, sy: 0 },
   // Silver Bream (sx 0, sy 1)
   { species: 'Silver Bream',   category: 'Common',   value: 0.7,   rarityWeight: 100, color: '#c0c8d0', sx:  0, sy: 1 },
   // Parrotfish (sx 5, sy 1)
