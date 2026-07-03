@@ -96,6 +96,7 @@ function cloudPushSave() {
 // Usage:
 //   dev.auth('your_password')          — unlock dev mode
 //   dev.view('username')               — print a player's save to console
+//   dev.load('username')               — load a player's save into your current session
 //   dev.wipe('username')               — zero out a player's save data
 //   dev.rename('oldName', 'newName')   — change a player's username
 //   dev.give('username', 5000)         — add cash to a player's save
@@ -127,6 +128,24 @@ window.dev = {
       console.log('Time (s):',        p.save_data?.game?.time ?? 'n/a');
       console.log('Full save data:',  p.save_data);
       console.groupEnd();
+    } catch (e) { console.error(e); }
+  },
+
+  async load(username) {
+    if (!_devAuth()) return;
+    try {
+      const res = await _cloudFetch(
+        `${CLOUD_TABLE}?username=eq.${encodeURIComponent(username)}&select=save_data`
+      );
+      if (!res.ok) { console.error('Request failed', res.status); return; }
+      const rows = await res.json();
+      if (!rows.length) { console.log(`Player "${username}" not found`); return; }
+      const data = rows[0].save_data;
+      if (!data || !Object.keys(data).length) { console.log(`"${username}" has no save data`); return; }
+      for (let v = (data.version || 1); v < SAVE_VERSION; v++) SAVE_MIGRATIONS[v]?.(data);
+      deserializeGame(data);
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+      console.log(`✅ Loaded ${username}'s save into your session`);
     } catch (e) { console.error(e); }
   },
 
