@@ -598,26 +598,33 @@ function drawBlock(ctx, id, sx, sy, c, r, forceDir) {
   } else if (id === B_FISH_DEPOT) {
     const carry = st ? st.carrying : [];
     const fillFrac = Math.min(carry.length / DEPOT_CAPACITY, 1);
-    // Dark hull
-    ctx.fillStyle = '#1c3d3a';
-    ctx.fillRect(sx + 1, sy + 1, S - 2, S - 2);
-    // Border
-    ctx.strokeStyle = '#2a7a6a';
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(sx + 2.5, sy + 2.5, S - 5, S - 5);
-    // Slat lines
-    ctx.strokeStyle = 'rgba(42,122,106,0.4)';
-    ctx.lineWidth = 0.7;
-    for (const fx of [sx + S * 0.33, sx + S * 0.66]) {
-      ctx.beginPath(); ctx.moveTo(fx, sy + 4); ctx.lineTo(fx, sy + S - 4); ctx.stroke();
+    // Crate sprite (same asset as B_CRATE)
+    if (IMAGES.crate) {
+      ctx.drawImage(IMAGES.crate, sx + 1, sy + 1, S - 2, S - 2);
+    } else {
+      ctx.fillStyle = '#5a4226';
+      ctx.fillRect(sx + 2, sy + 2, S - 4, S - 4);
+      ctx.fillStyle = '#7a5c38';
+      ctx.fillRect(sx + 2, sy + 2, S - 4, 4);
+      ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(sx + 2.5, sy + 2.5, S - 5, S - 5);
     }
-    // Fish icon
-    ctx.font = `${Math.round(S * 0.38)}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.fillText('🐟', sx + S / 2, sy + S / 2 + 4);
-    ctx.textAlign = 'left';
+    // Flag pole (top-left corner, rising above the tile)
+    const px = sx + 5, pyBase = sy + 2, pyTop = sy - 10;
+    ctx.strokeStyle = '#888';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(px, pyBase); ctx.lineTo(px, pyTop); ctx.stroke();
+    // Flag pennant (small triangle)
+    ctx.fillStyle = '#e83030';
+    ctx.beginPath();
+    ctx.moveTo(px, pyTop);
+    ctx.lineTo(px + 8, pyTop + 4);
+    ctx.lineTo(px, pyTop + 8);
+    ctx.closePath();
+    ctx.fill();
     // Fill bar
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(sx + 3, sy + S - 6, S - 6, 3);
     if (fillFrac > 0) {
       ctx.fillStyle = fillFrac >= 1 ? '#e85d4a' : '#4dca7c';
