@@ -529,6 +529,11 @@ function updatePlayer(dt) {
     if (!player.inBoat) {
       if (t === T_SHORE) {
         player.inBoat = true;
+        // Snap to tile center so all 4 corner probes land on T_SHORE, not the
+        // adjacent inland tile — otherwise the boat collision check immediately
+        // fails and the player can't move.
+        player.wx = (pc + 0.5) * TILE_SIZE;
+        player.wy = (pr + 0.5) * TILE_SIZE;
         queueToast('Boat — WASD to sail · F to land', '#7ec8e3');
       } else {
         queueToast('Walk to the beach (sandy edge) to board your boat', '#9aa0a8');
@@ -541,6 +546,11 @@ function updatePlayer(dt) {
 
       if (t === T_SHORE || tileWalkable(t)) {
         player.inBoat = false;
+        // Snap to tile center so no corners hang over water after switching to
+        // foot mode — tileWalkable(T_WATER) is false so a water corner freezes
+        // the player.
+        player.wx = (pc + 0.5) * TILE_SIZE;
+        player.wy = (pr + 0.5) * TILE_SIZE;
         queueToast(nearIsland ? 'Landed on island' : 'Back on land', '#7ec8e3');
       } else {
         queueToast('Sail to shore to disembark', '#9aa0a8');
