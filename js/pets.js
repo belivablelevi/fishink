@@ -403,10 +403,10 @@ const FROG_FRAME_W = 32;
 const FROG_FRAME_H = 32;
 const FROG_DIRS    = 8;
 const FROG_ANIM = {
-  idle:  { col: 0,  row: 0, frames: 4 },
-  croak: { col: 4,  row: 0, frames: 4 },
-  hop:   { col: 12, row: 0, frames: 4 },
-  shock: { col: 0,  row: 8, frames: 4 },
+  idle:  { col: 0,  row: 0, frames: 3 },
+  croak: { col: 4,  row: 0, frames: 3 },
+  hop:   { col: 12, row: 0, frames: 3 },
+  shock: { col: 0,  row: 8, frames: 3 },
 };
 const FROG_SIZE          = 32;  // rendered px
 const FROG_SHOCK_RADIUS  = 10 * TILE_SIZE;
@@ -422,10 +422,11 @@ const FROG_VARIANTS = [
 
 function frogImgKey(variant) { return `frog_${variant}`; }
 
-// Direction: 0=E 1=SE 2=S 3=SW 4=W 5=NW 6=N 7=NE (clockwise from east, matches spritesheet rows)
+// Row 0=S(facing cam) 1=SE 2=E 3=NE 4=N 5=NW 6=W 7=SW
+// Formula: start at S(90°) and rotate counterclockwise through rows
 function _vecToFrogDir(dx, dy) {
   const deg = ((Math.atan2(dy, dx) * 180 / Math.PI) + 360) % 360;
-  return Math.round(deg / 45) % FROG_DIRS;
+  return Math.round((90 - deg + 360) / 45) % FROG_DIRS;
 }
 
 const _frogStates = {};
@@ -452,7 +453,7 @@ function _getFrogState(uid, startWx, startWy) {
   if (!_frogStates[uid]) {
     _frogStates[uid] = {
       wx: startWx, wy: startWy,
-      dir: 2,
+      dir: 0,
       frame: 0, frameAccum: 0,
       phase: 'wait',
       waitTimer: 0.4 + Math.random() * 1.5,
