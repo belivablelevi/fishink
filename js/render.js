@@ -1521,15 +1521,18 @@ function drawChests(ctx) {
   const VW = ctx.canvas.width / ZOOM;
   const VH = ctx.canvas.height / ZOOM;
 
+  const CHEST_EARN_GATES = [5000, 25000, 100000];
   for (let i = 1; i < offshoreIslands.length; i++) {
     const isl = offshoreIslands[i];
     const sx = (isl.cx + 0.5) * S - cam.x;
     const sy = (isl.cy + 0.5) * S - cam.y;
     if (sx < -S * 3 || sx > VW + S * 3 || sy < -S * 3 || sy > VH + S * 3) continue;
 
+    const idx = Math.min(i - 1, CHEST_EARN_GATES.length - 1);
+    const locked = (game.lifetimeEarned || 0) < CHEST_EARN_GATES[idx];
     const key  = `${isl.cx},${isl.cy}`;
     const chst = game.islandChests && game.islandChests[key];
-    const ready = !chst || game.time >= chst.nextOpen;
+    const ready = !locked && (!chst || game.time >= chst.nextOpen);
 
     if (ready) {
       const pulse = 0.25 + 0.15 * Math.sin(performance.now() / 550);
@@ -1540,18 +1543,25 @@ function drawChests(ctx) {
     }
 
     // Chest body
-    ctx.fillStyle = ready ? '#c08020' : '#5a3a10';
+    ctx.fillStyle = locked ? '#303030' : (ready ? '#c08020' : '#5a3a10');
     ctx.fillRect(sx - 7, sy - 4, 14, 10);
     // Lid
-    ctx.fillStyle = ready ? '#e8a030' : '#7a5020';
+    ctx.fillStyle = locked ? '#484848' : (ready ? '#e8a030' : '#7a5020');
     ctx.fillRect(sx - 7, sy - 4, 14, 4);
     // Frame
     ctx.strokeStyle = '#301808';
     ctx.lineWidth = 1;
     ctx.strokeRect(sx - 7, sy - 4, 14, 10);
-    // Latch
-    ctx.fillStyle = ready ? '#f0d040' : '#706050';
-    ctx.fillRect(sx - 2, sy, 4, 4);
+    // Latch / lock
+    if (locked) {
+      ctx.fillStyle = '#888';
+      ctx.fillRect(sx - 2, sy - 1, 4, 5);        // lock body
+      ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(sx, sy - 2, 2.5, Math.PI, 0); ctx.stroke(); // shackle
+    } else {
+      ctx.fillStyle = ready ? '#f0d040' : '#706050';
+      ctx.fillRect(sx - 2, sy, 4, 4);
+    }
   }
 }
 

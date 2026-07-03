@@ -395,19 +395,40 @@ function triggerInteract(fromKey = false) {
   }
 
   // Chest interaction — non-worker offshore islands have a chest at their center
+  // Each island is gated by lifetime earnings; opening gives cash + permanent income bonus.
+  const CHEST_EARN_GATES  = [5000, 25000, 100000];   // lifetime $ needed per island (index 0 = island 1)
+  const CHEST_CASH_RANGES = [[200, 500], [600, 1500], [2000, 5000]]; // [min, max] cash per island
+  const CHEST_INCOME_INC  = [0.005, 0.008, 0.012];   // income bonus per open per island
+  const CHEST_INCOME_CAP  = 0.30;                     // total cap across all chests
+  const CHEST_COOLDOWN    = 300;                      // 5 minutes between opens
   if (offshoreIslands.length > 1) {
     for (let i = 1; i < offshoreIslands.length; i++) {
       const isl = offshoreIslands[i];
       if (Math.hypot(pc - isl.cx, pr - isl.cy) < 3) {
+        const idx = Math.min(i - 1, CHEST_EARN_GATES.length - 1);
+        const gate = CHEST_EARN_GATES[idx];
+        if ((game.lifetimeEarned || 0) < gate) {
+          queueToast(`Chest locked — earn $${gate.toLocaleString()} lifetime to open`, '#9aa0a8');
+          return;
+        }
         const key = `${isl.cx},${isl.cy}`;
         if (!game.islandChests) game.islandChests = {};
         const chest = game.islandChests[key];
         if (!chest || game.time >= chest.nextOpen) {
-          const reward = Math.floor(75 + Math.random() * 225 + i * 100);
-          awardCash(reward, `Chest! +$${reward}`, '#f0c030');
-          game.islandChests[key] = { nextOpen: game.time + 120 };
+          const [cMin, cMax] = CHEST_CASH_RANGES[idx];
+          const reward = Math.floor(cMin + Math.random() * (cMax - cMin));
+          awardCash(reward, `Chest! +$${reward.toLocaleString()}`, '#f0c030');
+          if ((game.chestIncomeBonus || 0) < CHEST_INCOME_CAP) {
+            const inc = CHEST_INCOME_INC[idx];
+            game.chestIncomeBonus = Math.min(CHEST_INCOME_CAP, (game.chestIncomeBonus || 0) + inc);
+            const pct = Math.round(game.chestIncomeBonus * 100);
+            queueToast(`Income bonus now +${pct}%!`, '#f0c030');
+          }
+          game.islandChests[key] = { nextOpen: game.time + CHEST_COOLDOWN };
         } else {
-          queueToast(`Chest refills in ${Math.ceil(chest.nextOpen - game.time)}s`, '#9aa0a8');
+          const secs = Math.ceil(chest.nextOpen - game.time);
+          const min = Math.floor(secs / 60), sec = secs % 60;
+          queueToast(`Chest refills in ${min > 0 ? `${min}m ` : ''}${sec}s`, '#9aa0a8');
         }
         return;
       }

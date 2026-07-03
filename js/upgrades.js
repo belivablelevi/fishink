@@ -12,10 +12,12 @@ const UPGRADES = [
     baseCost: 600, costMult: 1.8, maxLevel: 5, perLevel: 0.08, suffix: ' drone delivery bonus' },
   { id: 'pondCapacity', name: 'Habitat Expansion', desc: 'Increase pet slots in every pond and tank',
     baseCost: 500, costMult: 2.2, maxLevel: 3, perLevel: 1, suffix: ' pond slots', flat: true },
+  { id: 'globalLuck', name: 'Lucky Lure', desc: 'Boosts rare fish odds for every catch',
+    baseCost: 400, costMult: 2.2, maxLevel: 5, perLevel: 0.20, suffix: ' rare fish odds' },
 ];
 
 const upgradeLevels = { castSpeed: 0, beltSpeed: 0, maxHeld: 0, fisherSpeed: 0, sellPrice: 0,
-                        droneFisherSpeed: 0, droneDeliveryBonus: 0, pondCapacity: 0 };
+                        droneFisherSpeed: 0, droneDeliveryBonus: 0, pondCapacity: 0, globalLuck: 0 };
 
 function upgradeCost(def) {
   const lvl = upgradeLevels[def.id];
@@ -56,10 +58,11 @@ function effectiveCastTime()       { return CAST_TIME * (1 - upgradeLevels.castS
 function effectiveBeltSpeed()      { return BELT_SPEED * (1 + upgradeLevels.beltSpeed * 0.15); }
 function effectiveMaxHeld()        { return MAX_HELD + upgradeLevels.maxHeld * 2; }
 function effectiveFisherInterval() { return FISHER_INTERVAL * (1 - upgradeLevels.fisherSpeed * 0.12) * prestigeSpeedMult(); }
-function effectiveSellMult()       { return (1 + upgradeLevels.sellPrice * 0.10) * prestigeSellMult(); }
+function effectiveSellMult()       { return (1 + upgradeLevels.sellPrice * 0.10) * prestigeSellMult() * (1 + (game.chestIncomeBonus || 0)); }
 function effectiveDroneSpeedMult()      { return 1 + upgradeLevels.droneFisherSpeed * 0.15; }
 function effectiveDroneDeliveryBonus()  { return 1.10 + upgradeLevels.droneDeliveryBonus * 0.08; }
 function effectivePondCapacity()        { return POND_CAPACITY + upgradeLevels.pondCapacity; }
+function effectiveGlobalLuckMult()      { return 1 + upgradeLevels.globalLuck * 0.20; }
 
 // ─── Per-instance upgrades ───────────────────────────────────────────────────
 // Separate from the global tree above — click/E a placed instance of any

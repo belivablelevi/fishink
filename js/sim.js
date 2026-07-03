@@ -25,6 +25,7 @@ const game = {
   workers: [],         // hired workers [{uid, state, wx, wy, targetWx, targetWy, fish:[], timer}]
   workerNextUid: 1,
   islandChests: {},    // chest state keyed by "cx,cy": { nextOpen: gameTime }
+  chestIncomeBonus: 0, // permanent income multiplier accumulated from chest opens (0–0.30)
 };
 
 const fisherTimers = {};
@@ -259,7 +260,7 @@ function simUpdateWorkers(dt) {
         // Roll 1-3 fish when fishing completes
         const count = 1 + Math.floor(Math.random() * 3);
         w.fish = [];
-        for (let i = 0; i < count; i++) w.fish.push(randomFish());
+        for (let i = 0; i < count; i++) w.fish.push(randomFish(effectiveGlobalLuckMult()));
         w.state = 'inbound';
         w.targetWx = dockWx;
         w.targetWy = dockWy;
@@ -733,7 +734,7 @@ function tickMachineOutput() {
 function tryFisherProduce(c, r) {
   const level = stateAt(c, r).level || 0;
   const interval = effectiveFisherInterval() * machineSpeedMult(level);
-  const luck = fisherLuckMult(level);
+  const luck = fisherLuckMult(level) * effectiveGlobalLuckMult();
   const dirs = [{dc:1,dr:0},{dc:-1,dr:0},{dc:0,dr:1},{dc:0,dr:-1}];
   for (const {dc, dr} of dirs) {
     const nc = c + dc, nr = r + dr;
@@ -805,7 +806,7 @@ function tickDroneFisher(c, r, dt) {
     const crowd = dronesSharingWater(st.waterC, st.waterR, c, r);
     st.droneT += dt / (DRONE_FISH_TIME * (1 + crowd * 0.15) / effectiveDroneSpeedMult() * machineSpeedMult(st.level || 0));
     if (st.droneT >= 1) {
-      for (let i = 0; i < DRONE_BATCH; i++) st.carrying.push(randomFish(droneLuckMult(st.level || 0)));
+      for (let i = 0; i < DRONE_BATCH; i++) st.carrying.push(randomFish(droneLuckMult(st.level || 0) * effectiveGlobalLuckMult()));
       st.dronePhase = DRONE_BACK;
       st.droneT = 0;
     }
@@ -890,10 +891,10 @@ function completeCast() {
     sfxFail();
     return;
   }
-  const fish = randomFish();
+  const fish = randomFish(effectiveGlobalLuckMult());
   fish.progress = 0;
   heldFish.push(fish);
-  const rare = fish.category === 'Rare' || fish.category === 'Epic';
+  const rare = fish.category === 'Rare' || fish.category === 'Epic' || fish.category === 'Legendary';
   const catchColor = rare ? '#e8c43f' : '#4dca7c';
   queueToast(
     rare ? `★ ${fish.size} ${fish.species}!` : `${fish.size} ${fish.species}`,

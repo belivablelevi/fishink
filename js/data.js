@@ -60,6 +60,46 @@ const FISH = [
   { species: 'Blue Marlin',    category: 'Epic',     value: 280.0, rarityWeight: 1.0, color: '#3060c8', sx:  0, sy: 3 },
   // #50 Giant Squid       (idx 49 → sx  1, sy 4)
   { species: 'Giant Squid',    category: 'Epic',     value: 350.0, rarityWeight: 0.8, color: '#7020a0', sx:  1, sy: 4 },
+  // Whale Shark (sx 4, sy 6)
+  { species: 'Whale Shark',    category: 'Epic',     value: 420.0, rarityWeight: 0.6, color: '#3858a8', sx:  4, sy: 6 },
+  // ── Common (extra) ───────────────────────────────────────────────────────
+  // Angelfish (sx 4, sy 0)
+  { species: 'Angelfish',      category: 'Common',   value: 0.9,   rarityWeight: 100, color: '#c0c8c8', sx:  4, sy: 0 },
+  // Blue Tang (sx 5, sy 0)
+  { species: 'Blue Tang',      category: 'Common',   value: 1.1,   rarityWeight: 90,  color: '#1870c8', sx:  5, sy: 0 },
+  // Silver Bream (sx 0, sy 1)
+  { species: 'Silver Bream',   category: 'Common',   value: 0.7,   rarityWeight: 100, color: '#c0c8d0', sx:  0, sy: 1 },
+  // Parrotfish (sx 5, sy 1)
+  { species: 'Parrotfish',     category: 'Common',   value: 1.4,   rarityWeight: 80,  color: '#38c870', sx:  5, sy: 1 },
+  // ── Uncommon (extra) ─────────────────────────────────────────────────────
+  // Seahorse (sx 0, sy 5)
+  { species: 'Seahorse',       category: 'Uncommon', value: 4.0,   rarityWeight: 30,  color: '#e09830', sx:  0, sy: 5 },
+  // Pufferfish (sx 2, sy 11)
+  { species: 'Pufferfish',     category: 'Uncommon', value: 5.5,   rarityWeight: 30,  color: '#d8c870', sx:  2, sy: 11 },
+  // Moray Eel (sx 2, sy 3)
+  { species: 'Moray Eel',      category: 'Uncommon', value: 6.5,   rarityWeight: 28,  color: '#886020', sx:  2, sy: 3 },
+  // Flounder (sx 5, sy 3)
+  { species: 'Flounder',       category: 'Uncommon', value: 7.5,   rarityWeight: 28,  color: '#b8a058', sx:  5, sy: 3 },
+  // Striped Bass (sx 3, sy 1)
+  { species: 'Striped Bass',   category: 'Uncommon', value: 9.5,   rarityWeight: 25,  color: '#788060', sx:  3, sy: 1 },
+  // ── Rare (extra) ─────────────────────────────────────────────────────────
+  // Moon Jellyfish (sx 0, sy 7)
+  { species: 'Moon Jellyfish', category: 'Rare',     value: 38.0,  rarityWeight: 6,   color: '#d070b0', sx:  0, sy: 7 },
+  // Lobster (sx 6, sy 7)
+  { species: 'Lobster',        category: 'Rare',     value: 48.0,  rarityWeight: 6,   color: '#c83820', sx:  6, sy: 7 },
+  // Bottlenose Dolphin (sx 0, sy 6)
+  { species: 'Bottlenose Dolphin', category: 'Rare', value: 55.0,  rarityWeight: 5,   color: '#8090a8', sx:  0, sy: 6 },
+  // Hammerhead Shark (sx 5, sy 6)
+  { species: 'Hammerhead Shark',   category: 'Rare', value: 65.0,  rarityWeight: 5,   color: '#607080', sx:  5, sy: 6 },
+  // Manta Ray (sx 6, sy 6)
+  { species: 'Manta Ray',      category: 'Rare',     value: 75.0,  rarityWeight: 4,   color: '#a0b4c4', sx:  6, sy: 6 },
+  // ── Legendary ────────────────────────────────────────────────────────────
+  // Blue Whale (sx 1, sy 6)
+  { species: 'Blue Whale',     category: 'Legendary', value: 500.0, rarityWeight: 0.15, color: '#1840a0', sx:  1, sy: 6 },
+  // Great White Shark (sx 2, sy 6)
+  { species: 'Great White Shark', category: 'Legendary', value: 750.0, rarityWeight: 0.1, color: '#9ab0c0', sx:  2, sy: 6 },
+  // Giant Octopus (sx 9, sy 8)
+  { species: 'Giant Octopus',  category: 'Legendary', value: 1000.0, rarityWeight: 0.06, color: '#900830', sx:  9, sy: 8 },
 ];
 
 // Display preferences — kept in their own localStorage key, separate from
@@ -102,11 +142,11 @@ function formatMoney(n) {
   return `${digits}${MONEY_SUFFIXES[tier]}`;
 }
 
-const CATEGORY_NAMES = ['Common', 'Uncommon', 'Rare', 'Epic'];
-const CATEGORY_COLOR = { Common: '#9aa0a8', Uncommon: '#4dca7c', Rare: '#5aa8e8', Epic: '#b86bdc' };
+const CATEGORY_NAMES = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];
+const CATEGORY_COLOR = { Common: '#9aa0a8', Uncommon: '#4dca7c', Rare: '#5aa8e8', Epic: '#b86bdc', Legendary: '#f0c030' };
 
 // One-time cash reward for discovering every species in a Fish Index category.
-const FISH_INDEX_CATEGORY_BONUS = { Common: 100, Uncommon: 300, Rare: 1000, Epic: 3000 };
+const FISH_INDEX_CATEGORY_BONUS = { Common: 100, Uncommon: 300, Rare: 1000, Epic: 3000, Legendary: 15000 };
 
 const SIZES = [
   { name: 'Tiny',   mult: 0.5, weight: 30 },
