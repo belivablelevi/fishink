@@ -115,12 +115,13 @@ function cloudPushSaveImmediate() {
 
 // ── Dev console ────────────────────────────────────────────────────────────────
 // Usage:
-//   dev.auth('your_password')          — unlock dev mode
-//   dev.view('username')               — print a player's save to console
-//   dev.load('username')               — load a player's save into your current session
-//   dev.wipe('username')               — zero out a player's save data
-//   dev.rename('oldName', 'newName')   — change a player's username
-//   dev.give('username', 5000)         — add cash to a player's save
+//   dev.auth('your_password')              — unlock dev mode
+//   dev.view('username')                   — print a player's save to console
+//   dev.load('username')                   — load a player's save into your current session
+//   dev.wipe('username')                   — zero out a player's save data
+//   dev.rename('oldName', 'newName')       — change a player's username
+//   dev.give('username', 5000)             — add cash to a player's save
+//   dev.migrateLeaderboard()               — seed players table from leaderboard_scores
 
 const _DEV_PASSWORD = 'fishink_dev'; // ← change this before shipping
 
@@ -217,6 +218,40 @@ window.dev = {
         { method: 'PATCH', body: JSON.stringify({ save_data: saveData }) }
       );
       console.log(patchRes.ok ? `✅ Gave $${cash} to ${username}` : `❌ Failed (${patchRes.status})`);
+    } catch (e) { console.error(e); }
+  },
+
+  async migrateLeaderboard() {
+    if (!_devAuth()) return;
+    try {
+      // Fetch every leaderboard row
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard_scores?select=client_id,name&limit=1000`, {
+        headers: { apikey: SUPABASE_ANON, Authorization: 'Bearer ' + SUPABASE_ANON },
+      });
+      if (!res.ok) { console.error('Fetch leaderboard failed', res.status); return; }
+      const rows = await res.json();
+      console.log(`Found ${rows.length} leaderboard entries — seeding players table...`);
+
+      // Dedupe by client_id (keep first occurrence)
+      const seen = new Set();
+      const unique = rows.filter(r => {
+        if (!r.client_id || !r.name || seen.has(r.client_id)) return false;
+        seen.add(r.client_id);
+        return true;
+      });
+
+      let created = 0, skipped = 0;
+      for (const row of unique) {
+        // ignore-duplicates: skip silently if client_id OR username already exists
+        const r = await _cloudFetch(CLOUD_TABLE, {
+          method: 'POST',
+          headers: { Prefer: 'resolution=ignore-duplicates,return=minimal' },
+          body: JSON.stringify({ client_id: row.client_id, username: row.name, save_data: {} }),
+        });
+        if (r.status === 204 || r.ok) created++;
+        else skipped++;
+      }
+      console.log(`✅ Done: ${created} players seeded, ${skipped} skipped (already existed or name conflict)`);
     } catch (e) { console.error(e); }
   },
 };
