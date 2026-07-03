@@ -1249,6 +1249,58 @@ function renderControlsPanel() {
   }
 }
 
+// ─── Frog interaction popup (walk up + E) ────────────────────────────────────
+let _frogPopupEl = null;
+let _frogPopupUid = null;
+
+function openFrogPopup(uid) {
+  closeFrogPopup();
+  const frog = (game.frogs || []).find(f => f.uid === uid);
+  if (!frog) return;
+  const v = FROG_VARIANTS.find(f => f.id === frog.variant) || {};
+  const refund = Math.floor((v.cost || 0) * 0.5);
+  const s = _frogStates[uid];
+  if (!s) return;
+
+  const canvasEl = document.getElementById('canvas');
+  const rect = canvasEl ? canvasEl.getBoundingClientRect() : { left: 0, top: 0 };
+  const sx = rect.left + (s.wx - cam.x) * ZOOM;
+  const sy = rect.top  + (s.wy - cam.y) * ZOOM;
+
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;z-index:900;background:rgba(12,22,20,0.95);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 14px;min-width:130px;pointer-events:all;';
+  el.style.left = Math.min(sx, window.innerWidth - 160) + 'px';
+  el.style.top  = Math.max(10, sy - 90) + 'px';
+
+  const nameEl = document.createElement('div');
+  nameEl.style.cssText = 'font-size:12px;color:#ccc;margin-bottom:8px;font-weight:bold;';
+  nameEl.textContent = (v.name || frog.variant) + ' Frog';
+  el.appendChild(nameEl);
+
+  const pickBtn = document.createElement('button');
+  pickBtn.className = 'upgrade-buy';
+  pickBtn.style.cssText = 'width:100%;margin-bottom:6px;display:block;';
+  pickBtn.textContent = 'Pick Up';
+  pickBtn.addEventListener('click', () => { pickUpFrog(uid); closeFrogPopup(); if (typeof renderPetsPanel === 'function') renderPetsPanel(); });
+  el.appendChild(pickBtn);
+
+  const sellBtn = document.createElement('button');
+  sellBtn.className = 'upgrade-buy pet-sell-btn';
+  sellBtn.style.cssText = 'width:100%;display:block;';
+  sellBtn.textContent = `Sell — $${refund}`;
+  sellBtn.addEventListener('click', () => { sellFrog(uid); closeFrogPopup(); if (typeof renderPetsPanel === 'function') renderPetsPanel(); });
+  el.appendChild(sellBtn);
+
+  document.body.appendChild(el);
+  _frogPopupEl = el;
+  _frogPopupUid = uid;
+}
+
+function closeFrogPopup() {
+  if (_frogPopupEl) { _frogPopupEl.remove(); _frogPopupEl = null; }
+  _frogPopupUid = null;
+}
+
 // ─── Per-block popup (machine upgrade / sorter settings / crate contents) ──
 let blockPopupEl;
 
@@ -2134,21 +2186,19 @@ function renderPetsPanel() {
       const actRow = document.createElement('div');
       actRow.className = 'pet-card-actions';
 
-      const placeBtn = document.createElement('button');
-      placeBtn.className = 'upgrade-buy pet-card-btn';
-      placeBtn.textContent = isFrogPlaced(frog.uid) ? 'Move' : 'Place';
-      placeBtn.addEventListener('click', () => {
-        enterFrogPlaceMode(frog.uid);
-        setBuildMenuOpen(false);
-      });
-      actRow.appendChild(placeBtn);
-
-      const sellBtn = document.createElement('button');
-      sellBtn.className = 'upgrade-buy pet-card-btn pet-sell-btn';
-      const refund = Math.floor((v.cost || 0) * 0.5);
-      sellBtn.textContent = `Sell $${refund}`;
-      sellBtn.addEventListener('click', () => { sellFrog(frog.uid); renderPetsPanel(); });
-      actRow.appendChild(sellBtn);
+      if (!isFrogPlaced(frog.uid)) {
+        // Unplaced frogs show a Place button; placed ones are interacted with in-world (E key)
+        const placeBtn = document.createElement('button');
+        placeBtn.className = 'upgrade-buy pet-card-btn';
+        placeBtn.textContent = 'Place';
+        placeBtn.addEventListener('click', () => { enterFrogPlaceMode(frog.uid); setBuildMenuOpen(false); });
+        actRow.appendChild(placeBtn);
+      } else {
+        const hintEl = document.createElement('div');
+        hintEl.style.cssText = 'font-size:10px;color:var(--c-muted);line-height:1.4;';
+        hintEl.textContent = 'Walk up & press E';
+        actRow.appendChild(hintEl);
+      }
 
       card.appendChild(actRow);
       frogGrid.appendChild(card);

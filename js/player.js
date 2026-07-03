@@ -195,6 +195,10 @@ function handleBuildKey(e) {
     rotateBlueprintClipboard();
     return;
   }
+  if (e.key === 'Escape' && typeof closeFrogPopup === 'function' && _frogPopupUid !== null) {
+    closeFrogPopup();
+    return;
+  }
   if (e.key === 'Escape' && petPlaceMode.active) {
     exitPetPlaceMode();
     queueToast('Placement cancelled', '#9aa0a8');
@@ -320,6 +324,8 @@ function playerOccupiesTile(c, r) {
 // mobile Interact button.
 function triggerInteract() {
   if (_placeCooldown) return;
+  // Always dismiss open frog popup on any interact
+  if (typeof closeFrogPopup === 'function') closeFrogPopup();
   const pc = Math.floor(player.wx / TILE_SIZE);
   const pr = Math.floor(player.wy / TILE_SIZE);
   const inReach = hoverTile && Math.abs(hoverTile.c - pc) <= 1 && Math.abs(hoverTile.r - pr) <= 1;
@@ -370,6 +376,22 @@ function triggerInteract() {
       }
     }
     return;
+  }
+
+  // Nearby frog — open interaction popup (Pick Up / Sell)
+  if (game.frogs && game.frogs.length) {
+    const FROG_REACH = TILE_SIZE * 2;
+    const nearFrog = game.frogs.find(frog => {
+      if (!isFrogPlaced(frog.uid)) return false;
+      const s = _frogStates[frog.uid];
+      return s && Math.hypot(s.wx + FROG_SIZE / 2 - player.wx, s.wy + FROG_SIZE / 2 - player.wy) < FROG_REACH;
+    });
+    if (nearFrog) {
+      openFrogPopup(nearFrog.uid);
+      _placeCooldown = true;
+      requestAnimationFrame(() => { _placeCooldown = false; });
+      return;
+    }
   }
 
   if (kind) {
