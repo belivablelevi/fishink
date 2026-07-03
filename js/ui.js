@@ -2055,58 +2055,82 @@ function renderPetsPanel() {
   }
 
   const allPonds = listAvailablePonds();
+  const freePonds = allPonds.filter(p => p.count < p.capacity);
+
+  // Group by variant
+  const axoByVariant = {};
+  for (const pet of game.pets) {
+    if (!axoByVariant[pet.variant]) axoByVariant[pet.variant] = [];
+    axoByVariant[pet.variant].push(pet);
+  }
 
   const grid = document.createElement('div');
   grid.className = 'pets-collection-grid';
-  for (const pet of game.pets) {
-    const v = getPetVariant(pet.variant);
+  for (const [variantId, pets] of Object.entries(axoByVariant)) {
+    const v = getPetVariant(variantId);
     if (!v) continue;
-    const pond = petCurrentPond(pet.uid);
-    const freePonds = allPonds.filter(p => p.count < p.capacity);
-    let statusText = 'Not assigned';
-    if (pond) statusText = pond.type === 'block' ? `In built pond` : `In natural pond`;
+    const count = pets.length;
+    const placed  = pets.filter(p => petCurrentPond(p.uid));
+    const unplaced = pets.filter(p => !petCurrentPond(p.uid));
 
     const card = document.createElement('div');
-    card.className = 'pet-card';
-    card.innerHTML = `
-      <div class="pet-sprite-sm" style="background-image:url('img/axolotl/${pet.variant}.png')"></div>
-      <div class="pet-card-info">
-        <div class="pet-card-name" style="color:${RARITY_COLOR[v.rarity]}">${v.name}</div>
-        <div class="pet-card-status pet-card-status-${pet.uid}">${statusText}</div>
-      </div>
-      <div class="pet-card-actions" data-uid="${pet.uid}"></div>`;
-    grid.appendChild(card);
+    card.className = 'pets-collection-card';
+    card.style.position = 'relative';
 
-    const actionsEl = card.querySelector('.pet-card-actions');
-    if (pond) {
-      const removeBtn = document.createElement('button');
-      removeBtn.className = 'upgrade-buy pet-card-btn';
-      removeBtn.textContent = 'Remove';
-      removeBtn.addEventListener('click', () => { unassignPet(pet.uid); renderPetsPanel(); });
-      actionsEl.appendChild(removeBtn);
-    } else if (freePonds.length === 0) {
-      const disabledBtn = document.createElement('button');
-      disabledBtn.className = 'upgrade-buy pet-card-btn';
-      disabledBtn.textContent = 'No tank';
-      disabledBtn.disabled = true;
-      disabledBtn.title = 'Walk to a pond and press E, or build a Tank';
-      actionsEl.appendChild(disabledBtn);
-    } else {
+    if (count > 1) {
+      const badge = document.createElement('div');
+      badge.style.cssText = 'position:absolute;top:4px;right:6px;font-size:10px;font-weight:bold;color:var(--c-coin);';
+      badge.textContent = `${count}x`;
+      card.appendChild(badge);
+    }
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'pet-variant-name';
+    nameEl.style.color = RARITY_COLOR[v.rarity];
+    nameEl.textContent = v.name;
+    card.appendChild(nameEl);
+
+    const statusEl = document.createElement('div');
+    statusEl.style.cssText = 'font-size:10px;color:var(--c-muted);margin-bottom:6px';
+    statusEl.textContent = placed.length > 0
+      ? `${placed.length} in pond${unplaced.length > 0 ? ` · ${unplaced.length} in bag` : ''}`
+      : `${unplaced.length} in bag`;
+    card.appendChild(statusEl);
+
+    const actRow = document.createElement('div');
+    actRow.className = 'pet-card-actions';
+
+    if (unplaced.length > 0 && freePonds.length > 0) {
       const placeBtn = document.createElement('button');
       placeBtn.className = 'upgrade-buy pet-card-btn';
       placeBtn.textContent = 'Place';
-      placeBtn.addEventListener('click', () => {
-        enterPetPlaceMode(pet.uid); // closes menu, enters world-click placement
-      });
-      actionsEl.appendChild(placeBtn);
+      placeBtn.addEventListener('click', () => { enterPetPlaceMode(unplaced[0].uid); });
+      actRow.appendChild(placeBtn);
+    } else if (unplaced.length > 0 && freePonds.length === 0) {
+      const noTankBtn = document.createElement('button');
+      noTankBtn.className = 'upgrade-buy pet-card-btn';
+      noTankBtn.textContent = 'No tank';
+      noTankBtn.disabled = true;
+      noTankBtn.title = 'Walk to a pond and press E, or build a Tank';
+      actRow.appendChild(noTankBtn);
+    }
+    if (placed.length > 0) {
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'upgrade-buy pet-card-btn';
+      removeBtn.textContent = 'Remove';
+      removeBtn.addEventListener('click', () => { unassignPet(placed[0].uid); renderPetsPanel(); });
+      actRow.appendChild(removeBtn);
     }
 
-    // Sell button — always available
+    const sellUid = (unplaced[0] || placed[0]).uid;
     const sellBtn = document.createElement('button');
     sellBtn.className = 'upgrade-buy pet-card-btn pet-sell-btn';
     sellBtn.textContent = `Sell $${PET_SELL_PRICE[v.rarity]}`;
-    sellBtn.addEventListener('click', () => { sellPet(pet.uid); renderPetsPanel(); });
-    actionsEl.appendChild(sellBtn);
+    sellBtn.addEventListener('click', () => { sellPet(sellUid); renderPetsPanel(); });
+    actRow.appendChild(sellBtn);
+
+    card.appendChild(actRow);
+    grid.appendChild(card);
   }
   panel.appendChild(grid);
 
