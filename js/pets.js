@@ -93,9 +93,9 @@ function sellPet(uid) {
 // ── Gacha ─────────────────────────────────────────────────────────────────────
 
 function rollGacha() {
-  let r = Math.random() * _TOTAL_WEIGHT;
-  for (const v of PET_VARIANTS) { r -= v.weight; if (r <= 0) return v; }
-  return PET_VARIANTS[PET_VARIANTS.length - 1];
+  let r = Math.random() * _COMBINED_WEIGHT;
+  for (const v of _COMBINED_POOL) { r -= v.weight; if (r <= 0) return v; }
+  return _COMBINED_POOL[_COMBINED_POOL.length - 1];
 }
 
 // Returns array of new pet objects (after auto-sell), or null if can't afford.
@@ -108,17 +108,32 @@ function pullPets(count = 1) {
   let autoSoldCount = 0, autoSoldValue = 0;
   for (let i = 0; i < count; i++) {
     const v = rollGacha();
-    const pet = { uid: game.petNextUid++, variant: v.id };
-    game.pets.push(pet);
-    if (autoSell[v.rarity]) {
-      const price = PET_SELL_PRICE[v.rarity] || 0;
-      game.pets.splice(game.pets.indexOf(pet), 1);
-      game.cash += price;
-      game.lifetimeEarned += price;
-      autoSoldCount++;
-      autoSoldValue += price;
+    if (v.isFrog) {
+      const frog = { uid: game.frogNextUid++, variant: v.id, wx: -9999, wy: -9999 };
+      game.frogs.push(frog);
+      if (autoSell[v.rarity]) {
+        const price = Math.floor((v.cost || 0) * 0.5);
+        game.frogs.splice(game.frogs.indexOf(frog), 1);
+        game.cash += price;
+        game.lifetimeEarned += price;
+        autoSoldCount++;
+        autoSoldValue += price;
+      } else {
+        results.push({ type: 'frog', frog, variant: v });
+      }
     } else {
-      results.push({ pet, variant: v });
+      const pet = { uid: game.petNextUid++, variant: v.id };
+      game.pets.push(pet);
+      if (autoSell[v.rarity]) {
+        const price = PET_SELL_PRICE[v.rarity] || 0;
+        game.pets.splice(game.pets.indexOf(pet), 1);
+        game.cash += price;
+        game.lifetimeEarned += price;
+        autoSoldCount++;
+        autoSoldValue += price;
+      } else {
+        results.push({ type: 'axo', pet, variant: v });
+      }
     }
   }
   game.petPullsTotal += count;
@@ -412,13 +427,20 @@ const FROG_SIZE          = 32;  // rendered px
 const FROG_SHOCK_RADIUS  = 10 * TILE_SIZE;
 
 const FROG_VARIANTS = [
-  { id: 'green',         name: 'Green',        rarity: 'common',    cost: 200 },
-  { id: 'brown',         name: 'Brown',        rarity: 'common',    cost: 200 },
-  { id: 'blue',          name: 'Blue',         rarity: 'uncommon',  cost: 350 },
-  { id: 'purple',        name: 'Purple',       rarity: 'rare',      cost: 600 },
-  { id: 'gameboy_green', name: 'Game Boy',     rarity: 'rare',      cost: 600 },
-  { id: 'gameboy_bw',    name: 'Game Boy B&W', rarity: 'legendary', cost: 1000 },
+  { id: 'green',         name: 'Green',        rarity: 'common',    cost: 200, weight: 6 },
+  { id: 'brown',         name: 'Brown',        rarity: 'common',    cost: 200, weight: 6 },
+  { id: 'blue',          name: 'Blue',         rarity: 'uncommon',  cost: 350, weight: 4 },
+  { id: 'purple',        name: 'Purple',       rarity: 'rare',      cost: 600, weight: 2 },
+  { id: 'gameboy_green', name: 'Game Boy',     rarity: 'rare',      cost: 600, weight: 1 },
+  { id: 'gameboy_bw',    name: 'Game Boy B&W', rarity: 'legendary', cost: 1000, weight: 1 },
 ];
+
+// Combined gacha pool: axolotls + frogs. Frogs are ~17% of pulls.
+const _COMBINED_POOL = [
+  ...PET_VARIANTS.map(v  => ({ ...v, isFrog: false })),
+  ...FROG_VARIANTS.map(v => ({ ...v, isFrog: true  })),
+];
+const _COMBINED_WEIGHT = _COMBINED_POOL.reduce((s, v) => s + v.weight, 0);
 
 function frogImgKey(variant) { return `frog_${variant}`; }
 

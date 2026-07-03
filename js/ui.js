@@ -1935,7 +1935,7 @@ function renderPetsPanel() {
 
   const title = document.createElement('div');
   title.className = 'pets-gacha-title';
-  title.textContent = 'Axolotl Gacha';
+  title.textContent = 'Pet Gacha';
   gacha.appendChild(title);
 
   const costs = document.createElement('div');
@@ -1973,13 +1973,21 @@ function renderPetsPanel() {
   if (_petsPullResult && _petsPullResult.length > 0) {
     const reveal = document.createElement('div');
     reveal.className = 'pets-reveal';
-    for (const { pet, variant: v } of _petsPullResult) {
+    for (const item of _petsPullResult) {
+      const v = item.variant;
       const card = document.createElement('div');
       card.className = 'pets-reveal-card';
-      card.innerHTML = `
-        <div class="pet-sprite-lg" style="background-image:url('img/axolotl/${pet.variant}.png')"></div>
-        <div class="pet-rarity-label" style="color:${RARITY_COLOR[v.rarity]}">${RARITY_LABEL[v.rarity]}</div>
-        <div class="pet-variant-name">${v.name}</div>`;
+      if (item.type === 'frog') {
+        card.innerHTML = `
+          <div style="width:32px;height:32px;background:url('img/frogs/${v.id}.png') no-repeat 0 0/512px 512px;image-rendering:pixelated;margin:0 auto 4px"></div>
+          <div class="pet-rarity-label" style="color:${RARITY_COLOR[v.rarity]}">${RARITY_LABEL[v.rarity]}</div>
+          <div class="pet-variant-name">${v.name} Frog</div>`;
+      } else {
+        card.innerHTML = `
+          <div class="pet-sprite-lg" style="background-image:url('img/axolotl/${item.pet.variant}.png')"></div>
+          <div class="pet-rarity-label" style="color:${RARITY_COLOR[v.rarity]}">${RARITY_LABEL[v.rarity]}</div>
+          <div class="pet-variant-name">${v.name}</div>`;
+      }
       reveal.appendChild(card);
     }
     gacha.appendChild(reveal);
@@ -2157,7 +2165,7 @@ function renderPetsPanel() {
   }
   panel.appendChild(frogShop);
 
-  // Owned frogs list
+  // Owned frogs — grouped by variant, stacked count
   const ownedFrogs = (game.frogs || []);
   if (ownedFrogs.length > 0) {
     const ownedHeader = document.createElement('div');
@@ -2166,34 +2174,56 @@ function renderPetsPanel() {
     ownedHeader.textContent = `Your Frogs (${ownedFrogs.length})`;
     panel.appendChild(ownedHeader);
 
+    // Group by variant
+    const byVariant = {};
+    for (const frog of ownedFrogs) {
+      if (!byVariant[frog.variant]) byVariant[frog.variant] = [];
+      byVariant[frog.variant].push(frog);
+    }
+
     const frogGrid = document.createElement('div');
     frogGrid.className = 'pets-collection-grid';
-    for (const frog of ownedFrogs) {
-      const v = FROG_VARIANTS.find(f => f.id === frog.variant) || {};
+    for (const [variantId, frogs] of Object.entries(byVariant)) {
+      const v = FROG_VARIANTS.find(f => f.id === variantId) || { name: variantId, rarity: 'common' };
+      const count = frogs.length;
+      const unplaced = frogs.filter(f => !isFrogPlaced(f.uid));
+
       const card = document.createElement('div');
       card.className = 'pets-collection-card';
+      card.style.position = 'relative';
+
+      if (count > 1) {
+        const badge = document.createElement('div');
+        badge.style.cssText = 'position:absolute;top:4px;right:6px;font-size:10px;font-weight:bold;color:var(--c-coin);';
+        badge.textContent = `${count}x`;
+        card.appendChild(badge);
+      }
 
       const nameEl = document.createElement('div');
       nameEl.className = 'pet-variant-name';
-      nameEl.textContent = v.name || frog.variant;
+      nameEl.style.color = RARITY_COLOR[v.rarity] || '#ccc';
+      nameEl.textContent = v.name + ' Frog';
       card.appendChild(nameEl);
 
       const statusEl = document.createElement('div');
       statusEl.style.cssText = 'font-size:10px;color:var(--c-muted);margin-bottom:6px';
-      statusEl.textContent = isFrogPlaced(frog.uid) ? 'On island' : 'Not placed';
+      const placedCount = frogs.length - unplaced.length;
+      statusEl.textContent = placedCount > 0
+        ? `${placedCount} on island${unplaced.length > 0 ? `, ${unplaced.length} in bag` : ''}`
+        : `${unplaced.length} in bag`;
       card.appendChild(statusEl);
 
       const actRow = document.createElement('div');
       actRow.className = 'pet-card-actions';
 
-      if (!isFrogPlaced(frog.uid)) {
-        // Unplaced frogs show a Place button; placed ones are interacted with in-world (E key)
+      if (unplaced.length > 0) {
         const placeBtn = document.createElement('button');
         placeBtn.className = 'upgrade-buy pet-card-btn';
         placeBtn.textContent = 'Place';
-        placeBtn.addEventListener('click', () => { enterFrogPlaceMode(frog.uid); setBuildMenuOpen(false); });
+        placeBtn.addEventListener('click', () => { enterFrogPlaceMode(unplaced[0].uid); setBuildMenuOpen(false); });
         actRow.appendChild(placeBtn);
-      } else {
+      }
+      if (placedCount > 0) {
         const hintEl = document.createElement('div');
         hintEl.style.cssText = 'font-size:10px;color:var(--c-muted);line-height:1.4;';
         hintEl.textContent = 'Walk up & press E';
