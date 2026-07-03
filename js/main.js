@@ -1,6 +1,6 @@
 // Fish INK Factory — game loop
 
-const GAME_VERSION = '1.4.29';
+const GAME_VERSION = '1.4.30';
 
 let canvas, ctx;
 let lastTime = 0;
@@ -107,7 +107,7 @@ function init() {
   const loadingAnim = startLoadingAnimation();
   const loadStart = performance.now();
 
-  const finishLoading = () => {
+  const finishLoading = async () => {
     initBuildMenu();
     initBuildHud();
     initSoundMenu();
@@ -115,6 +115,24 @@ function init() {
     initMachinesMenu();
     initLeaderboardMenu();
     loadingAnim.setProgress(1);
+
+    // Try to load a cloud save for returning players. We do this before
+    // runStartScreens so the data is applied before any UI touches the game state.
+    if (typeof cloudLoadSave === 'function' && cloudUsername() && isLeaderboardConfigured()) {
+      try {
+        const cloud = await cloudLoadSave();
+        if (cloud?.save_data && Object.keys(cloud.save_data).length > 0) {
+          try {
+            const data = cloud.save_data;
+            for (let v = (data.version || 1); v < SAVE_VERSION; v++) SAVE_MIGRATIONS[v]?.(data);
+            deserializeGame(data);
+            // Mirror to localStorage so offline loads stay current
+            localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+          } catch (e) { console.warn('Cloud save apply failed', e); }
+        }
+      } catch (e) { /* offline — local save already loaded */ }
+    }
+
     setTimeout(() => {
       loadingAnim.stop();
       runStartScreens(() => {

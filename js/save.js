@@ -124,6 +124,7 @@ function saveGame() {
   } catch (e) {
     console.warn('Save failed', e);
   }
+  if (typeof cloudPushSave === 'function') cloudPushSave();
 }
 
 function hasSave() {

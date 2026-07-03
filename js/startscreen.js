@@ -21,23 +21,61 @@ const START_SCREENS = [
     id: 'pickName',
     shouldShow: () => !getLeaderboardName(),
     render(card, done) {
-      card.innerHTML = `
-        <div class="start-screen-title">Welcome to Fish INK!</div>
-        <div class="start-screen-sub">Pick a name to play as</div>
-        <input type="text" id="startNameInput" class="start-screen-input" maxlength="20" placeholder="Your name">
-        <button id="startNameBtn" class="start-screen-btn">Let's go</button>
-      `;
-      const input = card.querySelector('#startNameInput');
-      const btn   = card.querySelector('#startNameBtn');
-      const submit = () => {
-        const result = setLeaderboardName(input.value);
-        if (result === 'fancy')         { input.style.borderColor = '#e05c5c'; input.placeholder = 'Letters & numbers only!'; input.value = ''; return; }
-        if (result === 'inappropriate') { input.style.borderColor = '#e05c5c'; input.placeholder = 'Keep it clean!';          input.value = ''; return; }
-        if (result) done();
+      const render = (errMsg) => {
+        card.innerHTML = `
+          <div class="start-screen-title">Welcome to Fish INK!</div>
+          <div class="start-screen-sub">Pick a name — names are unique across all players</div>
+          <input type="text" id="startNameInput" class="start-screen-input" maxlength="20" placeholder="Your name">
+          ${errMsg ? `<div id="startNameErr" style="color:#e05c5c;font-size:10px;margin-top:6px;">${errMsg}</div>` : ''}
+          <button id="startNameBtn" class="start-screen-btn">Let's go</button>
+        `;
+        const input = card.querySelector('#startNameInput');
+        const btn   = card.querySelector('#startNameBtn');
+
+        const setErr = (msg) => {
+          let el = card.querySelector('#startNameErr');
+          if (!el) { el = document.createElement('div'); el.id = 'startNameErr'; el.style.cssText = 'color:#e05c5c;font-size:10px;margin-top:6px;'; btn.before(el); }
+          el.textContent = msg;
+          input.style.borderColor = '#e05c5c';
+          input.value = '';
+          input.focus();
+        };
+
+        const submit = async () => {
+          const result = setLeaderboardName(input.value);
+          if (result === 'fancy')         { setErr('Letters, numbers and punctuation only!'); return; }
+          if (result === 'inappropriate') { setErr('Keep it clean!'); return; }
+          if (!result) return;
+
+          btn.disabled = true;
+          btn.textContent = 'Checking…';
+          input.disabled = true;
+
+          // Check uniqueness in Supabase if cloud is configured
+          if (typeof cloudUsernameAvailable === 'function' && isLeaderboardConfigured()) {
+            const available = await cloudUsernameAvailable(input.value.trim());
+            if (available === false) {
+              // Name taken — reset leaderboard name so shouldShow() stays true
+              localStorage.removeItem(LEADERBOARD_NAME_KEY);
+              btn.disabled = false; btn.textContent = "Let's go"; input.disabled = false;
+              setErr('That name is already taken — try another!');
+              return;
+            }
+            // available === null means network error; allow through (will retry on next load)
+            if (typeof cloudCreatePlayer === 'function') {
+              await cloudCreatePlayer(input.value.trim());
+            }
+          }
+
+          done();
+        };
+
+        btn.addEventListener('click', submit);
+        input.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+        input.focus();
       };
-      btn.addEventListener('click', submit);
-      input.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
-      input.focus();
+
+      render();
     },
   },
 ];
