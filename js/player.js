@@ -382,7 +382,7 @@ function triggerInteract() {
   if (game.frogs && game.frogs.length) {
     const FROG_REACH = TILE_SIZE * 2;
     const nearFrog = game.frogs.find(frog => {
-      if (!isFrogPlaced(frog.uid)) return false;
+      if (frog.wx === -9999) return false;
       const s = _frogStates[frog.uid];
       return s && Math.hypot(s.wx + FROG_SIZE / 2 - player.wx, s.wy + FROG_SIZE / 2 - player.wy) < FROG_REACH;
     });

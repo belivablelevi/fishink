@@ -1257,8 +1257,8 @@ function openFrogPopup(uid) {
   closeFrogPopup();
   const frog = (game.frogs || []).find(f => f.uid === uid);
   if (!frog) return;
-  const v = FROG_VARIANTS.find(f => f.id === frog.variant) || {};
-  const refund = Math.floor((v.cost || 0) * 0.5);
+  const v = getFrogVariant(frog.variant) || {};
+  const refund = frogSellPrice(uid);
   const s = _frogStates[uid];
   if (!s) return;
 
@@ -2061,10 +2061,10 @@ function _buildAxoSlide(variantId, pets, freePonds) {
 
 // Builds one carousel slide for a frog variant group.
 function _buildFrogSlide(variantId, frogs) {
-  const v = FROG_VARIANTS.find(f => f.id === variantId) || { name: variantId, rarity: 'common' };
+  const v = getFrogVariant(variantId) || { name: variantId, rarity: 'common' };
   const count   = frogs.length;
-  const placed  = frogs.filter(f => isFrogPlaced(f.uid));
-  const unplaced = frogs.filter(f => !isFrogPlaced(f.uid));
+  const placed  = frogs.filter(f => f.wx !== -9999);
+  const unplaced = frogs.filter(f => f.wx === -9999);
 
   const slide = document.createElement('div');
   slide.style.cssText = 'text-align:center;padding-bottom:10px;';
@@ -2188,9 +2188,9 @@ function renderPetsPanel() {
   oddsRow.className = 'pets-odds';
   oddsRow.innerHTML = `
     <span style="color:${RARITY_COLOR.common}">Common 60%</span>
-    <span style="color:${RARITY_COLOR.uncommon}">Uncommon 28%</span>
-    <span style="color:${RARITY_COLOR.rare}">Rare 9%</span>
-    <span style="color:${RARITY_COLOR.legendary}">Legendary 3%</span>`;
+    <span style="color:${RARITY_COLOR.uncommon}">Uncommon 27%</span>
+    <span style="color:${RARITY_COLOR.rare}">Rare 10%</span>
+    <span style="color:${RARITY_COLOR.legendary}">Legendary 3.3%</span>`;
   panel.appendChild(oddsRow);
 
   const autoSell = game.petAutoSell || {};
@@ -2231,7 +2231,8 @@ function renderPetsPanel() {
   const collTitle = document.createElement('div');
   collTitle.className = 'pets-section-title';
   collTitle.style.marginTop = '10px';
-  collTitle.textContent = `Collection (${game.pets.length} owned · ${game.petPullsTotal} pulls)`;
+  const totalOwned = game.pets.length + (game.frogs || []).length;
+  collTitle.textContent = `Collection (${totalOwned} owned · ${game.petPullsTotal} pulls)`;
   panel.appendChild(collTitle);
 
   // ── Axolotl carousel ──

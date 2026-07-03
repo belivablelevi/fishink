@@ -58,9 +58,8 @@ const RARITY_LABEL = {
   common: 'Common', uncommon: 'Uncommon', rare: 'Rare', legendary: 'Legendary',
 };
 
-const _TOTAL_WEIGHT = PET_VARIANTS.reduce((s, v) => s + v.weight, 0);
-
-function getPetVariant(id) { return PET_VARIANTS.find(v => v.id === id) || null; }
+function getPetVariant(id)  { return PET_VARIANTS.find(v => v.id === id)  || null; }
+function getFrogVariant(id) { return FROG_VARIANTS.find(f => f.id === id) || null; }
 
 // Returns image key for IMAGES object
 function axoImgKey(variantId) { return 'axo_' + variantId.replace(/-/g, '_'); }
@@ -74,6 +73,13 @@ function petSellPrice(uid) {
   if (!pet) return 0;
   const v = getPetVariant(pet.variant);
   return v ? (PET_SELL_PRICE[v.rarity] || 0) : 0;
+}
+
+function frogSellPrice(uid) {
+  const frog = (game.frogs || []).find(f => f.uid === uid);
+  if (!frog) return 0;
+  const v = getFrogVariant(frog.variant);
+  return v ? Math.floor(v.cost * 0.5) : 0;
 }
 
 function sellPet(uid) {
@@ -109,29 +115,27 @@ function pullPets(count = 1) {
   for (let i = 0; i < count; i++) {
     const v = rollGacha();
     if (v.isFrog) {
-      const frog = { uid: game.frogNextUid++, variant: v.id, wx: -9999, wy: -9999 };
-      game.frogs.push(frog);
       if (autoSell[v.rarity]) {
         const price = Math.floor((v.cost || 0) * 0.5);
-        game.frogs.splice(game.frogs.indexOf(frog), 1);
         game.cash += price;
         game.lifetimeEarned += price;
         autoSoldCount++;
         autoSoldValue += price;
       } else {
+        const frog = { uid: game.frogNextUid++, variant: v.id, wx: -9999, wy: -9999 };
+        game.frogs.push(frog);
         results.push({ type: 'frog', frog, variant: v });
       }
     } else {
-      const pet = { uid: game.petNextUid++, variant: v.id };
-      game.pets.push(pet);
       if (autoSell[v.rarity]) {
         const price = PET_SELL_PRICE[v.rarity] || 0;
-        game.pets.splice(game.pets.indexOf(pet), 1);
         game.cash += price;
         game.lifetimeEarned += price;
         autoSoldCount++;
         autoSoldValue += price;
       } else {
+        const pet = { uid: game.petNextUid++, variant: v.id };
+        game.pets.push(pet);
         results.push({ type: 'axo', pet, variant: v });
       }
     }
@@ -581,20 +585,6 @@ function tickFrogStates(dt) {
   }
 }
 
-function buyFrog(variantId) {
-  const v = FROG_VARIANTS.find(f => f.id === variantId);
-  if (!v) return false;
-  if (game.cash < v.cost) { queueToast('Not enough cash!', '#e85d4a'); sfxFail(); return false; }
-  game.cash -= v.cost;
-  if (!game.frogs) game.frogs = [];
-  if (!game.frogNextUid) game.frogNextUid = 1;
-  const uid = game.frogNextUid++;
-  game.frogs.push({ uid, variant: variantId, wx: -9999, wy: -9999 });
-  sfxUpgrade();
-  saveGame();
-  return uid;
-}
-
 function placeFrogAt(uid, wx, wy) {
   const frog = (game.frogs || []).find(f => f.uid === uid);
   if (!frog) return false;
@@ -615,8 +605,7 @@ function pickUpFrog(uid) {
 function sellFrog(uid) {
   const frog = (game.frogs || []).find(f => f.uid === uid);
   if (!frog) return;
-  const v = FROG_VARIANTS.find(f => f.id === frog.variant);
-  const refund = v ? Math.floor(v.cost * 0.5) : 0;
+  const refund = frogSellPrice(uid);
   game.cash += refund;
   game.frogs = game.frogs.filter(f => f.uid !== uid);
   delete _frogStates[uid];

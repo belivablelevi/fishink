@@ -2301,7 +2301,7 @@ function drawFrogs(ctx) {
   if (!game.frogs || !game.frogs.length) return;
   ctx.imageSmoothingEnabled = false;
   for (const frog of game.frogs) {
-    if (!isFrogPlaced(frog.uid)) continue;
+    if (frog.wx === -9999) continue;
     const img = IMAGES[frogImgKey(frog.variant)];
     if (!img) continue;
     const s = _getFrogState(frog.uid, frog.wx, frog.wy);
