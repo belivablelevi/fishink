@@ -1713,7 +1713,7 @@ function renderCratePopupContent(c, r) {
 function updateBlockPopupLive() {
   if (!blockPopup.open) return;
   const { kind, c, r } = blockPopup;
-  const id = blockAt(c, r);
+  const id = kind === 'worker_dock' ? B_NONE : blockAt(c, r);
   const stillValid = kind === 'machine'     ? IS_UPGRADABLE(id)
                     : kind === 'sorter'     ? id === B_SORTER
                     : kind === 'crate'      ? id === B_CRATE

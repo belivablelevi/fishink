@@ -202,10 +202,11 @@ function simUpdateWorkers(dt) {
       if (w.timer > 0) continue;
       // Pick a random water tile within 12 tiles of island center
       const candidates = [];
+      const islC = Math.floor(isl.cx), islR = Math.floor(isl.cy);
       for (let dc = -12; dc <= 12; dc++) {
         for (let dr = -12; dr <= 12; dr++) {
-          const c = isl.cx + dc;
-          const r = isl.cy + dr;
+          const c = islC + dc;
+          const r = islR + dr;
           if (c >= 0 && c < WORLD_COLS && r >= 0 && r < WORLD_ROWS &&
               tileAt(c, r) === T_WATER) {
             candidates.push({ c, r });
