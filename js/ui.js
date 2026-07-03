@@ -1221,7 +1221,7 @@ const CONTROL_GROUPS = [
       [[['R']], 'Rotate the selected belt-type block’s facing'],
       [[['X']], 'Toggle multi mode. Drag a rectangle to place/remove over the whole area at once.'],
       [[['Left Click']], 'Place the selected block (drag to paint, or drag a box in multi mode)'],
-      [[[‘Right Click’]], ‘Remove/sell whatever\’s on that tile. On empty ground, exits build mode.’],
+      [[['Right Click']], 'Remove/sell whatever\'s on that tile. On empty ground, exits build mode.'],
     ],
   },
   {
