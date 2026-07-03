@@ -4,23 +4,35 @@
 // sx = (species_number - 1) % 12,  sy = floor((species_number - 1) / 12)
 const FISH = [
   // ── Common ────────────────────────────────────────────────────────────────
-  // #23 Guppy            (idx 22 → sx 10, sy 1)
+  // #1  Anchovy           (idx 0  → sx  0, sy 0)
+  { species: 'Anchovy',        category: 'Common',   value: 0.4,   rarityWeight: 100, color: '#c8c8a0', sx:  0, sy: 0 },
+  // #23 Guppy             (idx 22 → sx 10, sy 1)
   { species: 'Guppy',          category: 'Common',   value: 0.5,   rarityWeight: 100, color: '#f0a060', sx: 10, sy: 1 },
+  // #3  Sardine           (idx 2  → sx  2, sy 0)
+  { species: 'Sardine',        category: 'Common',   value: 0.6,   rarityWeight: 100, color: '#a0b8c0', sx:  2, sy: 0 },
   // #2  Clownfish         (idx 1  → sx  1, sy 0)
   { species: 'Clownfish',      category: 'Common',   value: 0.8,   rarityWeight: 100, color: '#e87030', sx:  1, sy: 0 },
   // #41 Perch             (idx 40 → sx  4, sy 3)
   { species: 'Perch',          category: 'Common',   value: 1.0,   rarityWeight: 100, color: '#7a9a5a', sx:  4, sy: 3 },
   // #10 Goldfish          (idx 9  → sx  9, sy 0)
   { species: 'Goldfish',       category: 'Common',   value: 1.2,   rarityWeight: 100, color: '#f0c030', sx:  9, sy: 0 },
+  // #4  Bass              (idx 3  → sx  3, sy 0)
+  { species: 'Bass',           category: 'Common',   value: 1.3,   rarityWeight: 80,  color: '#6a8a5a', sx:  3, sy: 0 },
   // #60 Rainbow Trout     (idx 59 → sx 11, sy 4)
   { species: 'Rainbow Trout',  category: 'Common',   value: 1.5,   rarityWeight: 100, color: '#c898d8', sx: 11, sy: 4 },
   // ── Uncommon ─────────────────────────────────────────────────────────────
   // #33 Common Carp       (idx 32 → sx  8, sy 2)
   { species: 'Common Carp',    category: 'Uncommon', value: 3.0,   rarityWeight: 35,  color: '#9a8a5a', sx:  8, sy: 2 },
+  // #8  Herring           (idx 7  → sx  7, sy 0)
+  { species: 'Herring',        category: 'Uncommon', value: 3.5,   rarityWeight: 40,  color: '#7a9ab8', sx:  7, sy: 0 },
   // #54 Pike              (idx 53 → sx  5, sy 4)
   { species: 'Pike',           category: 'Uncommon', value: 4.5,   rarityWeight: 35,  color: '#4a6a3a', sx:  5, sy: 4 },
+  // #7  Eel               (idx 6  → sx  6, sy 0)
+  { species: 'Eel',            category: 'Uncommon', value: 5.0,   rarityWeight: 30,  color: '#3a4a3a', sx:  6, sy: 0 },
   // #12 Catfish           (idx 11 → sx 11, sy 0)
   { species: 'Catfish',        category: 'Uncommon', value: 6.5,   rarityWeight: 35,  color: '#7a6a5a', sx: 11, sy: 0 },
+  // #25 Tilapia           (idx 24 → sx  0, sy 2)
+  { species: 'Tilapia',        category: 'Uncommon', value: 7.0,   rarityWeight: 30,  color: '#8a7a6a', sx:  0, sy: 2 },
   // #28 Atlantic Salmon   (idx 27 → sx  3, sy 2)
   { species: 'Atlantic Salmon',category: 'Uncommon', value: 8.0,   rarityWeight: 35,  color: '#e8836b', sx:  3, sy: 2 },
   // #53 Bluefin Tuna      (idx 52 → sx  4, sy 4)
@@ -32,11 +44,22 @@ const FISH = [
   { species: 'Koi',            category: 'Rare',     value: 35.0,  rarityWeight: 8,   color: '#e85d30', sx: 10, sy: 2 },
   // #45 Swordfish         (idx 44 → sx  8, sy 3)
   { species: 'Swordfish',      category: 'Rare',     value: 50.0,  rarityWeight: 8,   color: '#7a9ac8', sx:  8, sy: 3 },
+  // ── Rare ─────────────────────────────────────────────────────────────────
+  // #14 Red Snapper       (idx 13 → sx  1, sy 1)
+  { species: 'Red Snapper',    category: 'Rare',     value: 30.0,  rarityWeight: 7,   color: '#c84040', sx:  1, sy: 1 },
+  // #15 Mahi-Mahi         (idx 14 → sx  2, sy 1)
+  { species: 'Mahi-Mahi',      category: 'Rare',     value: 40.0,  rarityWeight: 7,   color: '#30c8a0', sx:  2, sy: 1 },
+  // #58 Barracuda         (idx 57 → sx  9, sy 4)
+  { species: 'Barracuda',      category: 'Rare',     value: 45.0,  rarityWeight: 6,   color: '#4a7a8a', sx:  9, sy: 4 },
   // ── Epic ─────────────────────────────────────────────────────────────────
   // #86 Arapaima          (idx 85 → sx  1, sy 7)
   { species: 'Arapaima',       category: 'Epic',     value: 150.0, rarityWeight: 1.5, color: '#8a4a3a', sx:  1, sy: 7 },
   // #65 Oarfish           (idx 64 → sx  4, sy 5)
   { species: 'Oarfish',        category: 'Epic',     value: 220.0, rarityWeight: 1.5, color: '#c8a0a0', sx:  4, sy: 5 },
+  // #37 Blue Marlin       (idx 36 → sx  0, sy 3)
+  { species: 'Blue Marlin',    category: 'Epic',     value: 280.0, rarityWeight: 1.0, color: '#3060c8', sx:  0, sy: 3 },
+  // #50 Giant Squid       (idx 49 → sx  1, sy 4)
+  { species: 'Giant Squid',    category: 'Epic',     value: 350.0, rarityWeight: 0.8, color: '#7020a0', sx:  1, sy: 4 },
 ];
 
 // Display preferences — kept in their own localStorage key, separate from

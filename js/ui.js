@@ -1393,13 +1393,34 @@ function renderBlockPopup() {
   else if (kind === 'teleporter') renderTeleporterPopupContent(c, r);
   else if (kind === 'pond')       renderPondPopupContent(c, r);
   else if (kind === 'water_pond') renderWaterPondPopupContent(c, r);
-  // "Move" button appended to block popups (not for terrain-based water ponds)
-  if (kind !== 'water_pond') {
+  else if (kind === 'worker_dock') renderWorkerDockContent(c, r);
+  // "Move" button appended to block popups (not for terrain-based or island popups)
+  if (kind !== 'water_pond' && kind !== 'worker_dock') {
     const moveBtn = document.createElement('button');
     moveBtn.className = 'mp-move';
     moveBtn.textContent = 'Move (free)';
     moveBtn.addEventListener('click', () => movePickUpBlock(c, r));
     if (blockPopupEl) blockPopupEl.appendChild(moveBtn);
+  }
+}
+
+function renderWorkerDockContent() {
+  if (!blockPopupEl) return;
+  const count = game.workers ? game.workers.length : 0;
+  const cost  = workerHireCost();
+  blockPopupEl.innerHTML = `
+    <div class="mp-title">Worker Island</div>
+    <div class="mp-stats">
+      <div>Workers: ${count} / ${WORKER_MAX}</div>
+      <div style="color:#9aa0a8;font-size:0.85em;margin-top:3px">Workers auto-fish and sell their catch</div>
+    </div>
+    <div class="mp-effect">${count >= WORKER_MAX ? '<span class="maxed">All workers hired</span>' : `Next hire — $${cost.toLocaleString()}`}</div>
+    <button class="mp-buy" ${count >= WORKER_MAX ? 'disabled' : ''}>${count >= WORKER_MAX ? 'MAXED' : `Hire Worker — $${cost.toLocaleString()}`}</button>
+  `;
+  const btn = blockPopupEl.querySelector('.mp-buy');
+  if (btn && count < WORKER_MAX) {
+    btn.disabled = game.cash < cost;
+    btn.addEventListener('click', () => hireWorker());
   }
 }
 
@@ -1699,8 +1720,15 @@ function updateBlockPopupLive() {
                     : kind === 'recycler'   ? id === B_RECYCLER
                     : kind === 'packer'     ? IS_PACKER(id)
                     : kind === 'teleporter' ? id === B_TELEPORTER
+                    : kind === 'worker_dock' ? true
                     : false;
   if (!stillValid) { closeBlockPopup(); return; }
+
+  if (kind === 'worker_dock') {
+    const btn = blockPopupEl && blockPopupEl.querySelector('.mp-buy');
+    if (btn) btn.disabled = game.cash < workerHireCost() || game.workers.length >= WORKER_MAX;
+    return;
+  }
 
   // Any popup with an upgrade section needs its buy button's disabled state
   // refreshed every frame as cash changes, without a full innerHTML rebuild.

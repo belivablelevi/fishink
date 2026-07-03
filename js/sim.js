@@ -22,6 +22,9 @@ const game = {
   petAutoSell: { common: false, uncommon: false, rare: false, legendary: false },
   frogs: [],         // owned frog pets [{uid, variant, wx, wy}]
   frogNextUid: 1,
+  workers: [],       // hired workers on the worker island [{uid, state, wx, wy, targetWx, targetWy, fishCount, timer}]
+  workerNextUid: 1,
+  islandChests: {},  // chest state keyed by "cx,cy": { nextOpen: gameTime }
 };
 
 const fisherTimers = {};
@@ -151,6 +154,110 @@ function comboMultFor(fish) {
   return { distinctSteps, mult: 1 + Math.max(0, distinctSteps - 1) * COMBO_BONUS_PER_STEP };
 }
 
+// ─── Worker island ────────────────────────────────────────────────────────────
+
+const WORKER_SPEED       = TILE_SIZE * 3.5; // world-px per second while rowing
+const WORKER_FISH_TIME   = 18;              // seconds spent fishing per trip
+const WORKER_IDLE_TIME   = 10;             // seconds idle between trips
+const WORKER_MAX         = 5;
+
+function workerHireCost() {
+  return (game.workers.length + 1) * 500;
+}
+
+function hireWorker() {
+  if (game.workers.length >= WORKER_MAX) {
+    queueToast('Max 5 workers!', '#e85d4a'); return;
+  }
+  const cost = workerHireCost();
+  if (game.cash < cost) { queueToast('Not enough cash!', '#e85d4a'); return; }
+  const isl = offshoreIslands[0];
+  if (!isl) return;
+  game.cash -= cost;
+  game.workers.push({
+    uid: game.workerNextUid++,
+    state: 'idle',
+    wx: (isl.cx + 0.5) * TILE_SIZE,
+    wy: (isl.cy + 0.5) * TILE_SIZE,
+    targetWx: 0, targetWy: 0,
+    fishCount: 0,
+    timer: 5,
+  });
+  queueToast(`Worker hired! (${game.workers.length}/${WORKER_MAX})`, '#4dca7c');
+  if (typeof renderBlockPopup === 'function' && blockPopup && blockPopup.open && blockPopup.kind === 'worker_dock') {
+    renderBlockPopup();
+  }
+}
+
+function simUpdateWorkers(dt) {
+  if (!game.workers || !game.workers.length) return;
+  const isl = offshoreIslands[0];
+  if (!isl) return;
+  const dockWx = (isl.cx + 0.5) * TILE_SIZE;
+  const dockWy = (isl.cy + 0.5) * TILE_SIZE;
+
+  for (const w of game.workers) {
+    if (w.state === 'idle') {
+      w.timer -= dt;
+      if (w.timer > 0) continue;
+      // Pick a random water tile within 12 tiles of island center
+      const candidates = [];
+      for (let dc = -12; dc <= 12; dc++) {
+        for (let dr = -12; dr <= 12; dr++) {
+          const c = isl.cx + dc;
+          const r = isl.cy + dr;
+          if (c >= 0 && c < WORLD_COLS && r >= 0 && r < WORLD_ROWS &&
+              tileAt(c, r) === T_WATER) {
+            candidates.push({ c, r });
+          }
+        }
+      }
+      if (!candidates.length) { w.timer = WORKER_IDLE_TIME; continue; }
+      const t = candidates[Math.floor(Math.random() * candidates.length)];
+      w.targetWx = (t.c + 0.5) * TILE_SIZE;
+      w.targetWy = (t.r + 0.5) * TILE_SIZE;
+      w.state = 'outbound';
+      w.fishCount = 1 + Math.floor(Math.random() * 3);
+
+    } else if (w.state === 'outbound' || w.state === 'inbound') {
+      const dx = w.targetWx - w.wx;
+      const dy = w.targetWy - w.wy;
+      const dist = Math.hypot(dx, dy);
+      if (dist < 2) {
+        w.wx = w.targetWx;
+        w.wy = w.targetWy;
+        if (w.state === 'outbound') {
+          w.state = 'fishing';
+          w.timer = WORKER_FISH_TIME;
+        } else {
+          // Returned to dock — sell catch silently
+          const earnings = w.fishCount * Math.floor(8 + Math.random() * 14);
+          game.cash += earnings;
+          game.lifetimeEarned += earnings;
+          game.fishSold += w.fishCount;
+          spawnFloatText(`+$${earnings}`, w.wx, w.wy - 8, '#f0c030');
+          w.state = 'idle';
+          w.timer = WORKER_IDLE_TIME;
+          w.wx = dockWx;
+          w.wy = dockWy;
+        }
+      } else {
+        const speed = WORKER_SPEED * dt;
+        w.wx += (dx / dist) * Math.min(speed, dist);
+        w.wy += (dy / dist) * Math.min(speed, dist);
+      }
+
+    } else if (w.state === 'fishing') {
+      w.timer -= dt;
+      if (w.timer <= 0) {
+        w.state = 'inbound';
+        w.targetWx = dockWx;
+        w.targetWy = dockWy;
+      }
+    }
+  }
+}
+
 // ─── Main update ─────────────────────────────────────────────────────────────
 
 let machineAccum = 0;
@@ -166,6 +273,10 @@ function simUpdate(dt) {
   checkAchievements();
   maybeShowUpgradeTip();
   tickParticles(dt);
+  simUpdateWorkers(dt);
+  if (typeof updateMusicForTimeOfDay === 'function') {
+    updateMusicForTimeOfDay(game.dayTime / DAY_CYCLE_SECONDS, dt);
+  }
   for (let i = floatTexts.length - 1; i >= 0; i--) {
     floatTexts[i].life -= dt;
     floatTexts[i].wy   -= dt * FLOAT_TEXT_SPEED;

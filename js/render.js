@@ -117,6 +117,10 @@ function draw(ctx, canvas, dt) {
   // Island docks — wooden piers on each offshore island
   drawIslandDocks(ctx);
 
+  // Island chests and worker boats — drawn over terrain, under particles
+  drawChests(ctx);
+  drawWorkers(ctx);
+
   // Shipping boat — fixed dock the Drone Delivery network sends fish to
   drawBoat(ctx);
 
@@ -1475,6 +1479,122 @@ function drawDroneSprite(ctx, cx, cy, pulse) {
 }
 
 // Draws a wooden pier at each offshore island's dock position.
+// Treasure chests on non-worker offshore islands. Ready chests glow gold;
+// spent chests show a closed darker box.
+function drawChests(ctx) {
+  if (!offshoreIslands || offshoreIslands.length <= 1) return;
+  const S = TILE_SIZE;
+  const VW = ctx.canvas.width / ZOOM;
+  const VH = ctx.canvas.height / ZOOM;
+
+  for (let i = 1; i < offshoreIslands.length; i++) {
+    const isl = offshoreIslands[i];
+    const sx = (isl.cx + 0.5) * S - cam.x;
+    const sy = (isl.cy + 0.5) * S - cam.y;
+    if (sx < -S * 3 || sx > VW + S * 3 || sy < -S * 3 || sy > VH + S * 3) continue;
+
+    const key  = `${isl.cx},${isl.cy}`;
+    const chst = game.islandChests && game.islandChests[key];
+    const ready = !chst || game.time >= chst.nextOpen;
+
+    if (ready) {
+      const pulse = 0.25 + 0.15 * Math.sin(performance.now() / 550);
+      ctx.fillStyle = `rgba(255,210,60,${pulse.toFixed(3)})`;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 11, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Chest body
+    ctx.fillStyle = ready ? '#c08020' : '#5a3a10';
+    ctx.fillRect(sx - 7, sy - 4, 14, 10);
+    // Lid
+    ctx.fillStyle = ready ? '#e8a030' : '#7a5020';
+    ctx.fillRect(sx - 7, sy - 4, 14, 4);
+    // Frame
+    ctx.strokeStyle = '#301808';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(sx - 7, sy - 4, 14, 10);
+    // Latch
+    ctx.fillStyle = ready ? '#f0d040' : '#706050';
+    ctx.fillRect(sx - 2, sy, 4, 4);
+  }
+}
+
+// Worker boats (when outbound/fishing/inbound) and idle worker sprites
+// on the worker island (offshoreIslands[0]).
+function drawWorkers(ctx) {
+  if (!game.workers || !game.workers.length) return;
+  const S = TILE_SIZE;
+  const VW = ctx.canvas.width / ZOOM;
+  const VH = ctx.canvas.height / ZOOM;
+
+  // Worker island flag
+  const wisl = offshoreIslands && offshoreIslands[0];
+  if (wisl) {
+    const fx = (wisl.cx + 0.5) * S - cam.x - 4;
+    const fy = (wisl.cy - 0.5) * S - cam.y;
+    if (fx > -S * 2 && fx < VW + S * 2 && fy > -S * 2 && fy < VH + S * 2) {
+      ctx.strokeStyle = '#606060';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(fx, fy + 16);
+      ctx.lineTo(fx, fy);
+      ctx.stroke();
+      ctx.fillStyle = '#e85d4a';
+      ctx.beginPath();
+      ctx.moveTo(fx, fy);
+      ctx.lineTo(fx + 10, fy + 4);
+      ctx.lineTo(fx, fy + 8);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  for (const w of game.workers) {
+    const sx = w.wx - cam.x;
+    const sy = w.wy - cam.y;
+    if (sx < -S * 2 || sx > VW + S * 2 || sy < -S * 2 || sy > VH + S * 2) continue;
+
+    if (w.state === 'idle') {
+      // Small person on the island
+      ctx.fillStyle = '#e8c87a';
+      ctx.beginPath();
+      ctx.arc(sx, sy - 5, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#4a7ac8';
+      ctx.fillRect(sx - 3, sy - 2, 6, 6);
+    } else {
+      // Small rowboat pointing toward target
+      const angle = Math.atan2(w.targetWy - w.wy, w.targetWx - w.wx);
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.rotate(angle);
+      // Hull
+      ctx.fillStyle = '#8B6020';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 7, 3.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Bow tip
+      ctx.fillStyle = '#6a4010';
+      ctx.beginPath();
+      ctx.moveTo(7, 0);
+      ctx.lineTo(5, -2);
+      ctx.lineTo(5, 2);
+      ctx.closePath();
+      ctx.fill();
+      // Fishing dot when at rest
+      if (w.state === 'fishing') {
+        ctx.fillStyle = '#4dca7c';
+        ctx.beginPath();
+        ctx.arc(0, -6, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+}
+
 // The pier runs from the T_SHORE tile (shoreDockC/R) out to the water
 // approach tile (dockC/R) where the player's boat ties up.
 function drawIslandDocks(ctx) {

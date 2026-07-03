@@ -95,6 +95,7 @@ function audioUnlock() {
   if (!AUDIO.ctx) { audioInit(); return; }
   if (AUDIO.ctx.state !== 'running') AUDIO.ctx.resume();
   if (AUDIO.music && AUDIO.music.paused) AUDIO.music.play().catch(() => {});
+  if (AUDIO.nightMusic && AUDIO.nightMusic.paused) AUDIO.nightMusic.play().catch(() => {});
 }
 window.addEventListener('pointerdown', audioUnlock);
 window.addEventListener('keydown', audioUnlock);
@@ -114,14 +115,38 @@ function startAmbient() {
   music.volume = 0.4;
   music.muted = AUDIO.musicMuted;
   AUDIO.music = music;
-
   music.play().catch(() => {}); // resumed by audioUnlock if this is blocked
+
+  // Night track — add audio/night-song.wav to enable; starts silent and fades
+  // in at night. If the file is missing the element fails silently and the day
+  // track keeps playing.
+  const night = new Audio('audio/night-song.wav');
+  night.loop = true;
+  night.preload = 'auto';
+  night.volume = 0;
+  night.muted = AUDIO.musicMuted;
+  AUDIO.nightMusic = night;
+  night.play().catch(() => {});
+}
+
+// Called each sim frame — crossfades between day/night tracks based on dayTime
+// fraction p (0–1). Night range: p < 0.18 (pre-dawn) or p > 0.65 (dusk onward).
+function updateMusicForTimeOfDay(p, dt) {
+  if (!AUDIO.music || !AUDIO.nightMusic || AUDIO.musicMuted) return;
+  const isNight   = p < 0.18 || p > 0.65;
+  const targetDay   = isNight ? 0   : 0.4;
+  const targetNight = isNight ? 0.4 : 0;
+  const rate = dt * 0.12; // full crossfade ≈ 3 s
+  const lerp = (cur, tgt) => Math.abs(cur - tgt) < rate ? tgt : cur + Math.sign(tgt - cur) * rate;
+  AUDIO.music.volume      = lerp(AUDIO.music.volume,      targetDay);
+  AUDIO.nightMusic.volume = lerp(AUDIO.nightMusic.volume, targetNight);
 }
 
 // ─── Sound settings (toggled from the speaker menu, see ui.js) ─────────────────
 function setMusicMuted(v) {
   AUDIO.musicMuted = v;
-  if (AUDIO.music) AUDIO.music.muted = v;
+  if (AUDIO.music)      AUDIO.music.muted      = v;
+  if (AUDIO.nightMusic) AUDIO.nightMusic.muted  = v;
 }
 function setSfxMuted(v)  { AUDIO.sfxMuted  = v; }
 function setSellMuted(v) { AUDIO.sellMuted = v; }

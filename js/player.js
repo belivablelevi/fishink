@@ -322,7 +322,7 @@ function playerOccupiesTile(c, r) {
 // back to a small player-radius search for fish-dropping only, so you
 // don't need pixel-precise aim just to unload. Shared by the E key and the
 // mobile Interact button.
-function triggerInteract() {
+function triggerInteract(fromKey = false) {
   if (_placeCooldown) return;
   // Always dismiss open frog popup on any interact
   if (typeof closeFrogPopup === 'function') closeFrogPopup();
@@ -333,8 +333,9 @@ function triggerInteract() {
   const kind = interactionKindFor(hoveredId);
   const hoverTerrain = hoverTile ? tileAt(hoverTile.c, hoverTile.r) : null;
 
-  // Frog placement mode — intercept all interactions until the player clicks a valid land tile
+  // Frog placement mode — intercept all interactions until the player uses E key on a valid land tile
   if (frogPlaceMode.active) {
+    if (!fromKey) return; // frogs placed by E key / Interact button only, not clicks
     if (!hoverTile) return;
     const t = tileAt(hoverTile.c, hoverTile.r);
     if ((t === T_EMPTY || t === T_SHORE) && blockAt(hoverTile.c, hoverTile.r) === B_NONE) {
@@ -390,6 +391,35 @@ function triggerInteract() {
       openFrogPopup(nearFrog.uid);
       _placeCooldown = true;
       requestAnimationFrame(() => { _placeCooldown = false; });
+      return;
+    }
+  }
+
+  // Chest interaction — non-worker offshore islands have a chest at their center
+  if (offshoreIslands.length > 1) {
+    for (let i = 1; i < offshoreIslands.length; i++) {
+      const isl = offshoreIslands[i];
+      if (Math.hypot(pc - isl.cx, pr - isl.cy) < 3) {
+        const key = `${isl.cx},${isl.cy}`;
+        if (!game.islandChests) game.islandChests = {};
+        const chest = game.islandChests[key];
+        if (!chest || game.time >= chest.nextOpen) {
+          const reward = Math.floor(75 + Math.random() * 225 + i * 100);
+          awardCash(reward, `Chest! +$${reward}`, '#f0c030');
+          game.islandChests[key] = { nextOpen: game.time + 120 };
+        } else {
+          queueToast(`Chest refills in ${Math.ceil(chest.nextOpen - game.time)}s`, '#9aa0a8');
+        }
+        return;
+      }
+    }
+  }
+
+  // Worker island interaction — first offshore island, press E near center
+  if (offshoreIslands.length > 0 && !player.inBoat) {
+    const wisl = offshoreIslands[0];
+    if (Math.hypot(pc - wisl.cx, pr - wisl.cy) < 3) {
+      toggleBlockPopupAtMouse('worker_dock', wisl.cx, wisl.cy);
       return;
     }
   }
@@ -455,7 +485,7 @@ function updatePlayer(dt) {
   const eDown = !!(KEYS['e'] || KEYS['E']);
   if (!buildMode.active && !player.inBoat) {
     if (eDown && !player._eWas) {
-      triggerInteract();
+      triggerInteract(true);
       player._eHoldAccum = 0;
     } else if (eDown && heldFish.length > 0) {
       player._eHoldAccum = (player._eHoldAccum || 0) + dt;

@@ -53,6 +53,9 @@ function serializeGame() {
       return s ? Object.assign({}, f, { wx: s.wx, wy: s.wy }) : f;
     }),
     frogNextUid: game.frogNextUid,
+    workers: game.workers || [],
+    workerNextUid: game.workerNextUid || 1,
+    islandChests: game.islandChests || {},
   };
 }
 
@@ -116,6 +119,9 @@ function deserializeGame(data) {
   game.petAutoSell  = Object.assign({ common: false, uncommon: false, rare: false, legendary: false }, data.petAutoSell || {});
   game.frogs        = data.frogs        || [];
   game.frogNextUid  = data.frogNextUid  || (game.frogs.reduce((m, f) => Math.max(m, f.uid), 0) + 1);
+  game.workers      = data.workers      || [];
+  game.workerNextUid = data.workerNextUid || (game.workers.reduce((m, w) => Math.max(m, w.uid), 0) + 1);
+  game.islandChests = data.islandChests || {};
 }
 
 function saveGame() {

@@ -127,7 +127,7 @@ function createActionButtons() {
   interactBtn.textContent = 'Interact';
   interactBtn.addEventListener('touchstart', e => {
     e.preventDefault();
-    triggerInteract();
+    triggerInteract(true); // mobile Interact = same as E key
   });
   document.body.appendChild(interactBtn);
 
