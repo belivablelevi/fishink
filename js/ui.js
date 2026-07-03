@@ -1922,7 +1922,195 @@ function renderWaterPondPopupContent(c, r) {
 
 // ── Pets tab (gacha + collection) ─────────────────────────────────────────────
 
-let _petsPullResult = null; // last pull result for display
+let _petsPullResult = null;
+
+// Builds a horizontally scrollable carousel from an array of slide elements.
+// Returns the outer wrapper; handles arrows, dots, and CSS slide transition.
+function _buildPetCarousel(slides) {
+  const outer = document.createElement('div');
+  outer.style.cssText = 'margin:6px 0 4px;';
+  if (!slides.length) return outer;
+
+  let cur = 0;
+
+  const viewport = document.createElement('div');
+  viewport.style.cssText = 'position:relative;overflow:hidden;';
+
+  const track = document.createElement('div');
+  track.style.cssText = 'display:flex;transition:transform 0.22s cubic-bezier(.4,0,.2,1);';
+  slides.forEach(s => {
+    s.style.flex = '0 0 100%';
+    s.style.boxSizing = 'border-box';
+    s.style.padding = '0 28px';
+    track.appendChild(s);
+  });
+  viewport.appendChild(track);
+
+  const mkArrow = (ch, side) => {
+    const btn = document.createElement('button');
+    btn.textContent = ch;
+    btn.style.cssText = `position:absolute;${side}:0;top:0;bottom:0;background:none;border:none;color:rgba(255,255,255,0.6);font-size:20px;line-height:1;cursor:pointer;padding:0 6px;z-index:2;transition:color 0.12s;`;
+    btn.addEventListener('mouseenter', () => { btn.style.color = '#fff'; });
+    btn.addEventListener('mouseleave', () => { btn.style.color = 'rgba(255,255,255,0.6)'; });
+    return btn;
+  };
+
+  let dotEls = [];
+  const go = n => {
+    cur = Math.max(0, Math.min(n, slides.length - 1));
+    track.style.transform = `translateX(${-cur * 100}%)`;
+    dotEls.forEach((d, i) => { d.style.opacity = i === cur ? '1' : '0.28'; });
+    prevBtn.style.opacity = cur === 0 ? '0.2' : '0.8';
+    nextBtn.style.opacity = cur === slides.length - 1 ? '0.2' : '0.8';
+  };
+
+  const prevBtn = mkArrow('‹', 'left');
+  prevBtn.addEventListener('click', () => go(cur - 1));
+  viewport.appendChild(prevBtn);
+
+  const nextBtn = mkArrow('›', 'right');
+  nextBtn.addEventListener('click', () => go(cur + 1));
+  viewport.appendChild(nextBtn);
+
+  outer.appendChild(viewport);
+
+  if (slides.length > 1) {
+    const dotsRow = document.createElement('div');
+    dotsRow.style.cssText = 'display:flex;justify-content:center;gap:5px;padding-top:7px;';
+    dotEls = slides.map((_, i) => {
+      const d = document.createElement('div');
+      d.style.cssText = 'width:5px;height:5px;border-radius:50%;background:#fff;cursor:pointer;transition:opacity 0.12s;';
+      d.addEventListener('click', () => go(i));
+      dotsRow.appendChild(d);
+      return d;
+    });
+    outer.appendChild(dotsRow);
+  }
+
+  go(0);
+  return outer;
+}
+
+// Builds one carousel slide for an axolotl variant group.
+function _buildAxoSlide(variantId, pets, freePonds) {
+  const v = getPetVariant(variantId);
+  if (!v) return document.createElement('div');
+  const count   = pets.length;
+  const placed  = pets.filter(p => petCurrentPond(p.uid));
+  const unplaced = pets.filter(p => !petCurrentPond(p.uid));
+
+  const slide = document.createElement('div');
+  slide.style.cssText = 'text-align:center;padding-bottom:10px;';
+
+  // Sprite: 128×256 sheet, 16×16 px/frame → 4× = 64×64 display. Row 9 = facing camera.
+  const sprite = document.createElement('div');
+  sprite.style.cssText = `width:64px;height:64px;margin:0 auto 8px;image-rendering:pixelated;background:url('img/axolotl/${variantId}.png') no-repeat 0 -576px/512px 1024px;`;
+  slide.appendChild(sprite);
+
+  const rEl = document.createElement('div');
+  rEl.style.cssText = `font-size:10px;color:${RARITY_COLOR[v.rarity]};text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;`;
+  rEl.textContent = RARITY_LABEL[v.rarity];
+  slide.appendChild(rEl);
+
+  const nEl = document.createElement('div');
+  nEl.style.cssText = 'font-size:13px;font-weight:bold;color:#e8e8e8;margin-bottom:3px;';
+  nEl.textContent = count > 1 ? `${v.name}  ×${count}` : v.name;
+  slide.appendChild(nEl);
+
+  const stEl = document.createElement('div');
+  stEl.style.cssText = 'font-size:10px;color:var(--c-muted);margin-bottom:10px;';
+  stEl.textContent = placed.length
+    ? `${placed.length} in pond${unplaced.length ? ` · ${unplaced.length} in bag` : ''}`
+    : `${unplaced.length} in bag`;
+  slide.appendChild(stEl);
+
+  const acts = document.createElement('div');
+  acts.style.cssText = 'display:flex;gap:4px;justify-content:center;flex-wrap:wrap;';
+
+  if (unplaced.length && freePonds.length) {
+    const b = document.createElement('button');
+    b.className = 'upgrade-buy pet-card-btn';
+    b.textContent = 'Place';
+    b.addEventListener('click', () => enterPetPlaceMode(unplaced[0].uid));
+    acts.appendChild(b);
+  } else if (unplaced.length) {
+    const b = document.createElement('button');
+    b.className = 'upgrade-buy pet-card-btn';
+    b.textContent = 'No tank';
+    b.disabled = true;
+    b.title = 'Walk to a pond and press E, or build a Tank';
+    acts.appendChild(b);
+  }
+  if (placed.length) {
+    const b = document.createElement('button');
+    b.className = 'upgrade-buy pet-card-btn';
+    b.textContent = 'Remove';
+    b.addEventListener('click', () => { unassignPet(placed[0].uid); renderPetsPanel(); });
+    acts.appendChild(b);
+  }
+  const sellUid = (unplaced[0] || placed[0]).uid;
+  const sb = document.createElement('button');
+  sb.className = 'upgrade-buy pet-card-btn pet-sell-btn';
+  sb.textContent = `Sell $${PET_SELL_PRICE[v.rarity]}`;
+  sb.addEventListener('click', () => { sellPet(sellUid); renderPetsPanel(); });
+  acts.appendChild(sb);
+
+  slide.appendChild(acts);
+  return slide;
+}
+
+// Builds one carousel slide for a frog variant group.
+function _buildFrogSlide(variantId, frogs) {
+  const v = FROG_VARIANTS.find(f => f.id === variantId) || { name: variantId, rarity: 'common' };
+  const count   = frogs.length;
+  const placed  = frogs.filter(f => isFrogPlaced(f.uid));
+  const unplaced = frogs.filter(f => !isFrogPlaced(f.uid));
+
+  const slide = document.createElement('div');
+  slide.style.cssText = 'text-align:center;padding-bottom:10px;';
+
+  // Sprite: 512×512 sheet, 32×32 px/frame → 2× = 64×64. Row 0 col 0 = facing camera idle.
+  const sprite = document.createElement('div');
+  sprite.style.cssText = `width:64px;height:64px;margin:0 auto 8px;image-rendering:pixelated;background:url('img/frogs/${variantId}.png') no-repeat 0 0/1024px 1024px;`;
+  slide.appendChild(sprite);
+
+  const rEl = document.createElement('div');
+  rEl.style.cssText = `font-size:10px;color:${RARITY_COLOR[v.rarity]};text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;`;
+  rEl.textContent = RARITY_LABEL[v.rarity];
+  slide.appendChild(rEl);
+
+  const nEl = document.createElement('div');
+  nEl.style.cssText = 'font-size:13px;font-weight:bold;color:#e8e8e8;margin-bottom:3px;';
+  nEl.textContent = count > 1 ? `${v.name} Frog  ×${count}` : `${v.name} Frog`;
+  slide.appendChild(nEl);
+
+  const stEl = document.createElement('div');
+  stEl.style.cssText = 'font-size:10px;color:var(--c-muted);margin-bottom:10px;';
+  stEl.textContent = placed.length
+    ? `${placed.length} on island${unplaced.length ? ` · ${unplaced.length} in bag` : ''}`
+    : `${unplaced.length} in bag`;
+  slide.appendChild(stEl);
+
+  const acts = document.createElement('div');
+  acts.style.cssText = 'display:flex;gap:4px;justify-content:center;flex-wrap:wrap;align-items:center;';
+
+  if (unplaced.length) {
+    const b = document.createElement('button');
+    b.className = 'upgrade-buy pet-card-btn';
+    b.textContent = 'Place';
+    b.addEventListener('click', () => { enterFrogPlaceMode(unplaced[0].uid); setBuildMenuOpen(false); });
+    acts.appendChild(b);
+  }
+  if (placed.length) {
+    const h = document.createElement('span');
+    h.style.cssText = 'font-size:10px;color:var(--c-muted);';
+    h.textContent = 'Walk up & press E';
+    acts.appendChild(h);
+  }
+
+  slide.appendChild(acts);
+  return slide;
+}
 
 function renderPetsPanel() {
   const panel = document.getElementById('petsPanel');
@@ -2046,97 +2234,29 @@ function renderPetsPanel() {
   collTitle.textContent = `Collection (${game.pets.length} owned · ${game.petPullsTotal} pulls)`;
   panel.appendChild(collTitle);
 
+  // ── Axolotl carousel ──
   if (game.pets.length === 0) {
     const hint = document.createElement('div');
     hint.className = 'panel-hint';
-    hint.textContent = 'Pull your first axolotl to start your collection!';
+    hint.textContent = 'Pull from the gacha to start your collection!';
     panel.appendChild(hint);
-    return;
-  }
-
-  const allPonds = listAvailablePonds();
-  const freePonds = allPonds.filter(p => p.count < p.capacity);
-
-  // Group by variant
-  const axoByVariant = {};
-  for (const pet of game.pets) {
-    if (!axoByVariant[pet.variant]) axoByVariant[pet.variant] = [];
-    axoByVariant[pet.variant].push(pet);
-  }
-
-  const grid = document.createElement('div');
-  grid.className = 'pets-collection-grid';
-  for (const [variantId, pets] of Object.entries(axoByVariant)) {
-    const v = getPetVariant(variantId);
-    if (!v) continue;
-    const count = pets.length;
-    const placed  = pets.filter(p => petCurrentPond(p.uid));
-    const unplaced = pets.filter(p => !petCurrentPond(p.uid));
-
-    const card = document.createElement('div');
-    card.className = 'pets-collection-card';
-    card.style.position = 'relative';
-
-    if (count > 1) {
-      const badge = document.createElement('div');
-      badge.style.cssText = 'position:absolute;top:4px;right:6px;font-size:10px;font-weight:bold;color:var(--c-coin);';
-      badge.textContent = `${count}x`;
-      card.appendChild(badge);
+  } else {
+    const allPonds  = listAvailablePonds();
+    const freePonds = allPonds.filter(p => p.count < p.capacity);
+    const axoByVariant = {};
+    for (const pet of game.pets) {
+      if (!axoByVariant[pet.variant]) axoByVariant[pet.variant] = [];
+      axoByVariant[pet.variant].push(pet);
     }
-
-    const nameEl = document.createElement('div');
-    nameEl.className = 'pet-variant-name';
-    nameEl.style.color = RARITY_COLOR[v.rarity];
-    nameEl.textContent = v.name;
-    card.appendChild(nameEl);
-
-    const statusEl = document.createElement('div');
-    statusEl.style.cssText = 'font-size:10px;color:var(--c-muted);margin-bottom:6px';
-    statusEl.textContent = placed.length > 0
-      ? `${placed.length} in pond${unplaced.length > 0 ? ` · ${unplaced.length} in bag` : ''}`
-      : `${unplaced.length} in bag`;
-    card.appendChild(statusEl);
-
-    const actRow = document.createElement('div');
-    actRow.className = 'pet-card-actions';
-
-    if (unplaced.length > 0 && freePonds.length > 0) {
-      const placeBtn = document.createElement('button');
-      placeBtn.className = 'upgrade-buy pet-card-btn';
-      placeBtn.textContent = 'Place';
-      placeBtn.addEventListener('click', () => { enterPetPlaceMode(unplaced[0].uid); });
-      actRow.appendChild(placeBtn);
-    } else if (unplaced.length > 0 && freePonds.length === 0) {
-      const noTankBtn = document.createElement('button');
-      noTankBtn.className = 'upgrade-buy pet-card-btn';
-      noTankBtn.textContent = 'No tank';
-      noTankBtn.disabled = true;
-      noTankBtn.title = 'Walk to a pond and press E, or build a Tank';
-      actRow.appendChild(noTankBtn);
-    }
-    if (placed.length > 0) {
-      const removeBtn = document.createElement('button');
-      removeBtn.className = 'upgrade-buy pet-card-btn';
-      removeBtn.textContent = 'Remove';
-      removeBtn.addEventListener('click', () => { unassignPet(placed[0].uid); renderPetsPanel(); });
-      actRow.appendChild(removeBtn);
-    }
-
-    const sellUid = (unplaced[0] || placed[0]).uid;
-    const sellBtn = document.createElement('button');
-    sellBtn.className = 'upgrade-buy pet-card-btn pet-sell-btn';
-    sellBtn.textContent = `Sell $${PET_SELL_PRICE[v.rarity]}`;
-    sellBtn.addEventListener('click', () => { sellPet(sellUid); renderPetsPanel(); });
-    actRow.appendChild(sellBtn);
-
-    card.appendChild(actRow);
-    grid.appendChild(card);
+    const axoSlides = Object.entries(axoByVariant)
+      .map(([id, pets]) => _buildAxoSlide(id, pets, freePonds))
+      .filter(Boolean);
+    panel.appendChild(_buildPetCarousel(axoSlides));
   }
-  panel.appendChild(grid);
 
   // ── Frogs section ──────────────────────────────────────────────────────────
   const frogSep = document.createElement('hr');
-  frogSep.style.cssText = 'border:none;border-top:1px solid rgba(255,255,255,0.08);margin:16px 0 12px';
+  frogSep.style.cssText = 'border:none;border-top:1px solid rgba(255,255,255,0.08);margin:14px 0 10px';
   panel.appendChild(frogSep);
 
   const frogHeader = document.createElement('div');
@@ -2145,78 +2265,25 @@ function renderPetsPanel() {
   panel.appendChild(frogHeader);
 
   const frogDesc = document.createElement('div');
-  frogDesc.style.cssText = 'font-size:11px;color:var(--c-muted);margin-bottom:10px;line-height:1.4';
+  frogDesc.style.cssText = 'font-size:11px;color:var(--c-muted);margin-bottom:6px;line-height:1.4';
   frogDesc.textContent = 'Pull from the gacha above! Place on any land tile — they hop around and react to rare catches nearby.';
   panel.appendChild(frogDesc);
 
-  // Owned frogs — grouped by variant, stacked count
   const ownedFrogs = (game.frogs || []);
-  if (ownedFrogs.length > 0) {
-    const ownedHeader = document.createElement('div');
-    ownedHeader.className = 'pets-section-title';
-    ownedHeader.style.marginTop = '14px';
-    ownedHeader.textContent = `Your Frogs (${ownedFrogs.length})`;
-    panel.appendChild(ownedHeader);
-
-    // Group by variant
+  if (ownedFrogs.length === 0) {
+    const hint = document.createElement('div');
+    hint.className = 'panel-hint';
+    hint.textContent = 'No frogs yet — try your luck in the gacha!';
+    panel.appendChild(hint);
+  } else {
     const byVariant = {};
     for (const frog of ownedFrogs) {
       if (!byVariant[frog.variant]) byVariant[frog.variant] = [];
       byVariant[frog.variant].push(frog);
     }
-
-    const frogGrid = document.createElement('div');
-    frogGrid.className = 'pets-collection-grid';
-    for (const [variantId, frogs] of Object.entries(byVariant)) {
-      const v = FROG_VARIANTS.find(f => f.id === variantId) || { name: variantId, rarity: 'common' };
-      const count = frogs.length;
-      const unplaced = frogs.filter(f => !isFrogPlaced(f.uid));
-
-      const card = document.createElement('div');
-      card.className = 'pets-collection-card';
-      card.style.position = 'relative';
-
-      if (count > 1) {
-        const badge = document.createElement('div');
-        badge.style.cssText = 'position:absolute;top:4px;right:6px;font-size:10px;font-weight:bold;color:var(--c-coin);';
-        badge.textContent = `${count}x`;
-        card.appendChild(badge);
-      }
-
-      const nameEl = document.createElement('div');
-      nameEl.className = 'pet-variant-name';
-      nameEl.style.color = RARITY_COLOR[v.rarity] || '#ccc';
-      nameEl.textContent = v.name + ' Frog';
-      card.appendChild(nameEl);
-
-      const statusEl = document.createElement('div');
-      statusEl.style.cssText = 'font-size:10px;color:var(--c-muted);margin-bottom:6px';
-      const placedCount = frogs.length - unplaced.length;
-      statusEl.textContent = placedCount > 0
-        ? `${placedCount} on island${unplaced.length > 0 ? `, ${unplaced.length} in bag` : ''}`
-        : `${unplaced.length} in bag`;
-      card.appendChild(statusEl);
-
-      const actRow = document.createElement('div');
-      actRow.className = 'pet-card-actions';
-
-      if (unplaced.length > 0) {
-        const placeBtn = document.createElement('button');
-        placeBtn.className = 'upgrade-buy pet-card-btn';
-        placeBtn.textContent = 'Place';
-        placeBtn.addEventListener('click', () => { enterFrogPlaceMode(unplaced[0].uid); setBuildMenuOpen(false); });
-        actRow.appendChild(placeBtn);
-      }
-      if (placedCount > 0) {
-        const hintEl = document.createElement('div');
-        hintEl.style.cssText = 'font-size:10px;color:var(--c-muted);line-height:1.4;';
-        hintEl.textContent = 'Walk up & press E';
-        actRow.appendChild(hintEl);
-      }
-
-      card.appendChild(actRow);
-      frogGrid.appendChild(card);
-    }
-    panel.appendChild(frogGrid);
+    const frogSlides = Object.entries(byVariant)
+      .map(([id, frogs]) => _buildFrogSlide(id, frogs))
+      .filter(Boolean);
+    panel.appendChild(_buildPetCarousel(frogSlides));
   }
 }
