@@ -130,20 +130,19 @@ function rotateBeltDir() {
   buildMode.beltDir = (buildMode.beltDir + 1) % BELT_DIRS.length;
 }
 
-// Enters build mode and opens the menu on first call; while build mode is
-// already active, just toggles the menu panel — placing stays usable with
-// it closed. Shared by the B key and the mobile Build button.
+// Enters build mode on first call; exits it on second call.
+// Shared by the B key and the mobile Build button.
 function triggerBuildToggle() {
   if (!buildMode.active) {
     buildMode.active = true;
     buildMode.menuOpen = true;
+    setBuildMenuOpen(true);
+    closeBlockPopup();
     tutorialNotify('build_open');
+    updateBuildHintUI();
   } else {
-    buildMode.menuOpen = !buildMode.menuOpen;
+    exitBuildMode();
   }
-  setBuildMenuOpen(buildMode.menuOpen);
-  closeBlockPopup();
-  updateBuildHintUI();
 }
 
 // Cancels everything build-related at once — box mode, any in-progress

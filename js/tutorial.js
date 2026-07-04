@@ -64,7 +64,7 @@ const TUTORIAL_PHASE2_STEPS = [
   },
   {
     id: 'close_build',
-    text: 'Path connected! Exit Build Mode to watch fish sell automatically — press <span class="tutorial-key">B</span> again, tap the ✕ button, or press <span class="tutorial-key">Esc</span>.',
+    text: 'Path connected! Exit Build Mode to watch fish sell automatically — press <span class="tutorial-key">B</span> or <span class="tutorial-key">Esc</span>, or tap the ✕ button.',
     target: () => null,
   },
 ];
