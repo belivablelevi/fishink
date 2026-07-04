@@ -67,9 +67,13 @@ function prestigeSpeedMult() { return Math.max(0.08, 1 - prestigeLevels.fasterSt
 function prestigeStartCash() { return 50 + prestigeLevels.startCash * STARTCASH_PER_LEVEL; }
 function prestigeUnlockDiscount() { return prestigeLevels.unlockGate * 5000; }
 
+let _prestigeInProgress = false;
+
 function doPrestige() {
+  if (_prestigeInProgress) return false;
   const earned = tokensAvailableOnReset();
   if (earned < 1) { queueToast('Need more lifetime earnings to prestige', '#9aa0a8'); return false; }
+  _prestigeInProgress = true;
   prestigeTokens.total += earned;
   savePrestige();
   // Fade out to black before the reset so it feels like a deliberate moment

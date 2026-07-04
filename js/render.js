@@ -1617,7 +1617,7 @@ function drawWorkers(ctx) {
     if (sx < -S * 2 || sx > VW + S * 2 || sy < -S * 2 || sy > VH + S * 2) continue;
 
     if (w.state === 'idle') {
-      const ws = typeof _workerWalkCache !== 'undefined' ? _workerWalkCache.get(w.uid) : null;
+      const ws = _workerWalkCache.get(w.uid);
       const walkPhase = (ws && ws.walkTimer <= 0) ? ws.walkPhase : 0;
       const facing    = ws ? ws.facing : 1;
       _drawMiniPlayer(ctx, sx, sy, 0.45, walkPhase, facing);
@@ -2239,7 +2239,6 @@ function drawToasts(ctx, canvas, dt) {
     t.age = (t.age || 0) + dt;
 
     const isMilestone = t.type === 'milestone' || t.type === 'achievement';
-    const totalLife   = isMilestone ? 3.5 : 2.2;
 
     // Eased opacity: ease-in over 0.1s, ease-out over 0.35s
     const entryAlpha = Math.min(1, t.age / 0.1);
@@ -2258,7 +2257,7 @@ function drawToasts(ctx, canvas, dt) {
     }
 
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    const tw = ctx.measureText(t.msg).width;
+    const tw = t.tw ?? (t.tw = ctx.measureText(t.msg).width);
     const padX = isMilestone ? 12 : 10;
     const h    = isMilestone ? 30 : 26;
     const x    = 16 - slideOffset;

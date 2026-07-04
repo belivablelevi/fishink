@@ -954,7 +954,7 @@ const MACHINE_DING_INTERVAL = 0.8; // seconds
 
 function sfxForMachine(id) {
   const now = game.time;
-  const last = _machineDingCooldown[id] || 0;
+  const last = _machineDingCooldown[id] ?? game.time;
   if (now - last < MACHINE_DING_INTERVAL) return null;
   _machineDingCooldown[id] = now;
   if (id === B_WASHER)  return sfxWasher;

@@ -94,7 +94,8 @@ function audioUnlock() {
   if (!AUDIO.ctx) { audioInit(); return; }
   if (AUDIO.ctx.state !== 'running') AUDIO.ctx.resume();
   if (AUDIO.music && AUDIO.music.paused) AUDIO.music.play().catch(() => {});
-  // Night synth is Web Audio oscillators — they resume when ctx resumes, no action needed.
+  // If startAmbient ran before the AudioContext existed, the synth was never started — retry now.
+  if (!AUDIO.nightSynthGain) _startNightSynth();
 }
 window.addEventListener('pointerdown', audioUnlock);
 window.addEventListener('keydown', audioUnlock);
