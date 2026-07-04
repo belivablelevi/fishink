@@ -871,8 +871,14 @@ function renderLeaderboardPanel() {
     if (result.error) {
       const err = document.createElement('div');
       err.className = 'panel-hint';
-      err.textContent = 'Could not reach the leaderboard. Check your connection.';
+      err.textContent = 'Leaderboard is temporarily unavailable — the server may be down. Try again in a moment.';
       leaderboardPanelEl.appendChild(err);
+      const retryBtn = document.createElement('button');
+      retryBtn.className = 'upgrade-buy';
+      retryBtn.textContent = 'Retry';
+      retryBtn.style.cssText = 'margin-top:8px;display:block;';
+      retryBtn.addEventListener('click', renderLeaderboardPanel);
+      leaderboardPanelEl.appendChild(retryBtn);
       return;
     }
     renderLeaderboardList(result);
@@ -926,6 +932,13 @@ function renderLeaderboardList(result) {
 
   const list = document.createElement('div');
   list.className = 'lb-list';
+
+  if (!top.length) {
+    const empty = document.createElement('div');
+    empty.className = 'panel-hint';
+    empty.textContent = 'No scores yet — be the first!';
+    leaderboardPanelEl.appendChild(empty);
+  }
 
   top.forEach((row, i) => {
     const rankRow = document.createElement('div');

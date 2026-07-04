@@ -194,8 +194,7 @@ function _randomIslandTile(isl) {
     for (let dr = -7; dr <= 7; dr++) {
       const c = islC + dc, r = islR + dr;
       if (c >= 0 && c < WORLD_COLS && r >= 0 && r < WORLD_ROWS) {
-        const t = tileAt(c, r);
-        if (t === T_EMPTY || t === T_SHORE) candidates.push({ c, r });
+        if (_isLand(tileAt(c, r))) candidates.push({ c, r });
       }
     }
   }

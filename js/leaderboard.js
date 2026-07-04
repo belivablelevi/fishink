@@ -213,7 +213,8 @@ async function fetchLeaderboard() {
       `${SUPABASE_URL}/rest/v1/leaderboard_scores?select=client_id,name,lifetime_earned&order=lifetime_earned.desc&limit=50`,
       { headers: leaderboardHeaders() }
     );
-    const top = topRes.ok ? await topRes.json() : [];
+    if (!topRes.ok) return { configured: true, error: true, status: topRes.status };
+    const top = await topRes.json();
 
     const meRes = await fetch(
       `${SUPABASE_URL}/rest/v1/leaderboard_scores?select=name,lifetime_earned&client_id=eq.${clientId}`,
