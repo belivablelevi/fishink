@@ -376,7 +376,8 @@ function simUpdate(dt) {
         st.processing = false;
         const bundleValue = st.carrying.reduce((s, f) => s + f.value, 0) * 1.5 * machineValueMult(st.level || 0);
         st.item = { species: `${st.carrying.length}-Fish Bundle`, category: 'Bundle', size: 'Bundle',
-                    value: Math.round(bundleValue * 10) / 10, color: '#e8a030', sx: 0, sy: 0, mults: [],
+                    value: Math.round(bundleValue * 10) / 10, color: '#e8a030', sx: 0, sy: 0,
+                    mults: ['Washer', 'Icer', 'Smoker', 'Stamper'],
                     wigglePhase: 0, isBundle: true, count: st.carrying.length };
         st.carrying = [];
         stateAt(c, r).flashAnim = game.time + 0.5;
