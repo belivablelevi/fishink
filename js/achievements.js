@@ -22,7 +22,11 @@ function checkAchievements() {
     if (game.unlockedAchievements.has(a.id)) continue;
     if (!a.check()) continue;
     game.unlockedAchievements.add(a.id);
-    awardCash(a.reward, `Achievement unlocked: ${a.name} (+$${a.reward})`, '#f0c419');
+    game.cash += a.reward;
+    game.lifetimeEarned += a.reward;
+    cashGuard.grant(a.reward);
+    trackEarn(a.reward);
+    toasts.push({ msg: `Achievement: ${a.name}  +$${a.reward}`, color: '#f0c419', life: 3.5, type: 'achievement' });
     if (ZOOM > MACHINE_SFX_ZOOM_THRESHOLD) sfxAchievement();
   }
 }

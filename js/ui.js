@@ -371,6 +371,7 @@ function setBuildMenuOpen(open) {
   // stays visible/reachable (see style.css) since it's the only way to
   // close the panel while staying in placement mode.
   document.body.classList.toggle('build-menu-open', open);
+  if (!open) _petsPullResult = null; // clear stale pull result on menu close
   if (open) {
     resetJoystick();
     refreshBuildPanel();

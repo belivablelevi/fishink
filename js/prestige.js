@@ -72,6 +72,13 @@ function doPrestige() {
   if (earned < 1) { queueToast('Need more lifetime earnings to prestige', '#9aa0a8'); return false; }
   prestigeTokens.total += earned;
   savePrestige();
-  resetRun(); // soft reset — keeps the tokens just banked; PRESTIGE_KEY is untouched
+  // Fade out to black before the reset so it feels like a deliberate moment
+  const veil = document.createElement('div');
+  veil.style.cssText = 'position:fixed;inset:0;background:#000;opacity:0;z-index:9999;pointer-events:none;transition:opacity 0.6s ease';
+  document.body.appendChild(veil);
+  requestAnimationFrame(() => { veil.style.opacity = '1'; });
+  setTimeout(() => {
+    resetRun(); // soft reset — keeps the tokens just banked; PRESTIGE_KEY is untouched
+  }, 650);
   return true;
 }

@@ -33,6 +33,13 @@ const fisherTimers = {};
 const manualCast = { active: false, timer: 0, duration: 0, wx: 0, wy: 0 };
 const toasts = [];
 
+// Screen-edge flash intensity when a rare/legendary fish is caught (0–1)
+let rareFlashIntensity = 0;
+
+// Lifetime-earn milestones — celebrated once per session with a gold toast
+const CASH_MILESTONES = [1000, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000, 5000000];
+const _celebratedMilestones = new Set();
+
 // Floating catch labels that rise above the catch point and fade out
 const floatTexts = [];
 const FLOAT_TEXT_SPEED = 55; // world-pixels per second, rising
@@ -73,6 +80,18 @@ function awardCash(amount, msg, color, volMult = 1) {
   trackEarn(amount);
   if (msg) queueToast(msg, color);
   sfxCoin(volMult);
+  checkCashMilestones();
+}
+
+function checkCashMilestones() {
+  for (const m of CASH_MILESTONES) {
+    if (!_celebratedMilestones.has(m) && game.lifetimeEarned >= m) {
+      _celebratedMilestones.add(m);
+      const label = m >= 1000000 ? `$${(m/1000000).toFixed(0)}M` : m >= 1000 ? `$${(m/1000).toFixed(0)}K` : `$${m}`;
+      toasts.push({ msg: `Milestone: ${label} earned!`, color: '#f0c419', life: 3.5, type: 'milestone' });
+      sfxUpgrade();
+    }
+  }
 }
 
 // ─── Efficiency tracking — sliding 60s window for the Stats panel's $/min,
@@ -913,6 +932,7 @@ function completeCast() {
   spawnParticles(manualCast.wx, manualCast.wy, 'splash', 6);
   if (rare) {
     game.rareCatches++;
+    rareFlashIntensity = 1.0;
     spawnParticles(manualCast.wx, manualCast.wy, 'sparkle', 10);
     if (typeof triggerFrogShock === 'function') triggerFrogShock(manualCast.wx, manualCast.wy);
   }

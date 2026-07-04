@@ -761,8 +761,10 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   border-radius: 10px;
   box-shadow: 0 14px 32px rgba(0,0,0,0.5);
   padding: 10px 12px;
+  transition: opacity 0.13s ease, transform 0.13s ease;
+  transform-origin: top left;
 }
-.sound-panel.hidden { display: none; }
+.sound-panel.hidden { opacity: 0; pointer-events: none; transform: translateY(-6px) scale(0.98); }
 .sound-panel .sound-row {
   display: flex;
   align-items: center;
@@ -807,8 +809,10 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   border-radius: 10px;
   box-shadow: 0 14px 32px rgba(0,0,0,0.5);
   padding: 10px;
+  transition: opacity 0.13s ease, transform 0.13s ease;
+  transform-origin: top left;
 }
-.game-menu-panel.hidden { display: none; }
+.game-menu-panel.hidden { opacity: 0; pointer-events: none; transform: translateY(-6px) scale(0.98); }
 .game-menu-btn {
   appearance: none;
   border: 1px solid var(--c-border);
@@ -871,8 +875,10 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   border-radius: 10px;
   box-shadow: 0 14px 32px rgba(0,0,0,0.5);
   padding: 10px 12px;
+  transition: opacity 0.13s ease, transform 0.13s ease;
+  transform-origin: bottom left;
 }
-.machines-panel.hidden { display: none; }
+.machines-panel.hidden { opacity: 0; pointer-events: none; transform: translateY(6px) scale(0.98); }
 .machines-panel .machines-group-title {
   font-size: 11px;
   font-weight: 700;
@@ -1431,3 +1437,60 @@ body.touch-active .build-hint { right: 90px; bottom: 20px; }
 /* Sell button — muted red-toned style */
 .pet-sell-btn { background: rgba(220,60,60,0.18) !important; color: #e87070 !important; }
 .pet-sell-btn:hover { background: rgba(220,60,60,0.32) !important; }
+
+/* ─── Global polish: button press feedback ──────────────────────────────────
+   Every interactive button gets a subtle downward press on :active so clicking
+   feels physical. The transform is fast (0.06s) so it doesn't delay feedback. */
+.game-menu-btn,
+.hud-btn,
+.upgrade-buy,
+.cat-nav-btn,
+.item-card,
+.tab,
+.leaderboard-close-btn,
+.sound-toggle-btn,
+.game-menu-toggle-btn,
+.machines-toggle-btn,
+.leaderboard-toggle-btn,
+.menu-close {
+  transition-property: background, color, border-color, transform, box-shadow;
+  transition-duration: 0.15s;
+}
+
+.game-menu-btn:active,
+.hud-btn:active:not(.disabled),
+.upgrade-buy:active,
+.cat-nav-btn:active,
+.item-card:active:not(.disabled):not(.locked),
+.sound-toggle-btn:active,
+.game-menu-toggle-btn:active,
+.machines-toggle-btn:active,
+.leaderboard-toggle-btn:active,
+.menu-close:active,
+.leaderboard-close-btn:active {
+  transform: scale(0.94) translateY(1px);
+  transition-duration: 0.06s;
+}
+
+/* Tab press — squish down toward the panel */
+.tab:active:not(.active) {
+  transform: translateY(2px);
+  transition-duration: 0.06s;
+}
+
+/* ─── Block popup upgrade button — add transform to existing transition ────── */
+.block-popup .upgrade-buy {
+  transition-property: background, color, border-color, transform;
+}
+
+/* ─── Cash HUD pulse animation ──────────────────────────────────────────────
+   The JS adds .cash-hud-pulse on every cash increase; the existing JS already
+   handles adding/removing the class. This makes the pulse look softer. */
+@keyframes cashPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(77,202,124,0.5); }
+  60%  { box-shadow: 0 0 0 6px rgba(77,202,124,0); }
+  100% { box-shadow: 0 0 0 0 rgba(77,202,124,0); }
+}
+.cash-hud-pulse {
+  animation: cashPulse 0.5s ease-out forwards !important;
+}

@@ -16,7 +16,6 @@ const SFX_FILES = {
   drop:      'audio/sfx-drop.wav',
   achievement: 'audio/sfx-achievement.wav',
   teleport:  'audio/sfx-teleport.wav',
-  placeholder: 'audio/sfx-placeholder.m4a',
 };
 
 // Plain <audio> elements, not fetch()+decodeAudioData — fetch() of local
@@ -95,7 +94,7 @@ function audioUnlock() {
   if (!AUDIO.ctx) { audioInit(); return; }
   if (AUDIO.ctx.state !== 'running') AUDIO.ctx.resume();
   if (AUDIO.music && AUDIO.music.paused) AUDIO.music.play().catch(() => {});
-  if (AUDIO.nightMusic && AUDIO.nightMusic.paused) AUDIO.nightMusic.play().catch(() => {});
+  // Night synth is Web Audio oscillators — they resume when ctx resumes, no action needed.
 }
 window.addEventListener('pointerdown', audioUnlock);
 window.addEventListener('keydown', audioUnlock);
@@ -117,36 +116,78 @@ function startAmbient() {
   AUDIO.music = music;
   music.play().catch(() => {}); // resumed by audioUnlock if this is blocked
 
-  // Night track — add audio/night-song.wav to enable; starts silent and fades
-  // in at night. If the file is missing the element fails silently and the day
-  // track keeps playing.
-  const night = new Audio('audio/night-song.wav');
-  night.loop = true;
-  night.preload = 'auto';
-  night.volume = 0;
-  night.muted = AUDIO.musicMuted;
-  AUDIO.nightMusic = night;
-  night.play().catch(() => {});
+  // Night ambient — synthesized drone using Web Audio so no file is needed.
+  // A pair of detuned oscillators (fundamental + fifth) at very low volume
+  // create a soft, atmospheric hum. A slow LFO drifts the gain for gentle
+  // movement. The "nightMusic" volume property is repurposed as a gain target
+  // so updateMusicForTimeOfDay() crossfades it exactly like a real track.
+  AUDIO.nightSynthGain = null;
+  AUDIO.nightSynthVol = 0; // mirrors what nightMusic.volume would be
+  _startNightSynth();
+}
+
+// ─── Synthesized night ambient ───────────────────────────────────────────────
+// Two detuned oscillators (root + perfect fifth) through a slow tremolo LFO,
+// creating a soft atmospheric hum without needing a file on disk.
+function _startNightSynth() {
+  if (!AUDIO.ctx) return;
+  const ctx = AUDIO.ctx;
+  const masterGain = ctx.createGain();
+  masterGain.gain.value = 0; // starts silent; crossfaded by updateMusicForTimeOfDay
+  masterGain.connect(AUDIO.master);
+  AUDIO.nightSynthGain = masterGain;
+
+  // Slow LFO for gentle volume tremolo (0.08 Hz, ±15%)
+  const lfo = ctx.createOscillator();
+  lfo.type = 'sine';
+  lfo.frequency.value = 0.08;
+  const lfoGain = ctx.createGain();
+  lfoGain.gain.value = 0.035;
+  lfo.connect(lfoGain);
+  lfoGain.connect(masterGain.gain);
+  lfo.start();
+
+  // Two detuned oscillators — fundamental (55 Hz, A1) + fifth (82.5 Hz)
+  const freqs = [55, 82.5, 110];
+  const vols  = [0.08, 0.05, 0.03];
+  for (let i = 0; i < freqs.length; i++) {
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = freqs[i] + (Math.random() - 0.5) * 0.6; // slight detune
+    const g = ctx.createGain();
+    g.gain.value = vols[i];
+    osc.connect(g);
+    g.connect(masterGain);
+    osc.start();
+  }
 }
 
 // Called each sim frame — crossfades between day/night tracks based on dayTime
 // fraction p (0–1). Night range: p < 0.18 (pre-dawn) or p > 0.65 (dusk onward).
 function updateMusicForTimeOfDay(p, dt) {
-  if (!AUDIO.music || !AUDIO.nightMusic || AUDIO.musicMuted) return;
-  const isNight   = p < 0.18 || p > 0.65;
+  if (AUDIO.musicMuted) return;
+  const isNight     = p < 0.18 || p > 0.65;
   const targetDay   = isNight ? 0   : 0.4;
-  const targetNight = isNight ? 0.4 : 0;
+  const targetNight = isNight ? 0.22 : 0;
   const rate = dt * 0.12; // full crossfade ≈ 3 s
   const lerp = (cur, tgt) => Math.abs(cur - tgt) < rate ? tgt : cur + Math.sign(tgt - cur) * rate;
-  AUDIO.music.volume      = lerp(AUDIO.music.volume,      targetDay);
-  AUDIO.nightMusic.volume = lerp(AUDIO.nightMusic.volume, targetNight);
+
+  if (AUDIO.music) {
+    AUDIO.music.volume = lerp(AUDIO.music.volume, targetDay);
+  }
+
+  // Night synth: drive the gain node directly
+  if (AUDIO.nightSynthGain) {
+    AUDIO.nightSynthVol = lerp(AUDIO.nightSynthVol, targetNight);
+    AUDIO.nightSynthGain.gain.value = AUDIO.musicMuted ? 0 : AUDIO.nightSynthVol;
+  }
 }
 
 // ─── Sound settings (toggled from the speaker menu, see ui.js) ─────────────────
 function setMusicMuted(v) {
   AUDIO.musicMuted = v;
-  if (AUDIO.music)      AUDIO.music.muted      = v;
-  if (AUDIO.nightMusic) AUDIO.nightMusic.muted  = v;
+  if (AUDIO.music) AUDIO.music.muted = v;
+  if (AUDIO.nightSynthGain) AUDIO.nightSynthGain.gain.value = v ? 0 : AUDIO.nightSynthVol;
 }
 function setSfxMuted(v)  { AUDIO.sfxMuted  = v; }
 function setSellMuted(v) { AUDIO.sellMuted = v; }

@@ -218,6 +218,7 @@ function draw(ctx, canvas, dt) {
   // HUD (unscaled)
   drawHUD(ctx, canvas, dt);
   if (!TUT.active) drawHeldFish(ctx, canvas);
+  drawRareFlash(ctx, canvas, dt);
   drawToasts(ctx, canvas, dt);
   drawHoverTooltip(ctx, canvas);
   drawTutorialArrow(ctx, canvas);
@@ -2219,18 +2220,63 @@ function drawToasts(ctx, canvas, dt) {
     const t = toasts[i];
     t.life -= dt;
     if (t.life <= 0) { toasts.splice(i, 1); continue; }
-    const alpha = Math.min(1, t.life * 2.5);
+    t.age = (t.age || 0) + dt;
+
+    const isMilestone = t.type === 'milestone' || t.type === 'achievement';
+    const totalLife   = isMilestone ? 3.5 : 2.2;
+
+    // Eased opacity: ease-in over 0.1s, ease-out over 0.35s
+    const entryAlpha = Math.min(1, t.age / 0.1);
+    const exitAlpha  = t.life < 0.35 ? t.life / 0.35 : 1;
+    const alpha      = entryAlpha * exitAlpha;
+
+    // Slide in from left: starts 18px off, arrives at 0 by 0.12s
+    const slideOffset = Math.max(0, (1 - t.age / 0.12)) * 18;
+
     ctx.globalAlpha = alpha;
-    ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif';
+
+    if (isMilestone) {
+      ctx.font = 'bold 14px "Segoe UI", system-ui, sans-serif';
+    } else {
+      ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif';
+    }
+
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     const tw = ctx.measureText(t.msg).width;
-    ctx.fillStyle = 'rgba(8,16,8,0.82)';
-    roundRect(ctx, 16, y - 14, tw + 22, 28, 6); ctx.fill();
+    const padX = isMilestone ? 12 : 10;
+    const h    = isMilestone ? 30 : 26;
+    const x    = 16 - slideOffset;
+
+    ctx.fillStyle = isMilestone ? 'rgba(30,22,0,0.88)' : 'rgba(8,16,8,0.82)';
+    roundRect(ctx, x, y - h / 2, tw + padX * 2, h, 6); ctx.fill();
+
+    if (isMilestone) {
+      ctx.strokeStyle = t.color + '60';
+      ctx.lineWidth = 1;
+      roundRect(ctx, x, y - h / 2, tw + padX * 2, h, 6); ctx.stroke();
+    }
+
     ctx.fillStyle = t.color;
-    ctx.fillText(t.msg, 27, y);
-    y -= 34;
+    ctx.fillText(t.msg, x + padX, y);
+    y -= isMilestone ? 38 : 32;
     ctx.globalAlpha = 1;
   }
+}
+
+// ─── Rare-catch vignette flash ────────────────────────────────────────────────
+
+function drawRareFlash(ctx, canvas, dt) {
+  if (rareFlashIntensity <= 0) return;
+  rareFlashIntensity = Math.max(0, rareFlashIntensity - dt * 3.5);
+  const alpha = rareFlashIntensity * 0.28;
+  const grad = ctx.createRadialGradient(
+    canvas.width / 2, canvas.height / 2, canvas.height * 0.15,
+    canvas.width / 2, canvas.height / 2, canvas.height * 0.75
+  );
+  grad.addColorStop(0, `rgba(240,200,0,0)`);
+  grad.addColorStop(1, `rgba(240,180,0,${alpha})`);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 }
 
 // ── Axolotl Pond ─────────────────────────────────────────────────────────────

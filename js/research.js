@@ -31,7 +31,7 @@ function buyResearch(id) {
   game.cash -= cost;
   researchLevels[id] = 1;
   sfxUpgrade();
-  queueToast(`Research complete: ${def.name}!`, '#4dca7c');
+  queueToast(`Research complete: ${def.name}!`, '#a78bfa');
   saveGame();
   return true;
 }
