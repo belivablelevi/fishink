@@ -906,7 +906,7 @@ function renderLeaderboardNamePrompt() {
   const joinBtn = document.createElement('button');
   joinBtn.className = 'upgrade-buy';
   joinBtn.textContent = 'Join leaderboard';
-  joinBtn.addEventListener('click', () => {
+  joinBtn.addEventListener('click', async () => {
     const result = _setLeaderboardNameInternal(input.value);
     if (result === 'fancy') {
       input.style.borderColor = '#e05c5c';
@@ -917,7 +917,9 @@ function renderLeaderboardNamePrompt() {
       input.value = '';
       input.placeholder = 'Keep it clean!';
     } else if (result) {
-      submitLeaderboardScore();
+      joinBtn.disabled = true;
+      joinBtn.textContent = 'Joining…';
+      await submitLeaderboardScore();
       renderLeaderboardPanel();
     }
   });

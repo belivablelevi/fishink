@@ -196,14 +196,14 @@ function checkLeaderboardEarnThreshold() {
 // failures are swallowed: a flaky leaderboard call must never interrupt
 // gameplay or surface an error to the player.
 function submitLeaderboardScore() {
-  if (!isLeaderboardConfigured()) return;
+  if (!isLeaderboardConfigured()) return Promise.resolve();
   const name = getLeaderboardName();
-  if (!name) return;
+  if (!name) return Promise.resolve();
 
   // Sanity check: reject earnings that are impossible at any legitimate pace.
   // Generous ceiling is ~$500k/min; beyond that the score was console-edited.
   const playtimeMins = game.time / 60;
-  if (playtimeMins > 1 && game.lifetimeEarned / playtimeMins > 500000) return;
+  if (playtimeMins > 1 && game.lifetimeEarned / playtimeMins > 500000) return Promise.resolve();
 
   _lastSubmittedEarned = game.lifetimeEarned;
 
@@ -215,11 +215,11 @@ function submitLeaderboardScore() {
     updated_at: new Date().toISOString(),
   };
 
-  fetch(`${SUPABASE_URL}/rest/v1/leaderboard_scores?on_conflict=client_id`, {
+  return fetch(`${SUPABASE_URL}/rest/v1/leaderboard_scores?on_conflict=client_id`, {
     method: 'POST',
     headers: leaderboardHeaders({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
     body: JSON.stringify(payload),
-    keepalive: true, // survives page reload/navigation
+    keepalive: true,
   }).then(r => {
     if (!r.ok) console.warn('[Leaderboard] Submit failed:', r.status, r.statusText);
   }).catch(() => {});
