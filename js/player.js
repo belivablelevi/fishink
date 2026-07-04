@@ -154,6 +154,7 @@ function exitBuildMode() {
   // If player cancels a pending move, refund the full original cost
   if (buildMode.pendingMove) {
     game.cash += BLOCK_COSTS[buildMode.pendingMove.id] || 0;
+    cashGuard.grant(BLOCK_COSTS[buildMode.pendingMove.id] || 0);
     queueToast('Move cancelled — refunded', '#e8a030');
     buildMode.pendingMove = null;
   }

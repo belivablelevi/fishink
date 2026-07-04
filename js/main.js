@@ -1,6 +1,6 @@
 // Fish INK Factory — game loop
 
-const GAME_VERSION = '1.4.53';
+const GAME_VERSION = '1.4.54';
 
 let canvas, ctx;
 let lastTime = 0;
@@ -141,6 +141,7 @@ function init() {
       loadingAnim.stop();
       runStartScreens(() => {
         document.getElementById('loadingScreen')?.classList.add('hidden');
+        cashGuard.init(game.cash);
         if (!game.tutorialDone) startTutorial();
         else if (!game.automationTutorialDone) startPhase2Tutorial();
         requestAnimationFrame(loop);

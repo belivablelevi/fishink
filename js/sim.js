@@ -68,6 +68,7 @@ function queueCoalescedToast(key, label, amount, color) {
 function awardCash(amount, msg, color, volMult = 1) {
   game.cash          += amount;
   game.lifetimeEarned += amount;
+  cashGuard.grant(amount);
   trackEarn(amount);
   if (msg) queueToast(msg, color);
   sfxCoin(volMult);
@@ -297,8 +298,9 @@ function simUpdate(dt) {
   saveAccum += dt;
   if (saveAccum >= AUTOSAVE_INTERVAL) {
     saveAccum = 0;
+    const cheated = cashGuard.check();
     saveGame();
-    submitLeaderboardScore();
+    if (!cheated) submitLeaderboardScore();
   }
 
 
@@ -609,6 +611,7 @@ function sellFish(fish, c, r) {
   game.fishSold += fish.count || 1;
   game.cash          += earned;
   game.lifetimeEarned += earned;
+  cashGuard.grant(earned);
   sfxCoin(distanceVolMult(c, r, SELL_SFX_RANGE));
   // Combos are notable enough to call out on their own line; plain sells
   // coalesce so a fast seller doesn't flood the stack. individualSellToasts
@@ -633,6 +636,7 @@ function recycleFish(fish, c, r) {
   game.fishSold += fish.count || 1;
   game.cash          += payout;
   game.lifetimeEarned += payout;
+  cashGuard.grant(payout);
   queueCoalescedToast('recycled', 'Recycled', payout, '#9aa0a8');
   sfxCoin(distanceVolMult(c, r, SELL_SFX_RANGE));
   stateAt(c, r).flashAnim = game.time + 0.5;
@@ -645,6 +649,7 @@ function droneSellFish(fish, c, r) {
   game.fishSold += fish.count || 1;
   game.cash          += earned;
   game.lifetimeEarned += earned;
+  cashGuard.grant(earned);
   sfxCoin(distanceVolMult(c, r, SELL_SFX_RANGE));
   // Same flood guard as sellFish: a wall of delivery drones can sell several
   // times a second, so only combos get their own line.
@@ -1077,6 +1082,7 @@ function sellAndRemove(c, r, silent = false) {
     removeBlock(c, r);
     if (id === B_FISHER) delete fisherTimers[`${c},${r}`];
     game.cash += refund;
+    cashGuard.grant(refund);
     if (refund > 0 && !silent) { queueToast(`+$${refund} (salvage)`, '#e8a030'); sfxCoin(); }
     notifyRemoved(id, c, r, dir, refund, prevConfig);
     saveGame();
@@ -1086,6 +1092,7 @@ function sellAndRemove(c, r, silent = false) {
     const refund = Math.floor(BLOCK_COSTS[B_CONCRETE] * 0.5);
     removeBlock(c, r);
     game.cash += refund;
+    cashGuard.grant(refund);
     if (!silent) { queueToast(`+$${refund} (salvage)`, '#e8a030'); sfxCoin(); }
     saveGame();
     return true;

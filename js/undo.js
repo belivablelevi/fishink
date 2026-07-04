@@ -71,6 +71,7 @@ function undoOneEntry(entry) {
   if (entry.type === 'place') {
     removeBlock(entry.c, entry.r);
     game.cash += entry.cost;
+    cashGuard.grant(entry.cost);
   } else if (entry.type === 'remove') {
     placeBlock(entry.id, entry.c, entry.r, entry.dir);
     applyConfig(entry.c, entry.r, entry.prevConfig);
@@ -86,6 +87,7 @@ function redoOneEntry(entry) {
   } else if (entry.type === 'remove') {
     removeBlock(entry.c, entry.r);
     game.cash += entry.refund;
+    cashGuard.grant(entry.refund);
   }
 }
 

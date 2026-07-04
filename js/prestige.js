@@ -57,7 +57,7 @@ function buyPrestigeUpgrade(id) {
   // via their effective* getters, so buying them is felt immediately.
   // Seed Capital only feeds game.cash at sim init, so without this the
   // purchase would do nothing until the player actually prestiges.
-  if (id === 'startCash') game.cash += STARTCASH_PER_LEVEL;
+  if (id === 'startCash') { game.cash += STARTCASH_PER_LEVEL; cashGuard.grant(STARTCASH_PER_LEVEL); }
   queueToast(`${def.name} upgraded! (Lv ${prestigeLevels[id]})`, '#4dca7c');
   return true;
 }

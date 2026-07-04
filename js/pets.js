@@ -92,6 +92,7 @@ function sellPet(uid) {
   game.pets.splice(idx, 1);
   game.cash += price;
   game.lifetimeEarned += price;
+  cashGuard.grant(price);
   if (price > 0) queueToast(`Sold ${v ? v.name : 'pet'} +$${price}`, '#9aa0a8');
   saveGame();
 }
@@ -119,6 +120,7 @@ function pullPets(count = 1) {
         const price = Math.floor((v.cost || 0) * 0.5);
         game.cash += price;
         game.lifetimeEarned += price;
+        cashGuard.grant(price);
         autoSoldCount++;
         autoSoldValue += price;
       } else {
@@ -131,6 +133,7 @@ function pullPets(count = 1) {
         const price = PET_SELL_PRICE[v.rarity] || 0;
         game.cash += price;
         game.lifetimeEarned += price;
+        cashGuard.grant(price);
         autoSoldCount++;
         autoSoldValue += price;
       } else {
@@ -607,6 +610,7 @@ function sellFrog(uid) {
   if (!frog) return;
   const refund = frogSellPrice(uid);
   game.cash += refund;
+  cashGuard.grant(refund);
   game.frogs = game.frogs.filter(f => f.uid !== uid);
   delete _frogStates[uid];
   queueToast(`Frog sold for $${refund}`, '#4dca7c');
