@@ -344,7 +344,11 @@ function simUpdateWorkers(dt) {
         // Roll 1-3 fish when fishing completes
         const count = 1 + Math.floor(Math.random() * 3);
         w.fish = [];
-        for (let i = 0; i < count; i++) w.fish.push(randomFish(effectiveGlobalLuckMult()));
+        for (let i = 0; i < count; i++) {
+          const f = randomFish(effectiveGlobalLuckMult());
+          if (f.category === 'Rare' || f.category === 'Epic' || f.category === 'Legendary') game.rareCatches++;
+          w.fish.push(f);
+        }
         w.state = 'inbound';
         w.targetWx = dockWx;
         w.targetWy = dockWy;
@@ -835,6 +839,7 @@ function tryFisherProduce(c, r) {
       const nst = stateAt(nc, nr);
       if (!nst.item) {
         const fish = randomFish(luck);
+        if (fish.category === 'Rare' || fish.category === 'Epic' || fish.category === 'Legendary') game.rareCatches++;
         fish.progress = 0;
         nst.item = fish;
         fisherTimers[`${c},${r}`] = interval;
@@ -843,7 +848,9 @@ function tryFisherProduce(c, r) {
     } else if (IS_MACHINE(nb)) {
       const nst = stateAt(nc, nr);
       if (!nst.inputItem && !nst.processing && !nst.item) {
-        nst.inputItem = randomFish(luck);
+        const mFish = randomFish(luck);
+        if (mFish.category === 'Rare' || mFish.category === 'Epic' || mFish.category === 'Legendary') game.rareCatches++;
+        nst.inputItem = mFish;
         const def = machineDef(nb);
         nst.processing = true;
         nst.timer = def.processTime * machineSpeedMult(nst.level || 0);
