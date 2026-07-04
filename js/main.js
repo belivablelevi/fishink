@@ -1,6 +1,6 @@
 // Fish INK Factory — game loop
 
-const GAME_VERSION = '1.4.71';
+const GAME_VERSION = '1.4.72';
 
 let canvas, ctx;
 let lastTime = 0;
@@ -166,7 +166,7 @@ function init() {
   window._dbg = {
     place: (id, c, r)  => placeBlock(id, c, r),
     procBelt: (on = true) => { DEBUG_FORCE_PROC_BELT = on; },
-    resetLifetime: () => { game.lifetimeEarned = 0; saveGame(); console.log('lifetimeEarned reset to 0'); },
+    resetLifetime: () => { game.lifetimeEarned = 0; saveGame(); submitLeaderboardScore(); console.log('lifetimeEarned reset and submitted'); },
   };
 }
 
