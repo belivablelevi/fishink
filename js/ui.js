@@ -907,7 +907,7 @@ function renderLeaderboardNamePrompt() {
   joinBtn.className = 'upgrade-buy';
   joinBtn.textContent = 'Join leaderboard';
   joinBtn.addEventListener('click', () => {
-    const result = setLeaderboardName(input.value);
+    const result = _setLeaderboardNameInternal(input.value);
     if (result === 'fancy') {
       input.style.borderColor = '#e05c5c';
       input.value = '';

@@ -159,13 +159,21 @@ function getLeaderboardName() {
 // (𝓁𝒾𝓀𝑒 𝓽𝒽𝒾𝓈) can't slip past the profanity filter via lookalike codepoints.
 const NAME_ALLOWED_RX = /^[\x20-\x7E]+$/;
 
-function setLeaderboardName(name) {
+// Internal — called by the UI name-prompt form. No auth required.
+function _setLeaderboardNameInternal(name) {
   const trimmed = (name || '').trim().slice(0, 20);
   if (!trimmed) return false;
   if (!NAME_ALLOWED_RX.test(trimmed)) return 'fancy';
   if (!nameIsClean(trimmed)) return 'inappropriate';
   localStorage.setItem(LEADERBOARD_NAME_KEY, trimmed);
   return true;
+}
+
+// Console-facing — requires dev.auth() first so players can't rename themselves
+// from DevTools without the admin password.
+function setLeaderboardName(name) {
+  if (typeof _devAuth !== 'function' || !_devAuth()) return false;
+  return _setLeaderboardNameInternal(name);
 }
 
 function leaderboardHeaders(extra) {
