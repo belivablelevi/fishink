@@ -190,13 +190,16 @@ function submitLeaderboardScore() {
     client_id: getLeaderboardClientId(),
     name,
     lifetime_earned: game.lifetimeEarned,
-    playtime: Math.round(game.time / 60 * 10) / 10, // minutes, 1 decimal place
+    playtime: Math.round(game.time / 60 * 10) / 10,
+    updated_at: new Date().toISOString(),
   };
 
   fetch(`${SUPABASE_URL}/rest/v1/leaderboard_scores?on_conflict=client_id`, {
     method: 'POST',
     headers: leaderboardHeaders({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
     body: JSON.stringify(payload),
+  }).then(r => {
+    if (!r.ok) console.warn('[Leaderboard] Submit failed:', r.status, r.statusText);
   }).catch(() => {});
 }
 

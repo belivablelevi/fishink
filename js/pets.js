@@ -610,6 +610,7 @@ function sellFrog(uid) {
   if (!frog) return;
   const refund = frogSellPrice(uid);
   game.cash += refund;
+  game.lifetimeEarned += refund;
   cashGuard.grant(refund);
   game.frogs = game.frogs.filter(f => f.uid !== uid);
   delete _frogStates[uid];
