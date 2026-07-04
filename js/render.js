@@ -1617,8 +1617,10 @@ function drawWorkers(ctx) {
     if (sx < -S * 2 || sx > VW + S * 2 || sy < -S * 2 || sy > VH + S * 2) continue;
 
     if (w.state === 'idle') {
-      // Mini player character standing on island
-      _drawMiniPlayer(ctx, sx, sy, 0.45);
+      const ws = typeof _workerWalkCache !== 'undefined' ? _workerWalkCache.get(w.uid) : null;
+      const walkPhase = (ws && ws.walkTimer <= 0) ? ws.walkPhase : 0;
+      const facing    = ws ? ws.facing : 1;
+      _drawMiniPlayer(ctx, sx, sy, 0.45, walkPhase, facing);
     } else {
       // Worker in a boat — scaled-down player boat
       const angle = Math.atan2(w.targetWy - w.wy, w.targetWx - w.wx);
@@ -1670,24 +1672,25 @@ function drawWorkers(ctx) {
 }
 
 // Draws a miniature version of the player character centered at (sx, sy).
-// scale: 0.45 gives a small idle fisherman; adjust as needed.
-function _drawMiniPlayer(ctx, sx, sy, scale) {
+// walkPhase: 0–1 walk cycle (0 = standing still). facing: 1=right, -1=left.
+function _drawMiniPlayer(ctx, sx, sy, scale, walkPhase, facing) {
+  const swing = walkPhase ? Math.sin(walkPhase * Math.PI * 2) * 4 : 0;
   ctx.save();
   ctx.translate(sx, sy);
-  ctx.scale(scale, scale);
-  // Legs
+  ctx.scale(facing === -1 ? -scale : scale, scale);
+  // Legs — alternate forward/back with swing
   ctx.fillStyle = '#5c4a30';
-  ctx.fillRect(-4, 4, 3, 8);
-  ctx.fillRect(1, 4, 3, 8);
+  ctx.fillRect(-4, 4 - swing, 3, 8);
+  ctx.fillRect( 1, 4 + swing, 3, 8);
   // Body / vest
   ctx.fillStyle = '#a8784a';
   ctx.fillRect(-6, -8, 12, 14);
   ctx.fillStyle = '#7a5c38';
   ctx.fillRect(-4, -6, 8, 12);
-  // Arms
+  // Arms — swing opposite to legs
   ctx.fillStyle = '#f0d090';
-  ctx.fillRect(-9, -7, 4, 10);
-  ctx.fillRect(5, -7, 4, 10);
+  ctx.fillRect(-9, -7 + swing, 4, 10);
+  ctx.fillRect( 5, -7 - swing, 4, 10);
   // Head
   ctx.fillStyle = '#f0d090';
   ctx.fillRect(-5, -18, 10, 10);

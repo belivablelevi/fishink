@@ -179,9 +179,43 @@ function comboMultFor(fish) {
 // ─── Worker island ────────────────────────────────────────────────────────────
 
 const WORKER_SPEED       = TILE_SIZE * 3.5; // world-px per second while rowing
+const WORKER_WALK_SPEED  = TILE_SIZE * 1.8; // world-px per second while wandering
 const WORKER_FISH_TIME   = 18;              // seconds spent fishing per trip
 const WORKER_IDLE_TIME   = 10;             // seconds idle between trips
 const WORKER_MAX         = 5;
+
+// Non-persisted walk state per worker uid — cleared on departure, rebuilt on tick.
+const _workerWalkCache = new Map();
+
+function _randomIslandTile(isl) {
+  const candidates = [];
+  const islC = Math.floor(isl.cx), islR = Math.floor(isl.cy);
+  for (let dc = -7; dc <= 7; dc++) {
+    for (let dr = -7; dr <= 7; dr++) {
+      const c = islC + dc, r = islR + dr;
+      if (c >= 0 && c < WORLD_COLS && r >= 0 && r < WORLD_ROWS) {
+        const t = tileAt(c, r);
+        if (t === T_EMPTY || t === T_SHORE) candidates.push({ c, r });
+      }
+    }
+  }
+  if (!candidates.length) return null;
+  const t = candidates[Math.floor(Math.random() * candidates.length)];
+  return { wx: (t.c + 0.5) * TILE_SIZE, wy: (t.r + 0.5) * TILE_SIZE };
+}
+
+function _getWorkerWalk(w, isl) {
+  if (!_workerWalkCache.has(w.uid)) {
+    const tile = _randomIslandTile(isl) || { wx: w.wx, wy: w.wy };
+    _workerWalkCache.set(w.uid, {
+      targetWx: tile.wx, targetWy: tile.wy,
+      walkTimer: Math.random() * 1.2,
+      walkPhase: Math.random(),
+      facing: 1,
+    });
+  }
+  return _workerWalkCache.get(w.uid);
+}
 
 function workerHireCost() {
   return (game.workers.length + 1) * 500;
@@ -223,7 +257,33 @@ function simUpdateWorkers(dt) {
 
     if (w.state === 'idle') {
       w.timer -= dt;
+
+      // On-island wandering during idle wait
+      const ws = _getWorkerWalk(w, isl);
+      if (ws.walkTimer > 0) {
+        ws.walkTimer -= dt;
+        // Standing still — keep walkPhase frozen so legs don't cycle
+      } else {
+        const dx = ws.targetWx - w.wx;
+        const dy = ws.targetWy - w.wy;
+        const dist = Math.hypot(dx, dy);
+        if (dist < 3) {
+          // Reached target — pick a new random island tile and pause briefly
+          const tile = _randomIslandTile(isl);
+          if (tile) { ws.targetWx = tile.wx; ws.targetWy = tile.wy; }
+          ws.walkTimer = 0.4 + Math.random() * 1.4;
+        } else {
+          const speed = WORKER_WALK_SPEED * dt;
+          w.wx += (dx / dist) * Math.min(speed, dist);
+          w.wy += (dy / dist) * Math.min(speed, dist);
+          ws.facing  = dx < 0 ? -1 : 1;
+          ws.walkPhase = (ws.walkPhase + dt * 4) % 1;
+        }
+      }
+
       if (w.timer > 0) continue;
+
+      // Depart on a fishing trip — snap back to dock so the boat starts there
       const candidates = [];
       const islC = Math.floor(isl.cx), islR = Math.floor(isl.cy);
       for (let dc = -12; dc <= 12; dc++) {
@@ -240,7 +300,10 @@ function simUpdateWorkers(dt) {
       const t = candidates[Math.floor(Math.random() * candidates.length)];
       w.targetWx = (t.c + 0.5) * TILE_SIZE;
       w.targetWy = (t.r + 0.5) * TILE_SIZE;
+      w.wx = dockWx;
+      w.wy = dockWy;
       w.fish = [];
+      _workerWalkCache.delete(w.uid); // fresh walk state on return
       w.state = 'outbound';
 
     } else if (w.state === 'outbound' || w.state === 'inbound') {
@@ -268,6 +331,7 @@ function simUpdateWorkers(dt) {
           w.timer = WORKER_IDLE_TIME;
           w.wx = dockWx;
           w.wy = dockWy;
+          _workerWalkCache.delete(w.uid); // start wandering from dock
         }
       } else {
         const speed = WORKER_SPEED * dt;
