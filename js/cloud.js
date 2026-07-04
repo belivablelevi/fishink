@@ -133,6 +133,14 @@ window.dev = {
     console.log(_devUnlocked ? '✅ Dev mode unlocked' : '❌ Wrong password');
   },
 
+  money(n = 10000) {
+    if (!_devAuth()) return;
+    game.cash += n;
+    cashGuard.grant(n);
+    queueToast(`+$${n.toLocaleString()} (dev)`, '#e8a030');
+    console.log(`💰 Added $${n.toLocaleString()}`);
+  },
+
   async view(username) {
     if (!_devAuth()) return;
     try {
