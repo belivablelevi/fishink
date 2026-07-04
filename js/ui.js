@@ -117,8 +117,17 @@ const restartBtn = document.getElementById('restartGameBtn');
     panel.classList.add('hidden');
   });
 
-restartBtn.addEventListener('click', () => {
-    if (confirm('Restart the game? This wipes your current save and starts a brand new world.')) {
+  let restartArmed = false, restartTimer = null;
+  restartBtn.addEventListener('click', () => {
+    if (!restartArmed) {
+      restartArmed = true;
+      restartBtn.textContent = 'Click again to confirm';
+      restartTimer = setTimeout(() => {
+        restartArmed = false;
+        restartBtn.textContent = 'Restart Game';
+      }, 3000);
+    } else {
+      clearTimeout(restartTimer);
       restartGame();
     }
   });
