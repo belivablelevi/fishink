@@ -89,13 +89,13 @@ let _pushTimer = null;
 
 function _doCloudPush(keepalive) {
   if (!isLeaderboardConfigured()) return;
-  const username = cloudUsername();
-  if (!username) return;
+  if (!cloudUsername()) return;
   const saveData = typeof serializeGame === 'function' ? serializeGame() : {};
-  _cloudFetch(CLOUD_TABLE, {
-    method: 'POST',
-    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify({ client_id: cloudId(), username, save_data: saveData }),
+  // PATCH by client_id so only save_data is updated — avoids the 409 that a
+  // POST upsert triggers when the username column conflicts with another row.
+  _cloudFetch(`${CLOUD_TABLE}?client_id=eq.${encodeURIComponent(cloudId())}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ save_data: saveData }),
     keepalive: keepalive || false,
   }).catch(() => {});
 }
