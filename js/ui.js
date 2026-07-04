@@ -955,7 +955,8 @@ function renderLeaderboardList(result) {
 
   leaderboardPanelEl.appendChild(list);
 
-  if (me) {
+  const alreadyVisible = top.some(row => row.client_id === clientId);
+  if (me && !alreadyVisible) {
     const footer = document.createElement('div');
     footer.className = 'upgrade-row lb-row lb-own-row';
     footer.innerHTML = `
