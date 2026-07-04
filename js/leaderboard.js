@@ -11,7 +11,11 @@ var SUPABASE_URL  = 'https://dcwaensexoprcpswkont.supabase.co';
 var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRjd2FlbnNleG9wcmNwc3drb250Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4OTIxNzcsImV4cCI6MjA5NzQ2ODE3N30.5nr6dPfjzTALnwbKqFvkOLZuq1-7TPQ0B9g9x11xows';
 // ────────────────────────────────────────────────────────────────────
 
-const LEADERBOARD_ID_KEY   = 'fishink_leaderboard_id';
+// Increment LEADERBOARD_SEASON to wipe all scores: every player gets a fresh
+// client_id on next load, so old rows become orphaned. Pair with a
+// TRUNCATE leaderboard_scores in the Supabase SQL editor for a full reset.
+const LEADERBOARD_SEASON   = 2;
+const LEADERBOARD_ID_KEY   = `fishink_leaderboard_id_s${LEADERBOARD_SEASON}`;
 const LEADERBOARD_NAME_KEY = 'fishink_leaderboard_name';
 
 // ── Admin name override ────────────────────────────────────────────────────
