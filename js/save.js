@@ -181,6 +181,9 @@ function restartGame() {
 function resetRun() {
   restarting = true;
   localStorage.removeItem(SAVE_KEY);
+  // Tell the next boot to skip cloud-load: otherwise cloudLoadSave() would
+  // return the stale pre-prestige save and re-apply it over the fresh start.
+  localStorage.setItem('fishink_skip_cloud', '1');
   location.reload();
 }
 

@@ -1,6 +1,6 @@
 // Fish INK Factory — game loop
 
-const GAME_VERSION = '1.4.50';
+const GAME_VERSION = '1.4.51';
 
 let canvas, ctx;
 let lastTime = 0;
@@ -118,7 +118,11 @@ function init() {
 
     // Try to load a cloud save for returning players. We do this before
     // runStartScreens so the data is applied before any UI touches the game state.
-    if (typeof cloudLoadSave === 'function' && cloudUsername() && isLeaderboardConfigured()) {
+    // Skip after a prestige reset: the stale pre-prestige cloud save must not
+    // overwrite the intentionally fresh local start.
+    const skipCloud = localStorage.getItem('fishink_skip_cloud');
+    localStorage.removeItem('fishink_skip_cloud');
+    if (!skipCloud && typeof cloudLoadSave === 'function' && cloudUsername() && isLeaderboardConfigured()) {
       try {
         const cloud = await cloudLoadSave();
         if (cloud?.save_data && Object.keys(cloud.save_data).length > 0) {
