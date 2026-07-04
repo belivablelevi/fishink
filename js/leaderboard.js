@@ -211,6 +211,7 @@ function submitLeaderboardScore() {
     method: 'POST',
     headers: leaderboardHeaders({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
     body: JSON.stringify(payload),
+    keepalive: true, // survives page reload/navigation
   }).then(r => {
     if (!r.ok) console.warn('[Leaderboard] Submit failed:', r.status, r.statusText);
   }).catch(() => {});

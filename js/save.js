@@ -172,6 +172,8 @@ let restarting = false;
 // button so the player gets a completely clean slate.
 function restartGame() {
   restarting = true;
+  game.lifetimeEarned = 0;
+  if (typeof submitLeaderboardScore === 'function') submitLeaderboardScore();
   localStorage.removeItem(SAVE_KEY);
   localStorage.removeItem(PRESTIGE_KEY); // prestige.js declares this constant
   location.reload();
@@ -182,6 +184,8 @@ function restartGame() {
 // aren't immediately wiped by the reload.
 function resetRun() {
   restarting = true;
+  game.lifetimeEarned = 0;
+  if (typeof submitLeaderboardScore === 'function') submitLeaderboardScore();
   localStorage.removeItem(SAVE_KEY);
   // Tell the next boot to skip cloud-load: otherwise cloudLoadSave() would
   // return the stale pre-prestige save and re-apply it over the fresh start.
