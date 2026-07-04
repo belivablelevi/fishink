@@ -1,6 +1,6 @@
 // Fish INK Factory — game loop
 
-const GAME_VERSION = '1.4.52';
+const GAME_VERSION = '1.4.53';
 
 let canvas, ctx;
 let lastTime = 0;
@@ -162,8 +162,7 @@ function init() {
     loadingAnim.setProgress(Math.min(loaded / total, 0.92));
   });
 
-  window.cheat = {
-    money: (n = 10000) => { game.cash += n; queueToast(`+$${n.toLocaleString()} added`, '#e8a030'); },
+  window._dbg = {
     place: (id, c, r)  => placeBlock(id, c, r),
     procBelt: (on = true) => { DEBUG_FORCE_PROC_BELT = on; },
   };

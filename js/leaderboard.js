@@ -181,6 +181,11 @@ function submitLeaderboardScore() {
   const name = getLeaderboardName();
   if (!name) return;
 
+  // Sanity check: reject earnings that are impossible at any legitimate pace.
+  // Generous ceiling is ~$500k/min; beyond that the score was console-edited.
+  const playtimeMins = game.time / 60;
+  if (playtimeMins > 1 && game.lifetimeEarned / playtimeMins > 500000) return;
+
   const payload = {
     client_id: getLeaderboardClientId(),
     name,
