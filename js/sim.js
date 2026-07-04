@@ -26,6 +26,7 @@ const game = {
   workerNextUid: 1,
   islandChests: {},    // chest state keyed by "cx,cy": { nextOpen: gameTime }
   chestIncomeBonus: 0, // permanent income multiplier accumulated from chest opens (0–0.30)
+  islandLevel: 0,      // number of ring expansions purchased
 };
 
 const fisherTimers = {};
@@ -1115,6 +1116,61 @@ function spawnParticles(x, y, kind, count) {
       life: 0, maxLife: kind === 'sparkle' ? 0.6 : 0.4,
     });
   }
+}
+
+// ─── Island expansion ─────────────────────────────────────────────────────────
+
+const ISLAND_EXPAND_BASE = 5000;
+const ISLAND_EXPAND_SCALE = 3;
+
+function islandExpandCost() {
+  return Math.floor(ISLAND_EXPAND_BASE * Math.pow(ISLAND_EXPAND_SCALE, game.islandLevel));
+}
+
+function _isLand(t) {
+  return t === T_EMPTY || t === T_SHORE || t === T_CONCRETE;
+}
+
+function _protectedTile(c, r) {
+  // Keep a buffer around the world border
+  if (r < ISLAND_EDGE_MARGIN || r >= WORLD_ROWS - ISLAND_EDGE_MARGIN) return true;
+  if (c < ISLAND_EDGE_MARGIN || c >= WORLD_COLS - ISLAND_EDGE_MARGIN) return true;
+  // Keep a buffer around the boat dock (BOAT_C, BOAT_R)
+  const bd = Math.max(Math.abs(c - BOAT_C), Math.abs(r - BOAT_R));
+  if (bd <= BOAT_CLEAR + 2) return true;
+  // Keep a buffer around each offshore island so the main island can't merge with them
+  for (const isl of offshoreIslands) {
+    const d = Math.max(Math.abs(c - isl.cx), Math.abs(r - isl.cy));
+    if (d <= 8) return true;
+  }
+  return false;
+}
+
+function expandIsland() {
+  const cost = islandExpandCost();
+  if (game.cash < cost) { queueToast('Not enough cash!', '#e85d4a'); sfxFail(); return; }
+
+  const toConvert = [];
+  for (let r = 0; r < WORLD_ROWS; r++) {
+    for (let c = 0; c < WORLD_COLS; c++) {
+      if (terrain[r][c] !== T_WATER) continue;
+      if (_protectedTile(c, r)) continue;
+      if (_isLand(tileAt(c - 1, r)) || _isLand(tileAt(c + 1, r)) ||
+          _isLand(tileAt(c, r - 1)) || _isLand(tileAt(c, r + 1))) {
+        toConvert.push({ c, r });
+      }
+    }
+  }
+
+  if (!toConvert.length) { queueToast('Island is at maximum size!', '#e85d4a'); return; }
+
+  for (const { c, r } of toConvert) terrain[r][c] = T_SHORE;
+
+  game.cash -= cost;
+  game.islandLevel++;
+  saveGame();
+  sfxCoin();
+  queueToast(`Island expanded! (Ring ${game.islandLevel}) · +${toConvert.length} tiles`, '#4dca7c');
 }
 
 function tickParticles(dt) {

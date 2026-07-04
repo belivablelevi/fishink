@@ -827,6 +827,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
 .game-menu-btn.danger:hover { background: rgba(224,92,92,0.15); }
 .game-menu-divider { height: 1px; background: var(--c-border); margin: 4px 0; }
 .game-menu-panel .sound-row { color: var(--c-text); }
+.game-menu-label { font-size: 11px; color: var(--c-muted); padding: 2px 0 4px; text-align: center; }
 
 /* ─── Machines overview — icon button docked beside the cash pill HUD ──────── */
 /* top/left here are just an initial fallback before the first frame's JS

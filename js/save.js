@@ -61,6 +61,7 @@ function serializeGame() {
     workerNextUid: game.workerNextUid || 1,
     islandChests: game.islandChests || {},
     chestIncomeBonus: game.chestIncomeBonus || 0,
+    islandLevel: game.islandLevel || 0,
   };
 }
 
@@ -127,6 +128,7 @@ function deserializeGame(data) {
   game.workerNextUid    = data.workerNextUid    || (game.workers.reduce((m, w) => Math.max(m, w.uid), 0) + 1);
   game.islandChests     = data.islandChests     || {};
   game.chestIncomeBonus = data.chestIncomeBonus || 0;
+  game.islandLevel      = data.islandLevel      || 0;
   ensureWorkerIslandDepot(); // backfills B_FISH_DEPOT for saves that predate the depot block
 }
 

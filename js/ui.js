@@ -82,11 +82,26 @@ function initGameMenu() {
 const restartBtn = document.getElementById('restartGameBtn');
   const fullNumbersCheck = document.getElementById('fullNumbersCheck');
   const individualSellToastsCheck = document.getElementById('individualSellToastsCheck');
+  const islandExpandBtn  = document.getElementById('islandExpandBtn');
+  const islandExpandInfo = document.getElementById('islandExpandInfo');
 
   fullNumbersCheck.checked = settings.fullNumbers;
   individualSellToastsCheck.checked = settings.individualSellToasts;
 
-  btn.addEventListener('click', () => panel.classList.toggle('hidden'));
+  function refreshIslandUI() {
+    const cost = islandExpandCost();
+    islandExpandInfo.textContent = `Island Ring ${game.islandLevel} · Next: $${cost.toLocaleString()}`;
+  }
+
+  btn.addEventListener('click', () => {
+    panel.classList.toggle('hidden');
+    if (!panel.classList.contains('hidden')) refreshIslandUI();
+  });
+
+  islandExpandBtn.addEventListener('click', () => {
+    expandIsland();
+    refreshIslandUI();
+  });
 
   fullNumbersCheck.addEventListener('change', () => {
     if (fullNumbersCheck.checked !== settings.fullNumbers) toggleFullNumbers();
