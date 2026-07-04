@@ -1674,23 +1674,24 @@ function drawWorkers(ctx) {
 // Draws a miniature version of the player character centered at (sx, sy).
 // walkPhase: 0–1 walk cycle (0 = standing still). facing: 1=right, -1=left.
 function _drawMiniPlayer(ctx, sx, sy, scale, walkPhase, facing) {
-  const swing = walkPhase ? Math.sin(walkPhase * Math.PI * 2) * 4 : 0;
+  // Whole-body bob: peaks once per step, 2 screen-px max — subtle but readable
+  const bob = walkPhase ? Math.abs(Math.sin(walkPhase * Math.PI * 2)) * 2 : 0;
   ctx.save();
-  ctx.translate(sx, sy);
+  ctx.translate(sx, sy + bob);
   ctx.scale(facing === -1 ? -scale : scale, scale);
-  // Legs — alternate forward/back with swing
+  // Legs
   ctx.fillStyle = '#5c4a30';
-  ctx.fillRect(-4, 4 - swing, 3, 8);
-  ctx.fillRect( 1, 4 + swing, 3, 8);
+  ctx.fillRect(-4, 4, 3, 8);
+  ctx.fillRect( 1, 4, 3, 8);
   // Body / vest
   ctx.fillStyle = '#a8784a';
   ctx.fillRect(-6, -8, 12, 14);
   ctx.fillStyle = '#7a5c38';
   ctx.fillRect(-4, -6, 8, 12);
-  // Arms — swing opposite to legs
+  // Arms
   ctx.fillStyle = '#f0d090';
-  ctx.fillRect(-9, -7 + swing, 4, 10);
-  ctx.fillRect( 5, -7 - swing, 4, 10);
+  ctx.fillRect(-9, -7, 4, 10);
+  ctx.fillRect( 5, -7, 4, 10);
   // Head
   ctx.fillStyle = '#f0d090';
   ctx.fillRect(-5, -18, 10, 10);
