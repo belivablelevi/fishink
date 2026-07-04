@@ -379,12 +379,15 @@ function simUpdate(dt) {
   }
 
   saveAccum += dt;
+  const cheated = saveAccum >= AUTOSAVE_INTERVAL ? cashGuard.check() : false;
   if (saveAccum >= AUTOSAVE_INTERVAL) {
     saveAccum = 0;
-    const cheated = cashGuard.check();
     saveGame();
     if (!cheated) submitLeaderboardScore();
   }
+
+  // Also push score whenever lifetime earnings cross a new $10k milestone.
+  if (!cheated) checkLeaderboardEarnThreshold();
 
 
   blockCountAccum += dt;

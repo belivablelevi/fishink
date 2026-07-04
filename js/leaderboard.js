@@ -172,6 +172,13 @@ function leaderboardHeaders(extra) {
   }, extra || {});
 }
 
+let _lastSubmittedEarned = 0;
+
+// Called every sim frame — submits whenever lifetime earnings jump by $10k.
+function checkLeaderboardEarnThreshold() {
+  if (game.lifetimeEarned - _lastSubmittedEarned >= 10000) submitLeaderboardScore();
+}
+
 // Upserts this player's row. Silent no-op while unconfigured or before a
 // name is chosen — there is nothing to submit yet in either case. Network
 // failures are swallowed: a flaky leaderboard call must never interrupt
@@ -185,6 +192,8 @@ function submitLeaderboardScore() {
   // Generous ceiling is ~$500k/min; beyond that the score was console-edited.
   const playtimeMins = game.time / 60;
   if (playtimeMins > 1 && game.lifetimeEarned / playtimeMins > 500000) return;
+
+  _lastSubmittedEarned = game.lifetimeEarned;
 
   const payload = {
     client_id: getLeaderboardClientId(),
