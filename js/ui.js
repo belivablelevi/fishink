@@ -2218,6 +2218,18 @@ function _buildFrogSlide(variantId, frogs) {
     acts.appendChild(h);
   }
 
+  // Sell button for unplaced frogs — mirrors axolotl sell so you don't have
+  // to find the frog in the world just to sell it.
+  if (unplaced.length) {
+    const sellUid = unplaced[0].uid;
+    const price = frogSellPrice(sellUid);
+    const sb = document.createElement('button');
+    sb.className = 'upgrade-buy pet-card-btn pet-sell-btn';
+    sb.textContent = `Sell $${price}`;
+    sb.addEventListener('click', () => { sellFrog(sellUid); renderPetsPanel(); });
+    acts.appendChild(sb);
+  }
+
   slide.appendChild(acts);
   return slide;
 }

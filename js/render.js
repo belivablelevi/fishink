@@ -2123,10 +2123,10 @@ function drawPlayer(ctx) {
 // ─── HUD ─────────────────────────────────────────────────────────────────────
 
 const cashAnim = { displayed: 0, prev: 0, pulse: 0 };
-// Screen-space rect of the cash pill, refreshed every frame in drawHUD —
-// lets the DOM machines button dock immediately beside it instead of using
-// a fixed offset that would drift whenever the cash label's width changes.
+// Screen-space rect of the cash pill — recalculated on resize, not every frame.
 const cashPillRect = { right: 0, top: 0, bottom: 0 };
+let _cashPillDirty = true; // set to true when layout may have changed
+window.addEventListener('resize', () => { _cashPillDirty = true; });
 
 function drawHUD(ctx, canvas, dt) {
   const cw = canvas.width, ch = canvas.height;
@@ -2142,13 +2142,25 @@ function drawHUD(ctx, canvas, dt) {
   const cashLabel = formatMoney(cashAnim.displayed);
   const cashHudEl  = document.getElementById('cashHud');
   const cashHudVal = document.getElementById('cashHudValue');
-  if (cashHudVal) cashHudVal.textContent = cashLabel;
   if (cashHudEl) {
-    cashHudEl.classList.toggle('cash-hud-pulse', cashAnim.pulse > 0.05);
+    const nextPulse = cashAnim.pulse > 0.05;
+    if (cashHudEl.classList.contains('cash-hud-pulse') !== nextPulse) {
+      cashHudEl.classList.toggle('cash-hud-pulse', nextPulse);
+      _cashPillDirty = true;
+    }
+  }
+  if (cashHudVal) {
+    if (cashHudVal.textContent !== cashLabel) {
+      cashHudVal.textContent = cashLabel;
+      _cashPillDirty = true; // text width change may shift the pill's right edge
+    }
+  }
+  if (cashHudEl && _cashPillDirty) {
     const r = cashHudEl.getBoundingClientRect();
     cashPillRect.right  = r.right;
     cashPillRect.top    = r.top;
     cashPillRect.bottom = r.bottom;
+    _cashPillDirty = false;
   }
 
   // Corner hint — only show placement controls while in build mode

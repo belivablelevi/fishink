@@ -7,8 +7,8 @@ const RESEARCH_NODES = [
   { id: 'capTier2', name: 'Advanced Tooling', desc: "Raises every machine's upgrade cap from Lv 5 to Lv 8", cost: 8000, requires: null },
   { id: 'capTier3', name: 'Precision Engineering', desc: "Raises every machine's upgrade cap from Lv 8 to Lv 10", cost: 25000, requires: 'capTier2' },
   { id: 'globalSellBonus', name: 'Automation Bonus', desc: 'All fish sell for +10% (stacks with Market Contacts)', cost: 15000, requires: null },
-  { id: 'globalTier2', name: 'Global Tooling I',  desc: 'Raises the level cap on 6 global upgrades (not Belt Motors) from 5 to 8', cost: 20000, requires: null },
-  { id: 'globalTier3', name: 'Global Tooling II', desc: 'Raises the level cap on 6 global upgrades (not Belt Motors) from 8 to 10', cost: 40000, requires: 'globalTier2' },
+  { id: 'globalTier2', name: 'Global Tooling I',  desc: 'Raises the level cap from 5→8 on: Quick Cast, Auto-Fisher Tuning, Market Contacts, Drone Engine Tuning, Delivery Network, Lucky Lure (Belt Motors excluded)', cost: 20000, requires: null },
+  { id: 'globalTier3', name: 'Global Tooling II', desc: 'Raises the same 6 upgrade caps from 8→10 (requires Global Tooling I)', cost: 40000, requires: 'globalTier2' },
 ];
 
 const researchLevels = { capTier2: 0, capTier3: 0, globalSellBonus: 0, globalTier2: 0, globalTier3: 0 };

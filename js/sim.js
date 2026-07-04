@@ -884,7 +884,16 @@ function machineDef(id) {
   return null;
 }
 
+// Rate-limit machine dings per type — at most one ding per 800ms per machine
+// type so a dense factory doesn't create overlapping noise from the same tone.
+const _machineDingCooldown = {};
+const MACHINE_DING_INTERVAL = 0.8; // seconds
+
 function sfxForMachine(id) {
+  const now = game.time;
+  const last = _machineDingCooldown[id] || 0;
+  if (now - last < MACHINE_DING_INTERVAL) return null;
+  _machineDingCooldown[id] = now;
   if (id === B_WASHER)  return sfxWasher;
   if (id === B_SMOKER)  return sfxSmoker;
   if (id === B_ICER)    return sfxIcer;

@@ -26,17 +26,9 @@ These are things the code alone cannot fix. Each one needs artwork, a design dec
 
 ---
 
-### Fix the Prestige Quick Start balance issue
+### ~~Fix the Prestige Quick Start balance issue~~ ✅ Fixed
 
-**Where:** `js/prestige.js` — `prestigeSpeedMult()`
-
-**What's wrong:** The formula is `1 - prestigeLevels.fasterStart * 0.10`. At max level 10, this returns `0.0`, which means catch time and machine processing time become `0ms` — instant catches forever.
-
-**What to do:** Either cap the speed multiplier at a minimum (e.g. `0.05` = 95% faster) or reduce the per-level gain so the theoretical minimum stays above zero. Suggested fix: change `0.10` to `0.08` so max gives 80% faster (0.2 multiplier).
-
-**Why it matters:** Currently a max-prestige player gets instant fish — breaks game balance.
-
-**Priority:** High
+`prestigeSpeedMult()` now clamps to a minimum of `0.08` (92% faster), preventing 0ms catch times.
 
 ---
 
@@ -144,17 +136,9 @@ Recommended style: simple, clean line icons matching the dark UI aesthetic. The 
 
 ---
 
-### Global Tooling research description is misleading
+### ~~Global Tooling research description is misleading~~ ✅ Fixed
 
-**Where:** `js/research.js` — the `globalTier2` node description
-
-**What's wrong:** The description says "Raises the level cap on 6 global upgrades (not Belt Motors)". Players don't know which 6 upgrades are affected without trial and error.
-
-**What to do:** List the 6 upgrades by name in the tooltip: Quick Cast, Tackle Bag, Auto-Fisher Tuning, Market Contacts, Drone Engine Tuning, and Lucky Lure.
-
-**Why it matters:** Clarity removes frustration.
-
-**Priority:** Low
+Both descriptions now list the 6 affected upgrades by name.
 
 ---
 
@@ -172,27 +156,15 @@ Recommended style: simple, clean line icons matching the dark UI aesthetic. The 
 
 ---
 
-### The start screen name entry has no visible character limit
+### ~~The start screen name entry has no visible character limit~~ ✅ Already handled
 
-**Where:** `js/startscreen.js` — the username input field
-
-**What's wrong:** The input accepts any length but the leaderboard likely truncates long names. Players may type long usernames and be confused.
-
-**What to do:** Add `maxlength="20"` to the input element and show a character counter beneath it.
-
-**Priority:** Low
+`maxlength="20"` is already present on the input field.
 
 ---
 
-### Frog sell is only accessible from world interaction
+### ~~Frog sell is only accessible from world interaction~~ ✅ Fixed
 
-**Where:** `js/ui.js` — `renderPetsPanel()`
-
-**What's wrong:** Axolotls have a sell button right in the Pets panel. Frogs do not — you must find the frog on the map and interact with it. This is inconsistent.
-
-**What to do:** Add a sell button to each frog slide in the `renderPetsPanel()` frog section, mirroring the axolotl sell button logic.
-
-**Priority:** Low
+Frog slides now show a "Sell $X" button for any unplaced frog, matching axolotl behaviour.
 
 ---
 

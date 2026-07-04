@@ -63,7 +63,7 @@ function buyPrestigeUpgrade(id) {
 }
 
 function prestigeSellMult()  { return 1 + prestigeLevels.globalSell * 0.02; }
-function prestigeSpeedMult() { return 1 - prestigeLevels.fasterStart * 0.10; }
+function prestigeSpeedMult() { return Math.max(0.08, 1 - prestigeLevels.fasterStart * 0.10); }
 function prestigeStartCash() { return 50 + prestigeLevels.startCash * STARTCASH_PER_LEVEL; }
 function prestigeUnlockDiscount() { return prestigeLevels.unlockGate * 5000; }
 
