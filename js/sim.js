@@ -1164,7 +1164,19 @@ function expandIsland() {
 
   if (!toConvert.length) { queueToast('Island is at maximum size!', '#e85d4a'); return; }
 
+  // Add the new outer ring as shore tiles
   for (const { c, r } of toConvert) terrain[r][c] = T_SHORE;
+
+  // Promote old shore tiles that are now interior (no longer adjacent to water) to grass
+  for (let r = 0; r < WORLD_ROWS; r++) {
+    for (let c = 0; c < WORLD_COLS; c++) {
+      if (terrain[r][c] !== T_SHORE) continue;
+      if (tileAt(c - 1, r) !== T_WATER && tileAt(c + 1, r) !== T_WATER &&
+          tileAt(c, r - 1) !== T_WATER && tileAt(c, r + 1) !== T_WATER) {
+        terrain[r][c] = T_EMPTY;
+      }
+    }
+  }
 
   game.cash -= cost;
   game.islandLevel++;
