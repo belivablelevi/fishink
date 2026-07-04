@@ -5,7 +5,7 @@
 :root {
   --c-bg: #07080f;
   --c-surface: #0d1117;
-  --c-border: rgba(255,255,255,0.22);
+  --c-border: rgba(255,255,255,0.40);
   --c-accent: #e8a030;
   --c-mint: #4dca7c;
   --c-sky: #7ec8e3;
@@ -87,7 +87,7 @@ html, body {
 .menu-close {
   appearance: none;
   border: 1px solid var(--c-border);
-  background: rgba(255,255,255,0.27);
+  background: rgba(255,255,255,0.50);
   color: var(--c-text);
   width: 28px; height: 28px;
   border-radius: 6px;
@@ -168,7 +168,7 @@ html, body {
 .cat-nav-btn {
   appearance: none;
   border: 1px solid var(--c-border);
-  background: rgba(255,255,255,0.27);
+  background: rgba(255,255,255,0.50);
   color: var(--cat-color, var(--c-muted));
   font-family: var(--font-ui);
   font-size: 10.5px;
@@ -180,7 +180,7 @@ html, body {
   cursor: pointer;
   transition: background 0.15s;
 }
-.cat-nav-btn:hover { background: rgba(255,255,255,0.38); }
+.cat-nav-btn:hover { background: rgba(255,255,255,0.64); }
 
 /* Build tab — category-grouped item grid */
 .item-grid { display: flex; flex-direction: column; gap: 4px; padding-bottom: 84px; }
@@ -212,7 +212,7 @@ html, body {
 
 .item-card {
   position: relative;
-  background: rgba(255,255,255,0.27);
+  background: rgba(255,255,255,0.50);
   border: 1.5px solid transparent;
   border-radius: 10px;
   padding: 14px 8px;
@@ -220,15 +220,15 @@ html, body {
   text-align: center;
   transition: background 0.15s, border-color 0.15s;
 }
-.item-card:hover { background: rgba(255,255,255,0.38); }
-.item-card.selected { border-color: var(--cat-color, var(--c-accent)); background: rgba(255,255,255,0.42); }
+.item-card:hover { background: rgba(255,255,255,0.64); }
+.item-card.selected { border-color: var(--cat-color, var(--c-accent)); background: rgba(255,255,255,0.70); }
 .item-card.disabled { opacity: 0.45; cursor: not-allowed; }
 .item-card .swatch {
   display: block;
   width: 64px; height: 64px;
   border-radius: 8px;
   margin: 0 auto 10px;
-  border: 1px solid rgba(255,255,255,0.27);
+  border: 1px solid rgba(255,255,255,0.50);
   image-rendering: pixelated;
 }
 .item-card .name { font-size: 12px; font-weight: 600; line-height: 1.2; }
@@ -253,7 +253,7 @@ html, body {
   font-size: 9.5px;
   font-weight: 700;
   color: var(--c-muted);
-  background: rgba(255,255,255,0.20);
+  background: rgba(255,255,255,0.34);
   border-radius: 4px;
   padding: 1px 4px;
 }
@@ -339,7 +339,7 @@ body.touch-active .machines-panel { bottom: 144px; }
   display: block;
   width: 40px; height: 40px;
   border-radius: 6px;
-  border: 1px solid rgba(255,255,255,0.27);
+  border: 1px solid rgba(255,255,255,0.50);
   image-rendering: pixelated;
 }
 .hud-info { flex: 1; min-width: 0; }
@@ -350,7 +350,7 @@ body.touch-active .machines-panel { bottom: 144px; }
   appearance: none;
   flex: 1;
   border: 1px solid var(--c-border);
-  background: rgba(255,255,255,0.27);
+  background: rgba(255,255,255,0.50);
   color: var(--c-text);
   border-radius: 6px;
   font-size: 11px;
@@ -360,7 +360,7 @@ body.touch-active .machines-panel { bottom: 144px; }
   transition: background 0.15s, color 0.15s, border-color 0.15s;
   display: flex; align-items: center; justify-content: center; gap: 4px;
 }
-.hud-btn:hover { background: rgba(255,255,255,0.38); }
+.hud-btn:hover { background: rgba(255,255,255,0.64); }
 .hud-btn.hud-toggle.active { background: var(--c-sky); color: #07080f; border-color: var(--c-sky); }
 .hud-btn.disabled { opacity: 0.4; cursor: not-allowed; }
 .hud-arrow { display: inline-block; font-size: 13px; transition: transform 0.15s; }
@@ -390,7 +390,7 @@ body.touch-active .machines-panel { bottom: 144px; }
   font-size: 11px;
   font-weight: 700;
   color: var(--c-text);
-  background: rgba(255,255,255,0.24);
+  background: rgba(255,255,255,0.44);
   border: 1px solid var(--c-border);
   border-bottom-width: 2px;
   border-radius: 5px;
@@ -418,7 +418,7 @@ body.touch-active .machines-panel { bottom: 144px; }
   gap: 14px;
   padding: 16px 18px;
   border-radius: 10px;
-  background: rgba(255,255,255,0.27);
+  background: rgba(255,255,255,0.50);
   margin-bottom: 10px;
 }
 .upgrade-row:last-child { margin-bottom: 0; }
@@ -473,7 +473,7 @@ body.touch-active .machines-panel { bottom: 144px; }
 }
 .upgrade-buy:hover { filter: brightness(1.1); }
 .upgrade-buy:disabled {
-  background: rgba(255,255,255,0.24);
+  background: rgba(255,255,255,0.44);
   color: var(--c-muted);
   cursor: not-allowed;
 }
@@ -487,7 +487,7 @@ body.touch-active .machines-panel { bottom: 144px; }
   font-weight: 700;
   font-family: inherit;
   color: var(--c-text);
-  background: rgba(255,255,255,0.24);
+  background: rgba(255,255,255,0.44);
   width: 140px;
 }
 .bp-name-input:focus { outline: 1px solid var(--c-accent); }
@@ -589,7 +589,7 @@ body.touch-active .machines-panel { bottom: 144px; }
 }
 .block-popup .mp-buy:hover { filter: brightness(1.1); }
 .block-popup .mp-buy:disabled {
-  background: rgba(255,255,255,0.24);
+  background: rgba(255,255,255,0.44);
   color: var(--c-muted);
   cursor: not-allowed;
 }
@@ -644,7 +644,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   flex: 1;
   appearance: none;
   border: 1px solid var(--c-border);
-  background: rgba(255,255,255,0.27);
+  background: rgba(255,255,255,0.50);
   color: var(--c-muted);
   border-radius: 5px;
   padding: 6px 2px;
@@ -705,7 +705,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
 .block-popup .mp-target-btn {
   appearance: none;
   border: 1px solid var(--c-border);
-  background: rgba(255,255,255,0.27);
+  background: rgba(255,255,255,0.50);
   color: var(--c-muted);
   border-radius: 5px;
   padding: 7px 8px;
@@ -758,7 +758,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   cursor: pointer;
   transition: background 0.15s;
 }
-.sound-toggle-btn:hover { background: rgba(255,255,255,0.38); }
+.sound-toggle-btn:hover { background: rgba(255,255,255,0.64); }
 
 .sound-panel {
   position: fixed;
@@ -803,7 +803,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   cursor: pointer;
   transition: background 0.15s;
 }
-.game-menu-toggle-btn:hover { background: rgba(255,255,255,0.38); }
+.game-menu-toggle-btn:hover { background: rgba(255,255,255,0.64); }
 
 .game-menu-panel {
   position: fixed;
@@ -827,7 +827,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
 .game-menu-btn {
   appearance: none;
   border: 1px solid var(--c-border);
-  background: rgba(255,255,255,0.24);
+  background: rgba(255,255,255,0.44);
   color: var(--c-text);
   border-radius: 6px;
   font-family: var(--font-ui);
@@ -837,7 +837,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
-.game-menu-btn:hover { background: rgba(255,255,255,0.38); }
+.game-menu-btn:hover { background: rgba(255,255,255,0.64); }
 .game-menu-btn.danger { color: var(--c-red); }
 .game-menu-btn.danger:hover { background: rgba(224,92,92,0.15); }
 .game-menu-divider { height: 1px; background: var(--c-border); margin: 4px 0; }
@@ -865,7 +865,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   transition: background 0.15s;
   padding: 0;
 }
-.machines-toggle-btn:hover { background: rgba(255,255,255,0.38); }
+.machines-toggle-btn:hover { background: rgba(255,255,255,0.64); }
 .machines-toggle-btn img {
   width: 36px; height: 36px;
   margin-top: 2px;
@@ -908,7 +908,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   font-family: var(--font-ui);
   font-size: 11px;
   color: #e8e8e8;
-  background: rgba(255,255,255,0.22);
+  background: rgba(255,255,255,0.40);
   border: 1px solid var(--c-border);
   border-radius: 6px;
   outline: none;
@@ -939,7 +939,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   cursor: pointer;
   transition: background 0.15s;
 }
-.leaderboard-toggle-btn:hover { background: rgba(255,255,255,0.38); }
+.leaderboard-toggle-btn:hover { background: rgba(255,255,255,0.64); }
 
 .leaderboard-panel {
   position: fixed;
@@ -1023,7 +1023,7 @@ body.touch-active .tutorial-overlay { bottom: 180px; }
 .tutorial-skip-btn {
   appearance: none;
   border: 1px solid var(--c-border);
-  background: rgba(255,255,255,0.24);
+  background: rgba(255,255,255,0.44);
   color: var(--c-muted);
   border-radius: 6px;
   font-family: var(--font-ui);
@@ -1033,7 +1033,7 @@ body.touch-active .tutorial-overlay { bottom: 180px; }
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
-.tutorial-skip-btn:hover { background: rgba(255,255,255,0.38); color: var(--c-text); }
+.tutorial-skip-btn:hover { background: rgba(255,255,255,0.64); color: var(--c-text); }
 
 /* Inline key badge — used inside tutorial step text for hotkey callouts */
 .tutorial-key {
@@ -1185,7 +1185,7 @@ body.touch-active .build-hint { right: 90px; bottom: 20px; }
   font-weight: 600;
   font-family: inherit;
   color: var(--c-text);
-  background: rgba(255,255,255,0.24);
+  background: rgba(255,255,255,0.44);
   box-sizing: border-box;
 }
 .start-screen-input:focus { outline: 1px solid var(--c-accent); }
@@ -1244,14 +1244,14 @@ body.touch-active .build-hint { right: 90px; bottom: 20px; }
   font-size: 11px;
   cursor: pointer;
 }
-.touch-action-btn:active { background: rgba(255,255,255,0.27); }
+.touch-action-btn:active { background: rgba(255,255,255,0.50); }
 #touchInteractBtn { right: 24px; bottom: 100px; }
 #touchBuildBtn    { right: 24px; bottom: 24px; }
 
 /* ─── Pets tab ──────────────────────────────────────────────────────────────── */
 
 .pets-gacha {
-  background: rgba(255,255,255,0.27);
+  background: rgba(255,255,255,0.50);
   border: 1px solid var(--c-border);
   border-radius: 8px;
   padding: 14px 16px;
@@ -1287,7 +1287,7 @@ body.touch-active .build-hint { right: 90px; bottom: 20px; }
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  background: rgba(255,255,255,0.27);
+  background: rgba(255,255,255,0.50);
   border-radius: 6px;
   padding: 8px 10px;
   min-width: 60px;
@@ -1355,7 +1355,7 @@ body.touch-active .build-hint { right: 90px; bottom: 20px; }
   display: flex;
   align-items: center;
   gap: 10px;
-  background: rgba(255,255,255,0.27);
+  background: rgba(255,255,255,0.50);
   border: 1px solid var(--c-border);
   border-radius: 6px;
   padding: 6px 10px;
@@ -1376,7 +1376,7 @@ body.touch-active .build-hint { right: 90px; bottom: 20px; }
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255,255,255,0.27);
+  background: rgba(255,255,255,0.50);
   border: 1px solid var(--c-border);
   border-radius: 6px;
   padding: 6px 10px;
