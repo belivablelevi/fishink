@@ -212,7 +212,7 @@ html, body {
 
 .item-card {
   position: relative;
-  background: rgba(255,255,255,0.58);
+  background: rgba(255,255,255,0.18);
   border: 1.5px solid transparent;
   border-radius: 10px;
   padding: 14px 8px;
@@ -220,8 +220,8 @@ html, body {
   text-align: center;
   transition: background 0.15s, border-color 0.15s;
 }
-.item-card:hover { background: rgba(255,255,255,0.64); }
-.item-card.selected { border-color: var(--cat-color, var(--c-accent)); background: rgba(255,255,255,0.70); }
+.item-card:hover { background: rgba(255,255,255,0.28); }
+.item-card.selected { border-color: var(--cat-color, var(--c-accent)); background: rgba(255,255,255,0.36); }
 .item-card.disabled { opacity: 0.45; cursor: not-allowed; }
 .item-card .swatch {
   display: block;
@@ -418,7 +418,7 @@ body.touch-active .machines-panel { bottom: 144px; }
   gap: 14px;
   padding: 16px 18px;
   border-radius: 10px;
-  background: rgba(255,255,255,0.58);
+  background: rgba(255,255,255,0.13);
   margin-bottom: 10px;
 }
 .upgrade-row:last-child { margin-bottom: 0; }
