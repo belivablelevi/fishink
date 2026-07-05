@@ -59,8 +59,6 @@
   <button id="machinesToggleBtn" class="machines-toggle-btn" title="View all upgradable machines"><img src="img/icon-machines.png" alt="Machines"></button>
   <div id="machinesPanel" class="machines-panel hidden"></div>
 
-  <button id="bulkSelectBtn" class="bulk-select-trigger" title="Bulk configure machines">Bulk Edit</button>
-
   <button id="leaderboardToggleBtn" class="leaderboard-toggle-btn" title="Leaderboard">&#127942;</button>
   <div id="leaderboardPanel" class="leaderboard-panel hidden">
     <div class="menu-header">
@@ -81,10 +79,13 @@
     <span id="cashHudValue">0</span>
   </div>
 
-  <button id="buildHint" class="build-hint" onclick="triggerBuildToggle()" title="Open Build Mode (B)">
-    <span class="build-hint-key">B</span>
-    <span class="build-hint-label">Build</span>
-  </button>
+  <div class="bottom-right-group">
+    <button id="bulkSelectBtn" class="bulk-select-trigger" title="Bulk configure machines">Bulk Edit</button>
+    <button id="buildHint" class="build-hint" onclick="triggerBuildToggle()" title="Open Build Mode (B)">
+      <span class="build-hint-key">B</span>
+      <span class="build-hint-label">Build</span>
+    </button>
+  </div>
 
   <div id="buildMenu" class="build-menu hidden">
     <div class="menu-header">

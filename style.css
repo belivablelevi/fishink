@@ -1075,11 +1075,19 @@ body.touch-active .tutorial-overlay { bottom: 180px; }
 /* ─── Build hint button ─────────────────────────────────────────────────────── */
 /* Persistent "B — Build" shortcut shown in the lower-right when not in
    build mode. Pulses during the tutorial's build_open step. */
-.build-hint {
+.bottom-right-group {
   position: fixed;
   bottom: 24px;
   right: 24px;
   z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+body.touch-active .bottom-right-group { right: 90px; bottom: 20px; }
+
+.build-hint {
+  position: static;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1118,15 +1126,10 @@ body.touch-active .tutorial-overlay { bottom: 180px; }
   0%, 100% { box-shadow: 0 0 0 0 rgba(232,160,48,0.7); }
   50%       { box-shadow: 0 0 0 10px rgba(232,160,48,0); }
 }
-/* On touch devices the joystick takes the bottom-right corner — push hint left */
-body.touch-active .build-hint { right: 90px; bottom: 20px; }
 
 /* ─── Bulk Edit trigger button ───────────────────────────────────────────────── */
 .bulk-select-trigger {
-  position: fixed;
-  bottom: 24px;
-  left: 24px;
-  z-index: 20;
+  position: static;
   display: flex;
   align-items: center;
   gap: 7px;
@@ -1153,7 +1156,6 @@ body.touch-active .build-hint { right: 90px; bottom: 20px; }
   background: rgba(77,202,124,0.12);
   color: var(--c-mint);
 }
-body.touch-active .bulk-select-trigger { bottom: 20px; left: 20px; }
 
 /* ─── Bulk Edit panel ────────────────────────────────────────────────────────── */
 .bs-panel {
