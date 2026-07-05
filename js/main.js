@@ -1,6 +1,6 @@
 // Fish INK Factory — game loop
 
-const GAME_VERSION = '1.4.95';
+const GAME_VERSION = '1.4.96';
 
 let canvas, ctx;
 let lastTime = 0;
@@ -144,6 +144,8 @@ function init() {
       } catch (e) { /* offline — local save already loaded */ }
     }
 
+    checkForUpdate();
+
     setTimeout(() => {
       loadingAnim.stop();
       runStartScreens(() => {
@@ -220,6 +222,19 @@ function loop(ts) {
   }
 
   requestAnimationFrame(loop);
+}
+
+async function checkForUpdate() {
+  try {
+    const res = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return;
+    const { version } = await res.json();
+    if (version && version !== GAME_VERSION) {
+      saveGame();
+      if (typeof cloudPushSaveImmediate === 'function') cloudPushSaveImmediate();
+      location.reload(true);
+    }
+  } catch (e) { /* offline — skip silently */ }
 }
 
 window.addEventListener('load', init);
