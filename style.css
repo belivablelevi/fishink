@@ -1100,6 +1100,24 @@ body.touch-active .tutorial-overlay { bottom: 180px; }
 body.touch-active .build-hint { right: 90px; bottom: 20px; }
 
 /* ─── Loading screen — covers the blank canvas while images/world load ──────── */
+
+@keyframes ls-rise {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes ls-widen {
+  from { opacity: 0; letter-spacing: 0.55em; }
+  to   { opacity: 1; letter-spacing: 0.30em; }
+}
+@keyframes ls-bar-in {
+  from { opacity: 0; transform: scaleX(0.6); }
+  to   { opacity: 1; transform: scaleX(1); }
+}
+@keyframes ls-dot {
+  0%, 80%, 100% { opacity: 0.2; }
+  40%           { opacity: 1; }
+}
+
 .loading-screen {
   position: fixed;
   inset: 0;
@@ -1108,35 +1126,63 @@ body.touch-active .build-hint { right: 90px; bottom: 20px; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 22px;
+  gap: 42px;
   background: var(--c-bg);
-  transition: opacity 0.3s ease;
+  transition: opacity 0.35s ease;
 }
 .loading-screen.hidden {
   opacity: 0;
   pointer-events: none;
 }
+.loading-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
 .loading-title {
   font-family: var(--font-ui);
-  font-size: 22px;
+  font-size: 42px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: #ffffff;
+  animation: ls-rise 0.55s cubic-bezier(0.22,1,0.36,1) both;
+}
+.loading-subtitle {
+  font-family: var(--font-ui);
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.16em;
-  color: var(--c-text);
+  letter-spacing: 0.30em;
+  color: var(--c-mint);
+  animation: ls-widen 0.6s cubic-bezier(0.22,1,0.36,1) 0.2s both;
+}
+.loading-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  animation: ls-bar-in 0.5s ease 0.35s both;
 }
 .loading-bar-track {
   position: relative;
-  width: 200px;
-  height: 3px;
-  border-radius: 999px;
-  background: var(--c-border);
+  width: 180px;
+  height: 2px;
+  background: rgba(255,255,255,0.10);
   overflow: hidden;
 }
 .loading-bar-fill {
   height: 100%;
   width: 4%;
-  border-radius: 999px;
   background: var(--c-mint);
+  box-shadow: 0 0 8px var(--c-mint);
   transition: width 0.25s ease-out;
+}
+.loading-label {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  color: var(--c-muted);
 }
 
 /* ─── Start-screen queue — one-time screens shown before gameplay begins ──── */
