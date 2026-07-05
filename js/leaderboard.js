@@ -14,7 +14,7 @@ var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 // Increment LEADERBOARD_SEASON to wipe all scores: every player gets a fresh
 // client_id on next load, so old rows become orphaned. Pair with a
 // TRUNCATE leaderboard_scores in the Supabase SQL editor for a full reset.
-const LEADERBOARD_SEASON   = 2;
+const LEADERBOARD_SEASON   = 3;
 const LEADERBOARD_ID_KEY   = `fishink_leaderboard_id_s${LEADERBOARD_SEASON}`;
 const LEADERBOARD_NAME_KEY = 'fishink_leaderboard_name';
 
