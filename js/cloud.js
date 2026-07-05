@@ -3,7 +3,22 @@
 // Depends on leaderboard.js (loaded first) for:
 //   SUPABASE_URL, SUPABASE_ANON, LEADERBOARD_ID_KEY, LEADERBOARD_NAME_KEY
 
-const CLOUD_TABLE = 'players';
+const CLOUD_TABLE        = 'players';
+const CLOUD_RECOVERY_KEY = 'fishink_recovery_code';
+
+// ── Sync-status state machine ──────────────────────────────────────────────────
+
+const CLOUD_STATUS = { IDLE: 'idle', SYNCING: 'syncing', SYNCED: 'synced', ERROR: 'error' };
+let _cloudStatus  = CLOUD_STATUS.IDLE;
+let _cloudLastSync = null; // Date.now() ms
+
+function setCloudStatus(s) {
+  _cloudStatus = s;
+  if (s === CLOUD_STATUS.SYNCED) _cloudLastSync = Date.now();
+  if (typeof updateCloudStatusUI === 'function') updateCloudStatusUI();
+}
+
+function getCloudStatus() { return { status: _cloudStatus, lastSync: _cloudLastSync }; }
 
 // ── Identity ───────────────────────────────────────────────────────────────────
 
@@ -38,6 +53,14 @@ function _cloudFetch(path, opts) {
   });
 }
 
+// ── Recovery code ──────────────────────────────────────────────────────────────
+
+function generateRecoveryCode() {
+  const chars = 'ABCDEFHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from(crypto.getRandomValues(new Uint8Array(8)))
+    .map(b => chars[b % chars.length]).join('');
+}
+
 // ── Username availability ──────────────────────────────────────────────────────
 
 // Returns true = available, false = taken, null = network error
@@ -55,26 +78,62 @@ async function cloudUsernameAvailable(username) {
 // ── Account creation ───────────────────────────────────────────────────────────
 
 // Creates a players row for this device, uploading any existing local save.
-// Returns true on success, false on failure (name taken, network, etc.)
+// Returns { ok: true, code } on success, { ok: false } on failure.
 async function cloudCreatePlayer(username) {
   try {
+    const code     = generateRecoveryCode();
     const saveData = typeof serializeGame === 'function' ? serializeGame() : {};
     const res = await _cloudFetch(CLOUD_TABLE, {
       method:  'POST',
       headers: { Prefer: 'resolution=ignore-duplicates,return=minimal' },
-      body: JSON.stringify({ client_id: cloudId(), username, save_data: saveData }),
+      body: JSON.stringify({
+        client_id: cloudId(), username,
+        save_data: saveData, recovery_code: code,
+      }),
     });
-    return res.ok || res.status === 409;
-  } catch { return false; }
+    if (res.ok || res.status === 409) {
+      localStorage.setItem(CLOUD_RECOVERY_KEY, code);
+      return { ok: true, code };
+    }
+    return { ok: false };
+  } catch { return { ok: false }; }
+}
+
+// ── Cross-device login ─────────────────────────────────────────────────────────
+
+// Looks up a player by username + recovery_code. On success, overwrites the
+// local identity keys so this device is now tied to that account.
+async function cloudLogin(username, code) {
+  try {
+    const res = await _cloudFetch(
+      `${CLOUD_TABLE}?username=eq.${encodeURIComponent(username)}&recovery_code=eq.${encodeURIComponent(code.trim())}&select=client_id,save_data`
+    );
+    if (!res.ok) return { error: 'network' };
+    const rows = await res.json();
+    if (!rows.length) return { error: 'invalid' };
+    localStorage.setItem(LEADERBOARD_ID_KEY,   rows[0].client_id);
+    localStorage.setItem(LEADERBOARD_NAME_KEY,  username);
+    localStorage.setItem(CLOUD_RECOVERY_KEY,    code.trim());
+    return { ok: true, saveData: rows[0].save_data };
+  } catch { return { error: 'network' }; }
+}
+
+// ── Sign out ───────────────────────────────────────────────────────────────────
+
+function cloudSignOut() {
+  localStorage.removeItem(LEADERBOARD_ID_KEY);
+  localStorage.removeItem(LEADERBOARD_NAME_KEY);
+  localStorage.removeItem(CLOUD_RECOVERY_KEY);
+  location.reload();
 }
 
 // ── Save sync ──────────────────────────────────────────────────────────────────
 
-// Loads this device's cloud save. Returns { username, save_data } or null.
+// Loads this device's cloud save. Returns { username, save_data, updated_at } or null.
 async function cloudLoadSave() {
   try {
     const res = await _cloudFetch(
-      `${CLOUD_TABLE}?client_id=eq.${cloudId()}&select=username,save_data`
+      `${CLOUD_TABLE}?client_id=eq.${cloudId()}&select=username,save_data,updated_at`
     );
     if (!res.ok) return null;
     const rows = await res.json();
@@ -82,32 +141,29 @@ async function cloudLoadSave() {
   } catch { return null; }
 }
 
-// Upserts the current in-memory game state to the cloud. Resolves on client_id
-// so it creates the row if missing (fixes players who predate the players table)
-// and updates it if the row already exists. Silent on failure.
+// Upserts the current in-memory game state to the cloud.
 let _pushTimer = null;
 
 function _doCloudPush(keepalive) {
   if (!isLeaderboardConfigured()) return;
   if (!cloudUsername()) return;
+  setCloudStatus(CLOUD_STATUS.SYNCING);
   const saveData = typeof serializeGame === 'function' ? serializeGame() : {};
-  // PATCH by client_id so only save_data is updated — avoids the 409 that a
-  // POST upsert triggers when the username column conflicts with another row.
   _cloudFetch(`${CLOUD_TABLE}?client_id=eq.${encodeURIComponent(cloudId())}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ save_data: saveData }),
+    method:    'PATCH',
+    body:      JSON.stringify({ save_data: saveData }),
     keepalive: keepalive || false,
-  }).catch(() => {});
+  }).then(r => setCloudStatus(r.ok ? CLOUD_STATUS.SYNCED : CLOUD_STATUS.ERROR))
+    .catch(() => setCloudStatus(CLOUD_STATUS.ERROR));
 }
 
 // Debounced version for in-game saves — batches rapid save calls.
 function cloudPushSave() {
   clearTimeout(_pushTimer);
-  _pushTimer = setTimeout(() => _doCloudPush(false), 8000);
+  _pushTimer = setTimeout(() => _doCloudPush(false), 3000);
 }
 
-// Immediate version for beforeunload — keepalive lets the request survive
-// the page close without being aborted by the browser.
+// Immediate version for beforeunload and manual sync.
 function cloudPushSaveImmediate() {
   clearTimeout(_pushTimer);
   _doCloudPush(true);
@@ -232,7 +288,6 @@ window.dev = {
   async migrateLeaderboard() {
     if (!_devAuth()) return;
     try {
-      // Fetch every leaderboard row
       const res = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard_scores?select=client_id,name&limit=1000`, {
         headers: { apikey: SUPABASE_ANON, Authorization: 'Bearer ' + SUPABASE_ANON },
       });
@@ -240,7 +295,6 @@ window.dev = {
       const rows = await res.json();
       console.log(`Found ${rows.length} leaderboard entries — seeding players table...`);
 
-      // Dedupe by client_id (keep first occurrence)
       const seen = new Set();
       const unique = rows.filter(r => {
         if (!r.client_id || !r.name || seen.has(r.client_id)) return false;
@@ -250,7 +304,6 @@ window.dev = {
 
       let created = 0, skipped = 0;
       for (const row of unique) {
-        // ignore-duplicates: skip silently if client_id OR username already exists
         const r = await _cloudFetch(CLOUD_TABLE, {
           method: 'POST',
           headers: { Prefer: 'resolution=ignore-duplicates,return=minimal' },

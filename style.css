@@ -844,6 +844,28 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
 .game-menu-panel .sound-row { color: var(--c-text); }
 .game-menu-label { font-size: 11px; color: var(--c-muted); padding: 2px 0 4px; text-align: center; }
 
+.cloud-status-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; }
+.cloud-status-icon { font-size: 13px; min-width: 14px; text-align: center; }
+.cloud-status-label { flex: 1; font-size: 10px; color: var(--c-muted); }
+.cloud-sync-btn { flex: 0; font-size: 10px; padding: 3px 8px; min-height: unset; }
+.cloud-recovery-row { display: flex; align-items: center; gap: 6px; padding: 2px 0 0; }
+.cloud-recovery-label { font-size: 9px; color: var(--c-muted); white-space: nowrap; }
+.cloud-recovery-code { font-family: monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: var(--c-mint); }
+
+.recovery-code-box {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-family: monospace;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--c-mint);
+  text-align: center;
+  margin: 12px 0;
+}
+
 /* ─── Machines overview — icon button docked beside the cash pill HUD ──────── */
 /* top/left here are just an initial fallback before the first frame's JS
    positioning (updateMachinesBtnPos in ui.js) docks it beside the cash pill. */

@@ -62,6 +62,7 @@ function serializeGame() {
     islandChests: game.islandChests || {},
     chestIncomeBonus: game.chestIncomeBonus || 0,
     islandLevel: game.islandLevel || 0,
+    savedAt: new Date().toISOString(),
   };
 }
 

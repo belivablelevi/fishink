@@ -42,6 +42,17 @@
     <button class="game-menu-btn" id="saveNowBtn">Save Now</button>
 <button class="game-menu-btn danger" id="restartGameBtn">Restart Game</button>
     <div class="game-menu-divider"></div>
+    <div class="cloud-status-row">
+      <span class="cloud-status-icon" id="cloudStatusIcon">☁</span>
+      <span class="cloud-status-label" id="cloudStatusLabel">Not signed in</span>
+      <button class="game-menu-btn cloud-sync-btn" id="cloudSyncBtn" style="display:none">Sync</button>
+    </div>
+    <div id="cloudRecoveryRow" class="cloud-recovery-row" style="display:none">
+      <span class="cloud-recovery-label">Recovery:</span>
+      <span class="cloud-recovery-code" id="cloudRecoveryCode"></span>
+    </div>
+    <button class="game-menu-btn danger" id="cloudSignOutBtn" style="display:none">Sign Out</button>
+    <div class="game-menu-divider"></div>
     <div id="islandExpandInfo" class="game-menu-label">Island Ring 0 · Next: $5,000</div>
     <button class="game-menu-btn" id="islandExpandBtn">Expand Island</button>
     <div class="game-menu-divider"></div>

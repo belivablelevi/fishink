@@ -3,6 +3,48 @@
 let buildMenuEl, buildPanelEl, upgradesPanelEl, fishIndexPanelEl, statsPanelEl, controlsPanelEl, researchPanelEl, prestigePanelEl, blueprintsPanelEl, menuCashEl;
 let leaderboardPanelEl;
 
+function updateCloudStatusUI() {
+  const icon       = document.getElementById('cloudStatusIcon');
+  const label      = document.getElementById('cloudStatusLabel');
+  const syncBtn    = document.getElementById('cloudSyncBtn');
+  const signOutBtn = document.getElementById('cloudSignOutBtn');
+  const recovRow   = document.getElementById('cloudRecoveryRow');
+  const recovCode  = document.getElementById('cloudRecoveryCode');
+  if (!icon) return;
+
+  const { status, lastSync } = typeof getCloudStatus === 'function'
+    ? getCloudStatus() : { status: 'idle', lastSync: null };
+  const name = typeof cloudUsername === 'function' ? cloudUsername() : '';
+
+  const icons  = { idle: '☁', syncing: '↑', synced: '✓', error: '✗' };
+  const colors = { idle: '', syncing: 'var(--c-sky)', synced: 'var(--c-mint)', error: 'var(--c-red)' };
+  icon.textContent  = icons[status]  || '☁';
+  icon.style.color  = colors[status] || '';
+
+  if (!name) {
+    label.textContent = 'Not signed in';
+    if (syncBtn)    syncBtn.style.display    = 'none';
+    if (signOutBtn) signOutBtn.style.display = 'none';
+    if (recovRow)   recovRow.style.display   = 'none';
+  } else {
+    const ago = lastSync
+      ? (Date.now() - lastSync < 60000 ? 'just now' : `${Math.round((Date.now() - lastSync) / 60000)}m ago`)
+      : 'not yet';
+    label.textContent = `${name} · ${ago}`;
+    if (syncBtn)    syncBtn.style.display    = '';
+    if (signOutBtn) signOutBtn.style.display = '';
+    if (recovRow && recovCode) {
+      const code = localStorage.getItem(typeof CLOUD_RECOVERY_KEY !== 'undefined' ? CLOUD_RECOVERY_KEY : 'fishink_recovery_code') || '';
+      if (code) {
+        recovCode.textContent  = code.slice(0, 4) + '-' + code.slice(4);
+        recovRow.style.display = '';
+      } else {
+        recovRow.style.display = 'none';
+      }
+    }
+  }
+}
+
 // Category metadata for the Build tab's grouped item grid. Order here is the
 // display order; BLOCK_CATS (grid.js) assigns each block id to one of these.
 const BUILD_CATS = [
@@ -95,7 +137,7 @@ const restartBtn = document.getElementById('restartGameBtn');
 
   btn.addEventListener('click', () => {
     panel.classList.toggle('hidden');
-    if (!panel.classList.contains('hidden')) refreshIslandUI();
+    if (!panel.classList.contains('hidden')) { refreshIslandUI(); updateCloudStatusUI(); }
   });
 
   islandExpandBtn.addEventListener('click', () => {
@@ -113,9 +155,22 @@ const restartBtn = document.getElementById('restartGameBtn');
 
   saveBtn.addEventListener('click', () => {
     saveGame();
+    if (typeof cloudPushSaveImmediate === 'function') cloudPushSaveImmediate();
     queueToast('Game saved', '#4dca7c');
     panel.classList.add('hidden');
   });
+
+  document.getElementById('cloudSyncBtn')?.addEventListener('click', () => {
+    if (typeof cloudPushSaveImmediate === 'function') cloudPushSaveImmediate();
+    queueToast('Syncing…', '#5ab8f5');
+  });
+
+  document.getElementById('cloudSignOutBtn')?.addEventListener('click', () => {
+    if (!confirm('Sign out? Your local save stays on this device.')) return;
+    if (typeof cloudSignOut === 'function') cloudSignOut();
+  });
+
+  updateCloudStatusUI();
 
   let restartArmed = false, restartTimer = null;
   restartBtn.addEventListener('click', () => {

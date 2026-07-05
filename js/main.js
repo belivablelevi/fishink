@@ -1,6 +1,6 @@
 // Fish INK Factory — game loop
 
-const GAME_VERSION = '1.4.90';
+const GAME_VERSION = '1.4.91';
 
 let canvas, ctx;
 let lastTime = 0;
@@ -127,11 +127,17 @@ function init() {
         const cloud = await cloudLoadSave();
         if (cloud?.save_data && Object.keys(cloud.save_data).length > 0) {
           try {
-            const data = cloud.save_data;
-            for (let v = (data.version || 1); v < SAVE_VERSION; v++) SAVE_MIGRATIONS[v]?.(data);
-            deserializeGame(data);
-            // Mirror to localStorage so offline loads stay current
-            localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+            const localRaw  = localStorage.getItem(SAVE_KEY);
+            const localData = localRaw ? JSON.parse(localRaw) : null;
+            const cloudTs   = cloud.updated_at ? new Date(cloud.updated_at).getTime() : 0;
+            const localTs   = localData?.savedAt ? new Date(localData.savedAt).getTime() : 0;
+            if (cloudTs > localTs) {
+              const data = cloud.save_data;
+              for (let v = (data.version || 1); v < SAVE_VERSION; v++) SAVE_MIGRATIONS[v]?.(data);
+              deserializeGame(data);
+              localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+            }
+            // Local is newer or equal — cloud will catch up on next push
           } catch (e) { console.warn('Cloud save apply failed', e); }
         }
       } catch (e) { /* offline — local save already loaded */ }
