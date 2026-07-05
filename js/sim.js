@@ -93,9 +93,6 @@ function checkCashMilestones() {
   }
 }
 
-
-}
-
 // 1 right on top of the tile, fading linearly to 0 at `range` tiles-worth of
 // distance away — shared by machine chimes and sell sounds so both fade the
 // same way. c/r null (no tile, e.g. UI actions) always plays at full volume.
