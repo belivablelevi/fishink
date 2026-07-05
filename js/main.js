@@ -1,6 +1,6 @@
 // Fish INK Factory — game loop
 
-const GAME_VERSION = '1.4.85';
+const GAME_VERSION = '1.4.86';
 
 let canvas, ctx;
 let lastTime = 0;
@@ -78,11 +78,25 @@ function loadImages(cb, onProgress) {
 }
 
 function startLoadingAnimation() {
-  const fill = document.getElementById('loadingBarFill');
+  const fill  = document.getElementById('loadingBarFill');
+  const video = document.getElementById('loadingVideo');
+  let pending = 0; // latest progress value, applied once metadata is ready
+
+  function scrub(pct) {
+    if (video && video.duration) video.currentTime = video.duration * pct;
+  }
+
+  if (video) {
+    // Apply any progress that arrived before metadata loaded
+    video.addEventListener('loadedmetadata', () => scrub(pending), { once: true });
+  }
+
   return {
     setProgress(pct) {
+      pending = pct;
       const clamped = Math.max(4, Math.min(100, pct * 100));
       if (fill) fill.style.width = `${clamped}%`;
+      scrub(pct);
     },
     stop() {},
   };
