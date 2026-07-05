@@ -1,6 +1,6 @@
 // Fish INK Factory — game loop
 
-const GAME_VERSION = '1.4.92';
+const GAME_VERSION = '1.4.93';
 
 let canvas, ctx;
 let lastTime = 0;
@@ -114,6 +114,7 @@ function init() {
     initGameMenu();
     initMachinesMenu();
     initLeaderboardMenu();
+    initBulkSelect();
     loadingAnim.setProgress(1);
 
     // Try to load a cloud save for returning players. We do this before
