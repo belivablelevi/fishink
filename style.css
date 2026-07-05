@@ -5,7 +5,7 @@
 :root {
   --c-bg: #07080f;
   --c-surface: #0d1117;
-  --c-border: rgba(255,255,255,0.48);
+  --c-border: rgba(255,255,255,0.08);
   --c-accent: #e8a030;
   --c-mint: #4dca7c;
   --c-sky: #7ec8e3;
@@ -124,7 +124,7 @@ html, body {
   text-transform: uppercase;
   font-family: var(--font-ui);
   color: var(--c-muted);
-  background: rgba(6,10,22,0.76);
+  background: rgba(8,14,12,0.72);
   border-radius: 9px 9px 0 0;
   transform: translateY(3px);
   transition: background 0.15s, color 0.15s, transform 0.15s;
@@ -133,20 +133,20 @@ html, body {
 .tab-discord {
   padding: 6px 10px; text-decoration: none; cursor: pointer;
   display: inline-flex; align-items: center; align-self: flex-end;
-  background: rgba(6,10,22,0.76); border-radius: 9px 9px 0 0;
+  background: rgba(8,14,12,0.72); border-radius: 9px 9px 0 0;
   transform: translateY(3px); transition: background 0.15s, transform 0.15s;
 }
-.tab-discord:hover { background: rgba(8,14,32,0.90); transform: translateY(0); }
+.tab-discord:hover { background: rgba(10,18,16,0.88); transform: translateY(0); }
 .tab-discord img { width: 24px; height: 24px; display: block; opacity: 0.65; transition: opacity 0.15s; }
 .tab-discord:hover img { opacity: 1; }
 .tab.active {
   color: #fff;
-  background: rgba(8,14,32,0.97);
+  background: rgba(10,18,16,0.96);
   transform: translateY(0);
 }
 
 .panel {
-  background: rgba(8,14,32,0.97);
+  background: rgba(10,18,16,0.96);
   border: 1px solid var(--c-border);
   border-radius: 0 10px 10px 10px;
   flex: 1;
@@ -212,7 +212,7 @@ html, body {
 
 .item-card {
   position: relative;
-  background: rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.04);
   border: 1.5px solid transparent;
   border-radius: 10px;
   padding: 14px 8px;
@@ -220,15 +220,15 @@ html, body {
   text-align: center;
   transition: background 0.15s, border-color 0.15s;
 }
-.item-card:hover { background: rgba(255,255,255,0.28); }
-.item-card.selected { border-color: var(--cat-color, var(--c-accent)); background: rgba(255,255,255,0.36); }
+.item-card:hover { background: rgba(255,255,255,0.09); }
+.item-card.selected { border-color: var(--cat-color, var(--c-accent)); background: rgba(255,255,255,0.1); }
 .item-card.disabled { opacity: 0.45; cursor: not-allowed; }
 .item-card .swatch {
   display: block;
   width: 64px; height: 64px;
   border-radius: 8px;
   margin: 0 auto 10px;
-  border: 1px solid rgba(255,255,255,0.58);
+  border: 1px solid rgba(255,255,255,0.15);
   image-rendering: pixelated;
 }
 .item-card .name { font-size: 12px; font-weight: 600; line-height: 1.2; }
@@ -253,7 +253,7 @@ html, body {
   font-size: 9.5px;
   font-weight: 700;
   color: var(--c-muted);
-  background: rgba(255,255,255,0.42);
+  background: rgba(255,255,255,0.06);
   border-radius: 4px;
   padding: 1px 4px;
 }
@@ -279,7 +279,7 @@ html, body {
   align-items: center;
   gap: 14px;
   padding: 14px 22px;
-  background: rgba(6,10,22,0.97);
+  background: rgba(8,14,12,0.96);
   border-top: 1px solid var(--c-border);
   backdrop-filter: blur(4px);
 }
@@ -339,7 +339,7 @@ body.touch-active .machines-panel { bottom: 144px; }
   display: block;
   width: 40px; height: 40px;
   border-radius: 6px;
-  border: 1px solid rgba(255,255,255,0.58);
+  border: 1px solid rgba(255,255,255,0.15);
   image-rendering: pixelated;
 }
 .hud-info { flex: 1; min-width: 0; }
@@ -390,7 +390,7 @@ body.touch-active .machines-panel { bottom: 144px; }
   font-size: 11px;
   font-weight: 700;
   color: var(--c-text);
-  background: rgba(255,255,255,0.52);
+  background: rgba(255,255,255,0.08);
   border: 1px solid var(--c-border);
   border-bottom-width: 2px;
   border-radius: 5px;
@@ -418,7 +418,7 @@ body.touch-active .machines-panel { bottom: 144px; }
   gap: 14px;
   padding: 16px 18px;
   border-radius: 10px;
-  background: rgba(255,255,255,0.13);
+  background: rgba(255,255,255,0.04);
   margin-bottom: 10px;
 }
 .upgrade-row:last-child { margin-bottom: 0; }
@@ -515,7 +515,7 @@ body.touch-active .machines-panel { bottom: 144px; }
   min-width: 230px;
   max-width: 280px;
   font-family: var(--font-ui);
-  background: rgba(8,14,32,0.97);
+  background: rgba(10,18,16,0.97);
   border: 1px solid var(--c-border);
   border-radius: 10px;
   box-shadow: 0 14px 32px rgba(0,0,0,0.5);
@@ -751,7 +751,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   width: 38px; height: 38px;
   appearance: none;
   border: 1px solid var(--c-border);
-  background: rgba(8,14,32,0.88);
+  background: rgba(10,18,16,0.85);
   color: var(--c-text);
   border-radius: 8px;
   font-size: 17px;
@@ -767,7 +767,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   z-index: 25;
   width: 170px;
   font-family: var(--font-ui);
-  background: rgba(8,14,32,0.97);
+  background: rgba(10,18,16,0.97);
   border: 1px solid var(--c-border);
   border-radius: 10px;
   box-shadow: 0 14px 32px rgba(0,0,0,0.5);
@@ -796,7 +796,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   width: 38px; height: 38px;
   appearance: none;
   border: 1px solid var(--c-border);
-  background: rgba(8,14,32,0.88);
+  background: rgba(10,18,16,0.85);
   color: var(--c-text);
   border-radius: 8px;
   font-size: 17px;
@@ -815,7 +815,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   flex-direction: column;
   gap: 6px;
   font-family: var(--font-ui);
-  background: rgba(8,14,32,0.97);
+  background: rgba(10,18,16,0.97);
   border: 1px solid var(--c-border);
   border-radius: 10px;
   box-shadow: 0 14px 32px rgba(0,0,0,0.5);
@@ -855,7 +855,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   width: 38px; height: 38px;
   appearance: none;
   border: 1px solid var(--c-border);
-  background: rgba(8,14,32,0.88);
+  background: rgba(10,18,16,0.85);
   color: var(--c-text);
   border-radius: 8px;
   font-family: var(--font-ui);
@@ -881,7 +881,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   max-height: 60vh;
   overflow-y: auto;
   font-family: var(--font-ui);
-  background: rgba(8,14,32,0.97);
+  background: rgba(10,18,16,0.97);
   border: 1px solid var(--c-border);
   border-radius: 10px;
   box-shadow: 0 14px 32px rgba(0,0,0,0.5);
@@ -920,7 +920,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   padding-right: 24px;
 }
 .machines-dropdown:focus { border-color: rgba(255,255,255,0.3); }
-.machines-dropdown option { background: #090d20; color: #e8e8e8; }
+.machines-dropdown option { background: #0e1a18; color: #e8e8e8; }
 
 /* ─── Leaderboard — fixed icon button, top-left (machines button moves away
    from this initial 106px slot every frame, so it's free for permanent use) */
@@ -932,7 +932,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   width: 38px; height: 38px;
   appearance: none;
   border: 1px solid var(--c-border);
-  background: rgba(8,14,32,0.88);
+  background: rgba(10,18,16,0.85);
   color: var(--c-text);
   border-radius: 8px;
   font-size: 18px;
@@ -956,7 +956,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
 .leaderboard-panel.hidden { display: none; }
 
 .leaderboard-content {
-  background: rgba(8,14,32,0.97);
+  background: rgba(10,18,16,0.96);
   border: 1px solid var(--c-border);
   border-radius: 0 10px 10px 10px;
   flex: 1;
@@ -975,7 +975,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   z-index: 25;
   width: min(92vw, 460px);
   font-family: var(--font-ui);
-  background: rgba(8,14,32,0.97);
+  background: rgba(10,18,16,0.97);
   border: 1px solid var(--c-border);
   border-radius: 10px;
   box-shadow: 0 14px 32px rgba(0,0,0,0.5);
@@ -992,7 +992,7 @@ body.touch-active .tutorial-overlay { bottom: 180px; }
   position: fixed;
   inset: 0;
   z-index: 200;
-  background: rgba(8,14,32,0.97);
+  background: rgba(10,18,16,0.97);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1061,7 +1061,7 @@ body.touch-active .tutorial-overlay { bottom: 180px; }
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(8,14,32,0.93);
+  background: rgba(10,18,16,0.92);
   border: 1px solid var(--c-border);
   border-radius: 8px;
   padding: 8px 14px;
@@ -1072,7 +1072,7 @@ body.touch-active .tutorial-overlay { bottom: 180px; }
   appearance: none;
   color: inherit;
 }
-.build-hint:hover { background: rgba(20,30,55,0.97); }
+.build-hint:hover { background: rgba(25,42,35,0.97); }
 .build-hint.hidden { display: none; }
 .build-hint-key {
   background: var(--c-accent);
@@ -1157,7 +1157,7 @@ body.touch-active .build-hint { right: 90px; bottom: 20px; }
   align-items: center;
   gap: 14px;
   font-family: var(--font-ui);
-  background: rgba(8,14,32,0.97);
+  background: rgba(10,18,16,0.97);
   border: 1px solid var(--c-border);
   border-radius: 12px;
   box-shadow: 0 14px 32px rgba(0,0,0,0.5);
@@ -1238,7 +1238,7 @@ body.touch-active .build-hint { right: 90px; bottom: 20px; }
   border-radius: 50%;
   appearance: none;
   border: 1px solid var(--c-border);
-  background: rgba(8,14,32,0.88);
+  background: rgba(10,18,16,0.85);
   color: var(--c-text);
   font-family: var(--font-ui);
   font-size: 11px;
@@ -1251,7 +1251,7 @@ body.touch-active .build-hint { right: 90px; bottom: 20px; }
 /* ─── Pets tab ──────────────────────────────────────────────────────────────── */
 
 .pets-gacha {
-  background: rgba(255,255,255,0.58);
+  background: rgba(255,255,255,0.04);
   border: 1px solid var(--c-border);
   border-radius: 8px;
   padding: 14px 16px;
@@ -1287,7 +1287,7 @@ body.touch-active .build-hint { right: 90px; bottom: 20px; }
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  background: rgba(255,255,255,0.58);
+  background: rgba(255,255,255,0.05);
   border-radius: 6px;
   padding: 8px 10px;
   min-width: 60px;
@@ -1355,7 +1355,7 @@ body.touch-active .build-hint { right: 90px; bottom: 20px; }
   display: flex;
   align-items: center;
   gap: 10px;
-  background: rgba(255,255,255,0.58);
+  background: rgba(255,255,255,0.04);
   border: 1px solid var(--c-border);
   border-radius: 6px;
   padding: 6px 10px;
@@ -1376,7 +1376,7 @@ body.touch-active .build-hint { right: 90px; bottom: 20px; }
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255,255,255,0.58);
+  background: rgba(255,255,255,0.04);
   border: 1px solid var(--c-border);
   border-radius: 6px;
   padding: 6px 10px;
