@@ -1,6 +1,6 @@
 // Fish INK Factory — game loop
 
-const GAME_VERSION = '1.4.96';
+const GAME_VERSION = '1.4.97';
 
 let canvas, ctx;
 let lastTime = 0;
@@ -154,6 +154,8 @@ function init() {
         if (!game.tutorialDone) startTutorial();
         else if (!game.automationTutorialDone) startPhase2Tutorial();
         requestAnimationFrame(loop);
+        // Keep leaderboard in sync while a tab stays open.
+        setInterval(submitLeaderboardScore, 2 * 60 * 1000);
       });
     }, 200);
   };

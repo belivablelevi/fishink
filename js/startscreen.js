@@ -144,6 +144,12 @@ function showSignIn(card, done) {
       if (res.error === 'network') { render("Couldn't reach the server — check your connection."); return; }
       if (res.error === 'invalid')  { render('Wrong username or recovery code.'); return; }
 
+      // Sync the signed-in username as the leaderboard display name.
+      // Account creation always sets this, but sign-in never did, so
+      // returning players had an empty name and every leaderboard submit
+      // silently bailed.
+      _setLeaderboardNameInternal(username);
+
       if (res.saveData && Object.keys(res.saveData).length > 0) {
         try {
           const data = res.saveData;
@@ -152,6 +158,10 @@ function showSignIn(card, done) {
           localStorage.setItem(SAVE_KEY, JSON.stringify(data));
         } catch (e) { console.warn('Failed to apply cloud save after sign-in', e); }
       }
+
+      // Push whatever lifetimeEarned was loaded from the cloud save
+      // now that the name is set.
+      submitLeaderboardScore();
 
       done();
     };
