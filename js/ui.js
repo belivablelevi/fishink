@@ -1086,51 +1086,6 @@ function renderStatsPanel() {
     statsPanelEl.appendChild(row);
   }
 
-  const effDivider = document.createElement('div');
-  effDivider.className = 'cat-divider';
-  effDivider.style.setProperty('--cat-color', '#7ec8e3');
-  effDivider.innerHTML = `<span class="cat-dot"></span>Factory Performance`;
-  statsPanelEl.appendChild(effDivider);
-
-  const perMin = earnPerMinute();
-  const sellBonus = Math.round((effectiveSellMult() - 1) * 100);
-  const chestBonus = Math.round((game.chestIncomeBonus || 0) * 100);
-  const effRows = [
-    ['Income Rate',     `$${perMin.toFixed(2)}/min`,  'earnPerMin',     'Cash earned over the last 60 seconds'],
-    ['Blocks Placed',   currentBlockCount,             'footprint',      'Total blocks on the map'],
-    ['Income per Block', `$${(perMin / Math.max(1, currentBlockCount)).toFixed(2)}/min`, 'earnPerTile', 'How much each placed block earns on average'],
-    ['Income per Machine', `$${(perMin / Math.max(1, currentMachineCount)).toFixed(2)}/min`, 'earnPerMachine', 'How much each processor earns on average'],
-    ['Sell Multiplier', `+${sellBonus}%`,              'sellMult',       'Total bonus applied to every fish sold'],
-    ['Chest Bonus',     `+${chestBonus}%`,             'chestBonus',     'Permanent income bonus from island chests'],
-  ];
-  for (const [label, value, key, desc] of effRows) {
-    const row = document.createElement('div');
-    row.className = 'upgrade-row';
-    row.innerHTML = `<div class="upgrade-info"><div class="name">${label}</div><div class="desc">${desc}</div></div><div class="cost afford" data-stat="${key}">${value}</div>`;
-    statsPanelEl.appendChild(row);
-  }
-
-  const snapshotRow = document.createElement('div');
-  snapshotRow.className = 'upgrade-row';
-  snapshotRow.innerHTML = `<div class="upgrade-info"><div class="name">Share</div><div class="desc">Copy a factory performance card to your clipboard</div></div>`;
-  const snapshotBtn = document.createElement('button');
-  snapshotBtn.className = 'upgrade-buy';
-  snapshotBtn.textContent = 'Copy Image';
-  snapshotBtn.addEventListener('click', () => {
-    const canvas = renderSnapshotCard(buildEfficiencySnapshot());
-    canvas.toBlob(blob => {
-      if (navigator.clipboard && window.ClipboardItem) {
-        navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
-          .then(() => queueToast('Performance card copied to clipboard', '#4dca7c'))
-          .catch(() => downloadSnapshotBlob(blob));
-      } else {
-        downloadSnapshotBlob(blob);
-      }
-    });
-  });
-  snapshotRow.appendChild(snapshotBtn);
-  statsPanelEl.appendChild(snapshotRow);
-
   const divider = document.createElement('div');
   divider.className = 'cat-divider';
   divider.style.setProperty('--cat-color', '#f0c419');
@@ -1153,85 +1108,6 @@ function renderStatsPanel() {
   statsPanelEl.appendChild(row);
 }
 
-// Patches just the Efficiency numbers in place instead of calling the full
-// renderStatsPanel() rebuild every frame — a full rebuild tears down and
-// recreates the Copy Snapshot button on every tick, which could drop a click
-// landing between two rebuilds before the listener ever fired.
-function updateStatsPanelLive() {
-  if (!statsPanelEl || statsPanelEl.classList.contains('hidden')) return;
-  if (!statsPanelEl.querySelector('[data-stat]')) return; // not rendered yet
-  const perMin = earnPerMinute();
-  const vals = {
-    earnPerMin:     `$${perMin.toFixed(2)}/min`,
-    footprint:      currentBlockCount,
-    earnPerTile:    `$${(perMin / Math.max(1, currentBlockCount)).toFixed(2)}/min`,
-    earnPerMachine: `$${(perMin / Math.max(1, currentMachineCount)).toFixed(2)}/min`,
-    sellMult:       `+${Math.round((effectiveSellMult() - 1) * 100)}%`,
-    chestBonus:     `+${Math.round((game.chestIncomeBonus || 0) * 100)}%`,
-  };
-  for (const key in vals) {
-    const el = statsPanelEl.querySelector(`[data-stat="${key}"]`);
-    if (el) el.textContent = vals[key];
-  }
-}
-
-// Draws the C3 efficiency snapshot as a Discord-embed-style PNG card
-// (instead of plain text) — reuses render.js's roundRect since this still
-// just draws to a 2D canvas context, only an offscreen one.
-function renderSnapshotCard(snap) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 640; canvas.height = 320;
-  const ctx = canvas.getContext('2d');
-
-  ctx.fillStyle = '#07080f';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = '#0d1117';
-  roundRect(ctx, 16, 16, canvas.width - 32, canvas.height - 32, 16);
-  ctx.fill();
-  ctx.fillStyle = '#7ec8e3';
-  roundRect(ctx, 16, 16, 6, canvas.height - 32, 3);
-  ctx.fill();
-
-  ctx.fillStyle = '#e8a030';
-  ctx.font = "bold 22px sans-serif";
-  ctx.fillText('FishInk Factory', 44, 62);
-  ctx.fillStyle = '#6a7a8a';
-  ctx.font = "15px sans-serif";
-  ctx.fillText(snap.estimated ? 'Efficiency Snapshot  (lifetime avg)' : 'Efficiency Snapshot', 44, 88);
-
-  const rows = [
-    ['$/min',     `$${snap.earnPerMin.toFixed(2)}`],
-    ['Footprint', `${snap.footprintTiles} tiles`],
-    ['$/tile',    `$${snap.earnPerTile.toFixed(2)}`],
-    ['Invested',  `$${Math.round(snap.cashSpent).toLocaleString()}`],
-  ];
-  let y = 140;
-  for (const [label, value] of rows) {
-    ctx.fillStyle = '#6a7a8a';
-    ctx.font = "bold 13px sans-serif";
-    ctx.fillText(label, 44, y);
-    ctx.fillStyle = '#e0e8f0';
-    ctx.font = "bold 22px monospace";
-    ctx.fillText(value, 200, y);
-    y += 44;
-  }
-
-  ctx.fillStyle = '#4dca7c';
-  ctx.font = "12px monospace";
-  ctx.fillText(new Date(snap.timestamp).toLocaleString(), 44, canvas.height - 28);
-
-  return canvas;
-}
-
-function downloadSnapshotBlob(blob) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `fishink-snapshot-${Date.now()}.png`;
-  a.click();
-  URL.revokeObjectURL(url);
-  queueToast('Snapshot image downloaded', '#4dca7c');
-}
 
 // ─── Controls tab — full keybind cheat-sheet ───────────────────────────────
 // Static reference content (rendered once at init, see initBuildMenu) — none
@@ -1829,7 +1705,6 @@ function updateBuildMenuLive() {
     if (cost != null) btn.disabled = game.cash < cost;
   });
   menuCashEl.textContent = `$${formatMoney(game.cash)}`;
-  updateStatsPanelLive();
 }
 
 // ─── Bottom-right build HUD ─────────────────────────────────────────────────

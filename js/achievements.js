@@ -25,7 +25,6 @@ function checkAchievements() {
     game.cash += a.reward;
     game.lifetimeEarned += a.reward;
     cashGuard.grant(a.reward);
-    trackEarn(a.reward);
     toasts.push({ msg: `Achievement: ${a.name}  +$${a.reward}`, color: '#f0c419', life: 3.5, type: 'achievement' });
     if (ZOOM > MACHINE_SFX_ZOOM_THRESHOLD) sfxAchievement();
   }

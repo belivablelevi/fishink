@@ -77,7 +77,6 @@ function awardCash(amount, msg, color, volMult = 1) {
   game.cash          += amount;
   game.lifetimeEarned += amount;
   cashGuard.grant(amount);
-  trackEarn(amount);
   if (msg) queueToast(msg, color);
   sfxCoin(volMult);
   checkCashMilestones();
@@ -94,58 +93,7 @@ function checkCashMilestones() {
   }
 }
 
-// ─── Efficiency tracking — sliding 60s window for the Stats panel's $/min,
-// $/tile, $/machine metrics (C1). Lifetime totals can't show "how good is my
-// *current* layout," only "how good was my whole save ever."
-const earnHistory = []; // { t: game.time, amount }
-function trackEarn(amount) {
-  earnHistory.push({ t: game.time, amount });
-}
-function earnPerMinute() {
-  const cutoff = game.time - 60;
-  while (earnHistory.length && earnHistory[0].t < cutoff) earnHistory.shift();
-  return earnHistory.reduce((s, e) => s + e.amount, 0);
-}
 
-// Full-footprint rescan, mirrors the autoFisherCount pattern already done on
-// load (save.js) — cheap at 64x48, so a once-per-second rescan is fine.
-let currentBlockCount = 0;
-let currentMachineCount = 0;
-let blockCountAccum = 0;
-function rescanBlockCounts() {
-  let blocks = 0, machines = 0;
-  for (let r = 0; r < WORLD_ROWS; r++) {
-    for (let c = 0; c < WORLD_COLS; c++) {
-      const id = blockAt(c, r);
-      if (id === B_NONE) continue;
-      blocks++;
-      if (IS_UPGRADABLE(id)) machines++;
-    }
-  }
-  currentBlockCount = blocks;
-  currentMachineCount = machines;
-}
-
-// A fixed-format, screenshot/Discord-friendly summary so different players'
-// factories are comparable using the same formula (C3) — measurement +
-// export only, no server-side leaderboard.
-function buildEfficiencySnapshot() {
-  let perMin = earnPerMinute();
-  // Fallback: if earnHistory is still empty (e.g. just loaded a save), use
-  // the lifetime average so the snapshot always shows a meaningful number.
-  let estimated = false;
-  if (perMin === 0 && game.lifetimeEarned > 0 && game.time > 10) {
-    perMin = game.lifetimeEarned / Math.max(game.time / 60, 1);
-    estimated = true;
-  }
-  return {
-    earnPerMin: Math.round(perMin * 100) / 100,
-    footprintTiles: currentBlockCount,
-    earnPerTile: Math.round((perMin / Math.max(1, currentBlockCount)) * 100) / 100,
-    cashSpent: game.lifetimeEarned - game.cash,
-    estimated,
-    timestamp: new Date().toISOString(),
-  };
 }
 
 // 1 right on top of the tile, fading linearly to 0 at `range` tiles-worth of
@@ -393,12 +341,6 @@ function simUpdate(dt) {
   // Also push score whenever lifetime earnings cross a new $10k milestone.
   if (!cheated) checkLeaderboardEarnThreshold();
 
-
-  blockCountAccum += dt;
-  if (blockCountAccum >= 1) {
-    blockCountAccum = 0;
-    rescanBlockCounts();
-  }
 
   // Manual cast countdown
   if (manualCast.active) {
