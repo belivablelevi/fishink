@@ -1172,59 +1172,124 @@ body.touch-active .build-hint { right: 90px; bottom: 20px; }
 }
 .start-screen-overlay.hidden { display: none; }
 .start-screen-card {
-  width: 300px;
+  width: 320px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 14px;
+  align-items: stretch;
+  gap: 12px;
   font-family: var(--font-ui);
-  background: rgba(10,18,16,0.97);
-  border: 1px solid var(--c-border);
-  border-radius: 12px;
-  box-shadow: 0 14px 32px rgba(0,0,0,0.5);
-  padding: 28px 24px;
+  background: rgba(10,18,16,0.98);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px;
+  box-shadow: 0 20px 48px rgba(0,0,0,0.7);
+  padding: 28px 26px 26px;
 }
 .start-screen-title {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--c-text);
   text-align: center;
+  letter-spacing: 0.01em;
 }
 .start-screen-sub {
   font-size: 12px;
   color: var(--c-muted);
   text-align: center;
-  margin-top: -8px;
+  line-height: 1.5;
+  margin-top: -4px;
+}
+.start-screen-hint {
+  font-size: 11px;
+  color: var(--c-muted);
+  text-align: center;
+  line-height: 1.5;
+  margin-top: -4px;
+}
+.start-screen-hint strong { color: var(--c-text); font-weight: 600; }
+.start-screen-error {
+  font-size: 11px;
+  color: var(--c-red);
+  text-align: center;
+  padding: 6px 10px;
+  background: rgba(224,92,92,0.1);
+  border: 1px solid rgba(224,92,92,0.25);
+  border-radius: 6px;
 }
 .start-screen-input {
   width: 100%;
   appearance: none;
-  border: 1px solid var(--c-border);
-  border-radius: 6px;
-  padding: 9px 12px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 7px;
+  padding: 10px 13px;
   font-size: 13px;
   font-weight: 600;
   font-family: inherit;
   color: var(--c-text);
-  background: rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.07);
   box-sizing: border-box;
+  transition: border-color 0.15s, background 0.15s;
 }
-.start-screen-input:focus { outline: 1px solid var(--c-accent); }
+.start-screen-input::placeholder { color: rgba(255,255,255,0.28); font-weight: 400; }
+.start-screen-input:focus { outline: none; border-color: var(--c-accent); background: rgba(255,255,255,0.10); }
+.ss-code-input { letter-spacing: 0.14em; text-transform: uppercase; font-family: monospace; font-size: 14px; }
 .start-screen-btn {
   width: 100%;
   appearance: none;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 6px;
-  padding: 10px 14px;
-  font-size: 12px;
+  padding: 11px 14px;
+  font-size: 13px;
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
   background: var(--c-accent);
   color: #1a1208;
-  transition: filter 0.15s;
+  transition: filter 0.15s, background 0.15s;
+  letter-spacing: 0.02em;
 }
-.start-screen-btn:hover { filter: brightness(1.1); }
+.start-screen-btn:hover { filter: brightness(1.12); }
+
+.start-screen-btn-ghost {
+  width: 100%;
+  appearance: none;
+  border: 1px solid rgba(255,255,255,0.22);
+  border-radius: 6px;
+  padding: 11px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  background: rgba(255,255,255,0.07);
+  color: var(--c-text);
+  transition: background 0.15s, border-color 0.15s;
+  letter-spacing: 0.02em;
+}
+.start-screen-btn-ghost:hover { background: rgba(255,255,255,0.13); border-color: rgba(255,255,255,0.38); }
+
+.start-screen-divider {
+  width: 100%;
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+  margin: 2px 0;
+}
+
+.start-screen-back {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 4px 0;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--c-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: color 0.15s;
+  align-self: flex-start;
+}
+.start-screen-back:hover { color: var(--c-text); }
 
 .touch-joystick-base {
   position: fixed;
