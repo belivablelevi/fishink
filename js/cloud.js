@@ -121,6 +121,8 @@ async function cloudLogin(username, code) {
 // ── Sign out ───────────────────────────────────────────────────────────────────
 
 function cloudSignOut() {
+  if (typeof restarting !== 'undefined') restarting = true; // prevent beforeunload from re-saving
+  localStorage.removeItem(SAVE_KEY);       // don't let this account's save bleed into next session
   localStorage.removeItem(LEADERBOARD_ID_KEY);
   localStorage.removeItem(LEADERBOARD_NAME_KEY);
   localStorage.removeItem(CLOUD_RECOVERY_KEY);
