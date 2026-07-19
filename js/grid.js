@@ -164,8 +164,9 @@ let STARTER_R = 10;
 
 // Fixed shipping-boat dock. Guaranteed clear of land by a post-generation
 // force-clear in buildWorld() — no terrain pass may leave land here.
-const BOAT_C = WORLD_COLS - 6;  // col 58
-const BOAT_R = 6;
+// These are let so growWorld() can shift them when the world expands in all directions.
+let BOAT_C = WORLD_COLS - 6;  // col 58
+let BOAT_R = 6;
 const BOAT_CLEAR = 5; // tiles radius kept as open ocean around the boat
 
 const ISLAND_EDGE_MARGIN = 3; // tiles of guaranteed ocean kept around the world border
@@ -475,8 +476,8 @@ function makeCellState() {
   };
 }
 
-// Expands the world canvas right and downward. Fills new space with ocean,
-// then tries to place 1-2 new offshore islands in the expanded area.
+// Expands the world canvas uniformly in all 4 directions. Fills new space with
+// ocean, shifts all absolute coordinates, then tries to place new offshore islands.
 // Returns true if the world grew, false if already at max.
 function growWorld() {
   if (WORLD_COLS >= WORLD_COLS_MAX && WORLD_ROWS >= WORLD_ROWS_MAX) return false;
@@ -486,44 +487,89 @@ function growWorld() {
   const newCols = Math.min(WORLD_COLS_MAX, WORLD_COLS + GROW_COLS);
   const newRows = Math.min(WORLD_ROWS_MAX, WORLD_ROWS + GROW_ROWS);
 
-  // Widen every existing row with new water columns on the right.
-  for (let r = 0; r < oldRows; r++) {
-    const oldTerrainRow = terrain[r];
-    const newTerrainRow = new Uint8Array(newCols);
-    newTerrainRow.set(oldTerrainRow);
-    newTerrainRow.fill(T_WATER, oldCols); // explicitly fill new cols as water (T_EMPTY=0, T_WATER=1)
-    terrain[r] = newTerrainRow;
+  const addedCols = newCols - oldCols;
+  const addedRows = newRows - oldRows;
+  const addLeft   = Math.floor(addedCols / 2);
+  const addRight  = addedCols - addLeft;
+  const addTop    = Math.floor(addedRows / 2);
+  const addBottom = addedRows - addTop;
 
-    const oldBlockRow = blocks[r];
-    const newBlockRow = new Uint8Array(newCols);
-    newBlockRow.set(oldBlockRow);
-    blocks[r] = newBlockRow;
-
-    for (let c = oldCols; c < newCols; c++) cellState[r][c] = makeCellState();
+  // Build new terrain: all water, then stamp old content offset by (addLeft, addTop).
+  const newTerrain   = [];
+  const newBlocks    = [];
+  const newCellState = [];
+  for (let r = 0; r < newRows; r++) {
+    newTerrain[r]   = new Uint8Array(newCols).fill(T_WATER);
+    newBlocks[r]    = new Uint8Array(newCols);
+    newCellState[r] = [];
+    for (let c = 0; c < newCols; c++) {
+      const or = r - addTop, oc = c - addLeft;
+      if (or >= 0 && or < oldRows && oc >= 0 && oc < oldCols) {
+        newTerrain[r][c]   = terrain[or][oc];
+        newBlocks[r][c]    = blocks[or][oc];
+        newCellState[r][c] = cellState[or][oc];
+      } else {
+        newCellState[r][c] = makeCellState();
+      }
+    }
   }
-
-  // Append new rows at the bottom (all water).
-  for (let r = oldRows; r < newRows; r++) {
-    terrain[r]   = new Uint8Array(newCols).fill(T_WATER);
-    blocks[r]    = new Uint8Array(newCols);
-    cellState[r] = [];
-    for (let c = 0; c < newCols; c++) cellState[r][c] = makeCellState();
-  }
+  terrain   = newTerrain;
+  blocks    = newBlocks;
+  cellState = newCellState;
 
   WORLD_COLS = newCols;
   WORLD_ROWS = newRows;
 
-  // Try to place up to 2 new offshore islands in the freshly added ocean.
+  // Shift all stored absolute tile coordinates by the left/top additions.
+  BOAT_C    += addLeft;
+  BOAT_R    += addTop;
+  STARTER_C += addLeft;
+  STARTER_R += addTop;
+
+  for (const isl of offshoreIslands) {
+    isl.cx += addLeft;
+    isl.cy += addTop;
+    if (isl.depotC !== undefined) isl.depotC += addLeft;
+    if (isl.depotR !== undefined) isl.depotR += addTop;
+  }
+
+  // Shift teleporter links and drone water-target cache.
+  for (let r = addTop; r < addTop + oldRows; r++) {
+    for (let c = addLeft; c < addLeft + oldCols; c++) {
+      const st = cellState[r][c];
+      if (st.teleportTarget) {
+        st.teleportTarget.c += addLeft;
+        st.teleportTarget.r += addTop;
+      }
+      if (st.waterC !== null) st.waterC += addLeft;
+      if (st.waterR !== null) st.waterR += addTop;
+    }
+  }
+
+  // Shift player world-pixel position and camera.
+  if (typeof player !== 'undefined') {
+    player.wx += addLeft * TILE_SIZE;
+    player.wy += addTop  * TILE_SIZE;
+  }
+  if (typeof cam !== 'undefined') {
+    cam.x += addLeft * TILE_SIZE;
+    cam.y += addTop  * TILE_SIZE;
+  }
+
+  // Try to place one island in each of the 4 new ocean strips.
+  const mid = { c: Math.floor(newCols / 2), r: Math.floor(newRows / 2) };
   const newIslandSlots = [
-    { cx: oldCols + 6,  cy: Math.floor(oldRows / 2) },
-    { cx: Math.floor(newCols / 2), cy: oldRows + 4  },
+    { cx: addLeft  / 2,                    cy: mid.r        }, // left strip
+    { cx: oldCols + addLeft + addRight / 2, cy: mid.r        }, // right strip
+    { cx: mid.c,                            cy: addTop  / 2  }, // top strip
+    { cx: mid.c,                            cy: oldRows + addTop + addBottom / 2 }, // bottom strip
   ];
   for (const slot of newIslandSlots) {
-    if (slot.cx >= newCols - 4 || slot.cy >= newRows - 4) continue;
+    if (slot.cx < 4 || slot.cx >= newCols - 4 || slot.cy < 4 || slot.cy >= newRows - 4) continue;
     for (let attempt = 0; attempt < 4; attempt++) {
-      const jx = slot.cx + randRange(-3, 3);
+      const jx = slot.cx + randRange(-2, 2);
       const jy = slot.cy + randRange(-2, 2);
-      const result = carveOffshoreIsland(jx, jy, 3 + Math.random() * 2);
+      const result = carveOffshoreIsland(Math.floor(jx), Math.floor(jy), 3 + Math.random() * 2);
       if (result) { offshoreIslands.push(result); break; }
     }
   }
