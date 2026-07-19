@@ -491,7 +491,7 @@ function growWorld() {
     const oldTerrainRow = terrain[r];
     const newTerrainRow = new Uint8Array(newCols);
     newTerrainRow.set(oldTerrainRow);
-    // New cols default to 0 (T_WATER) — Uint8Array is zero-initialised.
+    newTerrainRow.fill(T_WATER, oldCols); // explicitly fill new cols as water (T_EMPTY=0, T_WATER=1)
     terrain[r] = newTerrainRow;
 
     const oldBlockRow = blocks[r];
@@ -504,7 +504,7 @@ function growWorld() {
 
   // Append new rows at the bottom (all water).
   for (let r = oldRows; r < newRows; r++) {
-    terrain[r]   = new Uint8Array(newCols); // zero = T_WATER
+    terrain[r]   = new Uint8Array(newCols).fill(T_WATER);
     blocks[r]    = new Uint8Array(newCols);
     cellState[r] = [];
     for (let c = 0; c < newCols; c++) cellState[r][c] = makeCellState();
