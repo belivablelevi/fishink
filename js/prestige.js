@@ -9,10 +9,11 @@ const PRESTIGE_UPGRADES = [
   { id: 'globalSell',  name: 'Veteran Trader',    desc: '+2% sell price per level (all sales)',               baseCost: 1, costMult: 1.6, maxLevel: 15 },
   { id: 'fasterStart', name: 'Quick Start',       desc: '+10% catch/process speed per level',                 baseCost: 1, costMult: 1.6, maxLevel: 10 },
   { id: 'unlockGate',  name: 'Industry Contacts', desc: 'Research unlock threshold lowered by $5,000/level',  baseCost: 1, costMult: 1.7, maxLevel: 8 },
+  { id: 'islandStart', name: 'Head Start',        desc: '+1 free island ring at run start per level',         baseCost: 2, costMult: 2.0, maxLevel: 5 },
 ];
 
 const prestigeTokens = { total: 0 };
-const prestigeLevels = { startCash: 0, globalSell: 0, fasterStart: 0, unlockGate: 0 };
+const prestigeLevels = { startCash: 0, globalSell: 0, fasterStart: 0, unlockGate: 0, islandStart: 0 };
 
 // Separate localStorage key from the run save — must survive restartGame()'s
 // removeItem(SAVE_KEY) wipe, so prestige progress isn't lost on reset.

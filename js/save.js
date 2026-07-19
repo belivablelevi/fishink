@@ -96,6 +96,12 @@ function deserializeGame(data) {
 
   offshoreIslands = data.offshoreIslands || [];
 
+  // Restore world dimensions from the saved arrays before iterating them.
+  if (data.terrain && data.terrain.length) {
+    WORLD_ROWS = data.terrain.length;
+    WORLD_COLS = data.terrain[0].length;
+  }
+
   terrain   = data.terrain.map(row => Uint8Array.from(row));
   blocks    = data.blocks.map(row => Uint8Array.from(row));
   cellState = data.cellState;

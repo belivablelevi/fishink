@@ -1,6 +1,6 @@
 // Fish INK Factory — game loop
 
-const GAME_VERSION = '1.5.1';
+const GAME_VERSION = '1.5.2';
 
 let canvas, ctx;
 let lastTime = 0;
@@ -100,7 +100,7 @@ function init() {
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
 
-  if (!loadGame()) { buildWorld(); resetPlayerSpawn(); }
+  if (!loadGame()) { buildWorld(); applyStartingIslandRings(); resetPlayerSpawn(); }
   initMouseHandlers(canvas);
   initTouchControls(canvas);
 

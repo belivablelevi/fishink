@@ -1,8 +1,14 @@
 // Fish INK Factory — world grid and block system
 
 const TILE_SIZE = 32;
-const WORLD_COLS = 64;
-const WORLD_ROWS = 48;
+let WORLD_COLS = 64;
+let WORLD_ROWS = 48;
+const WORLD_COLS_BASE = 64;
+const WORLD_ROWS_BASE = 48;
+const WORLD_COLS_MAX  = 128;
+const WORLD_ROWS_MAX  = 96;
+const GROW_COLS = 16;
+const GROW_ROWS = 12;
 
 // Base terrain types
 const T_EMPTY    = 0;
@@ -467,6 +473,64 @@ function makeCellState() {
     teleportTarget: null,   // B_TELEPORTER only — { c, r } of the linked destination, or null if unset/broken
     pondPets: [],           // B_POND only — array of pet uid numbers assigned to swim here
   };
+}
+
+// Expands the world canvas right and downward. Fills new space with ocean,
+// then tries to place 1-2 new offshore islands in the expanded area.
+// Returns true if the world grew, false if already at max.
+function growWorld() {
+  if (WORLD_COLS >= WORLD_COLS_MAX && WORLD_ROWS >= WORLD_ROWS_MAX) return false;
+
+  const oldCols = WORLD_COLS;
+  const oldRows = WORLD_ROWS;
+  const newCols = Math.min(WORLD_COLS_MAX, WORLD_COLS + GROW_COLS);
+  const newRows = Math.min(WORLD_ROWS_MAX, WORLD_ROWS + GROW_ROWS);
+
+  // Widen every existing row with new water columns on the right.
+  for (let r = 0; r < oldRows; r++) {
+    const oldTerrainRow = terrain[r];
+    const newTerrainRow = new Uint8Array(newCols);
+    newTerrainRow.set(oldTerrainRow);
+    // New cols default to 0 (T_WATER) — Uint8Array is zero-initialised.
+    terrain[r] = newTerrainRow;
+
+    const oldBlockRow = blocks[r];
+    const newBlockRow = new Uint8Array(newCols);
+    newBlockRow.set(oldBlockRow);
+    blocks[r] = newBlockRow;
+
+    for (let c = oldCols; c < newCols; c++) cellState[r][c] = makeCellState();
+  }
+
+  // Append new rows at the bottom (all water).
+  for (let r = oldRows; r < newRows; r++) {
+    terrain[r]   = new Uint8Array(newCols); // zero = T_WATER
+    blocks[r]    = new Uint8Array(newCols);
+    cellState[r] = [];
+    for (let c = 0; c < newCols; c++) cellState[r][c] = makeCellState();
+  }
+
+  WORLD_COLS = newCols;
+  WORLD_ROWS = newRows;
+
+  // Try to place up to 2 new offshore islands in the freshly added ocean.
+  const newIslandSlots = [
+    { cx: oldCols + 6,  cy: Math.floor(oldRows / 2) },
+    { cx: Math.floor(newCols / 2), cy: oldRows + 4  },
+  ];
+  for (const slot of newIslandSlots) {
+    if (slot.cx >= newCols - 4 || slot.cy >= newRows - 4) continue;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const jx = slot.cx + randRange(-3, 3);
+      const jy = slot.cy + randRange(-2, 2);
+      const result = carveOffshoreIsland(jx, jy, 3 + Math.random() * 2);
+      if (result) { offshoreIslands.push(result); break; }
+    }
+  }
+
+  applyShorePass();
+  ensureWorkerIslandDepot();
+  return true;
 }
 
 function tileAt(c, r) {

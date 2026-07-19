@@ -132,7 +132,17 @@ const restartBtn = document.getElementById('restartGameBtn');
 
   function refreshIslandUI() {
     const cost = islandExpandCost();
-    islandExpandInfo.textContent = `Island Ring ${game.islandLevel} · Next: $${cost.toLocaleString()}`;
+    const atMax = WORLD_COLS >= WORLD_COLS_MAX && WORLD_ROWS >= WORLD_ROWS_MAX && nextExpandIsWorldGrow();
+    if (atMax) {
+      islandExpandInfo.textContent = `World at maximum size`;
+      islandExpandBtn.disabled = true;
+    } else {
+      const worldGrow = nextExpandIsWorldGrow();
+      islandExpandInfo.textContent = worldGrow
+        ? `World Expansion · Ring ${game.islandLevel} · Next: $${cost.toLocaleString()}`
+        : `Island Ring ${game.islandLevel} · Next: $${cost.toLocaleString()}`;
+      islandExpandBtn.disabled = false;
+    }
   }
 
   btn.addEventListener('click', () => {
