@@ -32,6 +32,14 @@ function initBulkSelect() {
   window.addEventListener('mousemove', _bsOnMove);
   window.addEventListener('mouseup',   _bsOnUp);
 
+  // Right-click anywhere exits (works during both selection phase and panel phase)
+  _bsOverlay.addEventListener('contextmenu', e => { e.preventDefault(); exitBulkSelectMode(); });
+
+  // Clicking the game canvas while the panel is open exits
+  document.getElementById('canvas').addEventListener('mousedown', e => {
+    if (_bsPanel.classList.contains('bs-open') && e.button === 0) exitBulkSelectMode();
+  });
+
   _bsBtn.addEventListener('click', toggleBulkSelectMode);
 
   window.addEventListener('keydown', e => {
@@ -73,8 +81,8 @@ function enterBulkSelectMode() {
 }
 
 function exitBulkSelectMode() {
-  bulkSelect.active   = false;
-  bulkSelect.dragging = false;
+  bulkSelect.active    = false;
+  bulkSelect.dragging  = false;
   bulkSelect.tiles    = [];
   window._bsHighlights = [];
   _bsOverlay.style.display = 'none';
