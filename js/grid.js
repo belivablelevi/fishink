@@ -7,8 +7,8 @@ const WORLD_COLS_BASE = 64;
 const WORLD_ROWS_BASE = 48;
 const WORLD_COLS_MAX  = 128;
 const WORLD_ROWS_MAX  = 96;
-const GROW_COLS = 16;
-const GROW_ROWS = 12;
+const GROW_COLS = 8;
+const GROW_ROWS = 6;
 
 // Base terrain types
 const T_EMPTY    = 0;

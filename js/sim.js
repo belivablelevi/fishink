@@ -1192,65 +1192,14 @@ function expandIsland() {
   const cost = islandExpandCost();
   if (game.cash < cost) { queueToast('Not enough cash!', '#e85d4a'); sfxFail(); return; }
 
-  const toConvert = [];
-  for (let r = 0; r < WORLD_ROWS; r++) {
-    for (let c = 0; c < WORLD_COLS; c++) {
-      if (terrain[r][c] !== T_WATER) continue;
-      if (_protectedTile(c, r)) continue;
-      // Skip interior pond water — only expand the ocean coastline.
-      if (waterBodyAnchor(c, r) !== null) continue;
-      if (_isLand(tileAt(c - 1, r)) || _isLand(tileAt(c + 1, r)) ||
-          _isLand(tileAt(c, r - 1)) || _isLand(tileAt(c, r + 1))) {
-        toConvert.push({ c, r });
-      }
-    }
-  }
-
-  if (!toConvert.length) {
-    const grew = growWorld();
-    if (!grew) { queueToast('World is at maximum size!', '#e85d4a'); return; }
-    game.cash -= cost;
-    game.islandLevel++;
-    saveGame();
-    sfxCoin();
-    queueToast(`World expanded! (Ring ${game.islandLevel}) · New islands discovered!`, '#4dca7c');
-    return;
-  }
-
-  // Add the new outer ring as shore tiles
-  for (const { c, r } of toConvert) terrain[r][c] = T_SHORE;
-
-  // Promote old shore tiles that are now interior (no longer adjacent to water) to grass
-  for (let r = 0; r < WORLD_ROWS; r++) {
-    for (let c = 0; c < WORLD_COLS; c++) {
-      if (terrain[r][c] !== T_SHORE) continue;
-      if (tileAt(c - 1, r) !== T_WATER && tileAt(c + 1, r) !== T_WATER &&
-          tileAt(c, r - 1) !== T_WATER && tileAt(c, r + 1) !== T_WATER) {
-        terrain[r][c] = T_EMPTY;
-      }
-    }
-  }
+  const grew = growWorld();
+  if (!grew) { queueToast('World is at maximum size!', '#e85d4a'); return; }
 
   game.cash -= cost;
   game.islandLevel++;
   saveGame();
   sfxCoin();
-  queueToast(`Island expanded! (Ring ${game.islandLevel}) · +${toConvert.length} tiles`, '#4dca7c');
-}
-
-// Returns true when the next expandIsland() call would grow the world canvas
-// rather than add an island ring — used by the UI to update the button label.
-function nextExpandIsWorldGrow() {
-  for (let r = 0; r < WORLD_ROWS; r++) {
-    for (let c = 0; c < WORLD_COLS; c++) {
-      if (terrain[r][c] !== T_WATER) continue;
-      if (_protectedTile(c, r)) continue;
-      if (waterBodyAnchor(c, r) !== null) continue;
-      if (_isLand(tileAt(c - 1, r)) || _isLand(tileAt(c + 1, r)) ||
-          _isLand(tileAt(c, r - 1)) || _isLand(tileAt(c, r + 1))) return false;
-    }
-  }
-  return true;
+  queueToast(`Ocean expanded! (Ring ${game.islandLevel}) · New islands may appear!`, '#4dca7c');
 }
 
 // Applies N free island rings at run start based on the islandStart prestige
@@ -1259,29 +1208,7 @@ function applyStartingIslandRings() {
   const rings = (typeof prestigeLevels !== 'undefined') ? (prestigeLevels.islandStart || 0) : 0;
   if (!rings) return;
   for (let i = 0; i < rings; i++) {
-    const toConvert = [];
-    for (let r = 0; r < WORLD_ROWS; r++) {
-      for (let c = 0; c < WORLD_COLS; c++) {
-        if (terrain[r][c] !== T_WATER) continue;
-        if (_protectedTile(c, r)) continue;
-        if (waterBodyAnchor(c, r) !== null) continue;
-        if (_isLand(tileAt(c - 1, r)) || _isLand(tileAt(c + 1, r)) ||
-            _isLand(tileAt(c, r - 1)) || _isLand(tileAt(c, r + 1))) {
-          toConvert.push({ c, r });
-        }
-      }
-    }
-    if (!toConvert.length) break;
-    for (const { c, r } of toConvert) terrain[r][c] = T_SHORE;
-    for (let r = 0; r < WORLD_ROWS; r++) {
-      for (let c = 0; c < WORLD_COLS; c++) {
-        if (terrain[r][c] !== T_SHORE) continue;
-        if (tileAt(c-1,r) !== T_WATER && tileAt(c+1,r) !== T_WATER &&
-            tileAt(c,r-1) !== T_WATER && tileAt(c,r+1) !== T_WATER) {
-          terrain[r][c] = T_EMPTY;
-        }
-      }
-    }
+    if (!growWorld()) break;
   }
   game.islandLevel = rings;
 }
