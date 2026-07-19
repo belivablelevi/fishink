@@ -435,8 +435,9 @@ function triggerInteract(fromKey = false) {
     }
   }
 
-  // Worker island interaction — first offshore island, press E near center
-  if (offshoreIslands.length > 0 && !player.inBoat) {
+  // Worker island interaction — first offshore island, press E near center.
+  // Skip if the player is hovering an interactable block so block popups take priority.
+  if (offshoreIslands.length > 0 && !player.inBoat && !kind) {
     const wisl = offshoreIslands[0];
     if (Math.hypot(pc - wisl.cx, pr - wisl.cy) < 3) {
       toggleBlockPopupAtMouse('worker_dock', wisl.cx, wisl.cy);
