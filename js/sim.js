@@ -1195,11 +1195,35 @@ function expandIsland() {
   const grew = growWorld();
   if (!grew) { queueToast('World is at maximum size!', '#e85d4a'); return; }
 
+  // Also grow the main island outward by one coastal ring.
+  const toConvert = [];
+  for (let r = 0; r < WORLD_ROWS; r++) {
+    for (let c = 0; c < WORLD_COLS; c++) {
+      if (terrain[r][c] !== T_WATER) continue;
+      if (_protectedTile(c, r)) continue;
+      if (waterBodyAnchor(c, r) !== null) continue;
+      if (_isLand(tileAt(c - 1, r)) || _isLand(tileAt(c + 1, r)) ||
+          _isLand(tileAt(c, r - 1)) || _isLand(tileAt(c, r + 1))) {
+        toConvert.push({ c, r });
+      }
+    }
+  }
+  for (const { c, r } of toConvert) terrain[r][c] = T_SHORE;
+  for (let r = 0; r < WORLD_ROWS; r++) {
+    for (let c = 0; c < WORLD_COLS; c++) {
+      if (terrain[r][c] !== T_SHORE) continue;
+      if (tileAt(c - 1, r) !== T_WATER && tileAt(c + 1, r) !== T_WATER &&
+          tileAt(c, r - 1) !== T_WATER && tileAt(c, r + 1) !== T_WATER) {
+        terrain[r][c] = T_EMPTY;
+      }
+    }
+  }
+
   game.cash -= cost;
   game.islandLevel++;
   saveGame();
   sfxCoin();
-  queueToast(`Ocean expanded! (Ring ${game.islandLevel}) · New islands may appear!`, '#4dca7c');
+  queueToast(`Ring ${game.islandLevel} · Island & ocean expanded!`, '#4dca7c');
 }
 
 // Applies N free island rings at run start based on the islandStart prestige
@@ -1209,6 +1233,28 @@ function applyStartingIslandRings() {
   if (!rings) return;
   for (let i = 0; i < rings; i++) {
     if (!growWorld()) break;
+    const toConvert = [];
+    for (let r = 0; r < WORLD_ROWS; r++) {
+      for (let c = 0; c < WORLD_COLS; c++) {
+        if (terrain[r][c] !== T_WATER) continue;
+        if (_protectedTile(c, r)) continue;
+        if (waterBodyAnchor(c, r) !== null) continue;
+        if (_isLand(tileAt(c - 1, r)) || _isLand(tileAt(c + 1, r)) ||
+            _isLand(tileAt(c, r - 1)) || _isLand(tileAt(c, r + 1))) {
+          toConvert.push({ c, r });
+        }
+      }
+    }
+    for (const { c, r } of toConvert) terrain[r][c] = T_SHORE;
+    for (let r = 0; r < WORLD_ROWS; r++) {
+      for (let c = 0; c < WORLD_COLS; c++) {
+        if (terrain[r][c] !== T_SHORE) continue;
+        if (tileAt(c-1,r) !== T_WATER && tileAt(c+1,r) !== T_WATER &&
+            tileAt(c,r-1) !== T_WATER && tileAt(c,r+1) !== T_WATER) {
+          terrain[r][c] = T_EMPTY;
+        }
+      }
+    }
   }
   game.islandLevel = rings;
 }
