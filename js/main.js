@@ -1,6 +1,6 @@
 // Fish INK Factory — game loop
 
-const GAME_VERSION = '1.6.1';
+const GAME_VERSION = '1.6.2';
 
 let canvas, ctx;
 let lastTime = 0;
@@ -228,7 +228,7 @@ function loop(ts) {
 
 async function checkForUpdate() {
   try {
-    const res = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store' });
+    const res = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
     if (!res.ok) return;
     const { version } = await res.json();
     if (version && version !== GAME_VERSION) {
