@@ -180,18 +180,18 @@ function randRange(min, max) { return min + Math.random() * (max - min); }
 // the radius a bit before painting, so the result is one connected but
 // irregular landmass instead of a neat ellipse.
 function carveIslandBlob() {
-  let cx = WORLD_COLS / 2 + randRange(-6, 6);
-  let cy = WORLD_ROWS / 2 + randRange(-4, 4);
-  let radius = randRange(9, 13);
+  let cx = WORLD_COLS / 2 + randRange(-4, 4);
+  let cy = WORLD_ROWS / 2 + randRange(-3, 3);
+  let radius = randRange(6, 9);
   const circles = [];
-  const steps = 8 + Math.floor(Math.random() * 5);
+  const steps = 4 + Math.floor(Math.random() * 4);
   const minC = ISLAND_EDGE_MARGIN + 6, maxC = WORLD_COLS - ISLAND_EDGE_MARGIN - 6;
   const minR = ISLAND_EDGE_MARGIN + 6, maxR = WORLD_ROWS - ISLAND_EDGE_MARGIN - 6;
   for (let i = 0; i < steps; i++) {
     circles.push({ cx, cy, r: radius });
     cx = Math.max(minC, Math.min(maxC, cx + randRange(-9, 9)));
     cy = Math.max(minR, Math.min(maxR, cy + randRange(-7, 7)));
-    radius = Math.max(6, Math.min(14, radius + randRange(-3, 3)));
+    radius = Math.max(4, Math.min(10, radius + randRange(-2, 2)));
   }
 
   for (let r = ISLAND_EDGE_MARGIN; r < WORLD_ROWS - ISLAND_EDGE_MARGIN; r++) {
