@@ -1196,6 +1196,8 @@ function expandIsland() {
     for (let c = 0; c < WORLD_COLS; c++) {
       if (terrain[r][c] !== T_WATER) continue;
       if (_protectedTile(c, r)) continue;
+      // Skip interior pond water — only expand the ocean coastline.
+      if (waterBodyAnchor(c, r) !== null) continue;
       if (_isLand(tileAt(c - 1, r)) || _isLand(tileAt(c + 1, r)) ||
           _isLand(tileAt(c, r - 1)) || _isLand(tileAt(c, r + 1))) {
         toConvert.push({ c, r });
