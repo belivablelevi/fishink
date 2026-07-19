@@ -647,10 +647,10 @@ function sellFish(fish, c, r) {
   // defaults on so early sales feel concrete, but it self-disables past
   // INDIVIDUAL_SELL_TOAST_LIMIT once the flood of sales would just spam the
   // toast stack.
-  if (distinctSteps >= 2 || (settings.individualSellToasts && game.fishSold <= INDIVIDUAL_SELL_TOAST_LIMIT)) {
-    const msg = distinctSteps >= 2 ? `+$${earned.toFixed(1)} ${fish.species} (combo x${distinctSteps}!)`
-                                    : `+$${earned.toFixed(1)} ${fish.species}`;
-    queueToast(msg, distinctSteps >= 2 ? '#e8c43f' : '#4dca7c');
+  if (distinctSteps >= 2) {
+    queueCoalescedToast('comboSold', `Combo ×${distinctSteps}`, earned, '#e8c43f');
+  } else if (settings.individualSellToasts && game.fishSold <= INDIVIDUAL_SELL_TOAST_LIMIT) {
+    queueToast(`+$${earned.toFixed(1)} ${fish.species}`, '#4dca7c');
   } else {
     queueCoalescedToast('sold', 'Sold', earned, '#4dca7c');
   }
@@ -682,9 +682,10 @@ function droneSellFish(fish, c, r) {
   sfxCoin(distanceVolMult(c, r, SELL_SFX_RANGE));
   // Same flood guard as sellFish: a wall of delivery drones can sell several
   // times a second, so only combos get their own line.
-  if (distinctSteps >= 2 || (settings.individualSellToasts && game.fishSold <= INDIVIDUAL_SELL_TOAST_LIMIT)) {
-    const msg = `+$${earned.toFixed(1)} ${fish.species} (drone${distinctSteps >= 2 ? ` combo x${distinctSteps}` : ''})`;
-    queueToast(msg, distinctSteps >= 2 ? '#e8c43f' : '#5ad0e8');
+  if (distinctSteps >= 2) {
+    queueCoalescedToast('droneCombo', `Drone combo ×${distinctSteps}`, earned, '#e8c43f');
+  } else if (settings.individualSellToasts && game.fishSold <= INDIVIDUAL_SELL_TOAST_LIMIT) {
+    queueToast(`+$${earned.toFixed(1)} ${fish.species} (drone)`, '#5ad0e8');
   } else {
     queueCoalescedToast('droneSold', 'Drone sold', earned, '#5ad0e8');
   }
