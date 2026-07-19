@@ -179,10 +179,12 @@ let restarting = false;
 // button so the player gets a completely clean slate.
 function restartGame() {
   restarting = true;
-  game.lifetimeEarned = 0;
   if (typeof submitLeaderboardScore === 'function') submitLeaderboardScore();
+  game.lifetimeEarned = 0;
   localStorage.removeItem(SAVE_KEY);
+  localStorage.setItem('fishink_skip_cloud', '1');
   localStorage.removeItem(PRESTIGE_KEY); // prestige.js declares this constant
+  if (typeof cloudPushSaveImmediate === 'function') cloudPushSaveImmediate();
   location.reload();
 }
 
