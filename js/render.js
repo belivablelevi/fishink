@@ -1891,6 +1891,11 @@ function drawDrones(ctx) {
 }
 
 function drawFishSprite(ctx, fish, cx, cy, size) {
+  const legendary = fish.category === 'Legendary';
+  if (legendary) {
+    ctx.shadowColor = '#f0c030';
+    ctx.shadowBlur  = 7 + Math.sin(game.time * 2.2 + (fish.wigglePhase || 0)) * 3;
+  }
   const img = IMAGES.fishes;
   if (img) {
     ctx.imageSmoothingEnabled = false;
@@ -1903,6 +1908,7 @@ function drawFishSprite(ctx, fish, cx, cy, size) {
     ctx.ellipse(cx, cy, size / 2, size / 3, 0, 0, Math.PI * 2);
     ctx.fill();
   }
+  if (legendary) ctx.shadowBlur = 0;
 }
 
 // ─── Fishing rod ──────────────────────────────────────────────────────────────
