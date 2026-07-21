@@ -117,7 +117,15 @@ const INDIVIDUAL_SELL_TOAST_LIMIT = 300;
 const COMBO_BONUS_PER_STEP = 0.3;
 
 function comboMultFor(fish) {
-  const distinctSteps = new Set(fish.mults).size;
+  // mults is at most a handful of entries — a nested scan beats allocating a
+  // Set on every single sale.
+  const m = fish.mults;
+  let distinctSteps = 0;
+  for (let i = 0; i < m.length; i++) {
+    let dup = false;
+    for (let j = 0; j < i; j++) if (m[j] === m[i]) { dup = true; break; }
+    if (!dup) distinctSteps++;
+  }
   return { distinctSteps, mult: 1 + Math.max(0, distinctSteps - 1) * COMBO_BONUS_PER_STEP };
 }
 
@@ -331,7 +339,7 @@ function simUpdate(dt) {
   const cheated = saveAccum >= AUTOSAVE_INTERVAL ? cashGuard.check() : false;
   if (saveAccum >= AUTOSAVE_INTERVAL) {
     saveAccum = 0;
-    saveGame();
+    saveGameNow(); // autosave keeps its guaranteed cadence — no debounce
     if (!cheated) submitLeaderboardScore();
   }
 
@@ -355,37 +363,33 @@ function simUpdate(dt) {
   }
 
   // Fishing Drones (continuous flight state machine)
-  for (let r = 0; r < WORLD_ROWS; r++) {
-    for (let c = 0; c < WORLD_COLS; c++) {
-      if (blockAt(c, r) === B_DRONE_FISHER) tickDroneFisher(c, r, dt);
-    }
+  for (const key of blockIndex.droneFishers) {
+    tickDroneFisher(key & REG_MASK, key >> REG_SHIFT, dt);
   }
 
   // Machine processing timers (continuous)
-  for (let r = 0; r < WORLD_ROWS; r++) {
-    for (let c = 0; c < WORLD_COLS; c++) {
-      const id = blockAt(c, r);
-      if (!IS_MACHINE(id)) continue;
-      const st = stateAt(c, r);
-      if (st.bypassFlash > 0) st.bypassFlash = Math.max(0, st.bypassFlash - dt);
-      if (!st.processing) continue;
-      st.timer -= dt;
-      if (st.timer <= 0) {
-        st.processing = false;
-        if (st.inputItem) {
-          const def      = machineDef(id);
-          const good     = def.goodFor.includes(st.inputItem.category);
-          const baseMult = good ? def.goodMult : def.badMult;
-          const mult     = baseMult * machineValueMult(st.level || 0);
-          st.inputItem.value = Math.round(st.inputItem.value * mult * 10) / 10;
-          st.inputItem.mults.push(def.label);
-          st.item      = st.inputItem;
-          st.inputItem = null;
-          const sfx = sfxForMachine(id);
-          if (sfx && ZOOM > MACHINE_SFX_ZOOM_THRESHOLD) {
-            const volMult = distanceVolMult(c, r, MACHINE_SFX_RANGE);
-            if (volMult > 0) sfx(volMult);
-          }
+  for (const key of blockIndex.machines) {
+    const c = key & REG_MASK, r = key >> REG_SHIFT;
+    const id = blocks[r][c];
+    const st = cellState[r][c];
+    if (st.bypassFlash > 0) st.bypassFlash = Math.max(0, st.bypassFlash - dt);
+    if (!st.processing) continue;
+    st.timer -= dt;
+    if (st.timer <= 0) {
+      st.processing = false;
+      if (st.inputItem) {
+        const def      = machineDef(id);
+        const good     = def.goodFor.includes(st.inputItem.category);
+        const baseMult = good ? def.goodMult : def.badMult;
+        const mult     = baseMult * machineValueMult(st.level || 0);
+        st.inputItem.value = Math.round(st.inputItem.value * mult * 10) / 10;
+        st.inputItem.mults.push(def.label);
+        st.item      = st.inputItem;
+        st.inputItem = null;
+        const sfx = sfxForMachine(id);
+        if (sfx && ZOOM > MACHINE_SFX_ZOOM_THRESHOLD) {
+          const volMult = distanceVolMult(c, r, MACHINE_SFX_RANGE);
+          if (volMult > 0) sfx(volMult);
         }
       }
     }
@@ -397,22 +401,20 @@ function simUpdate(dt) {
   tickDeliveryFlights(dt);
 
   // Packer processing timers (continuous, mirrors the IS_MACHINE loop above)
-  for (let r = 0; r < WORLD_ROWS; r++) {
-    for (let c = 0; c < WORLD_COLS; c++) {
-      if (!IS_PACKER(blockAt(c, r))) continue;
-      const st = stateAt(c, r);
-      if (!st.processing) continue;
-      st.timer -= dt;
-      if (st.timer <= 0) {
-        st.processing = false;
-        const bundleValue = st.carrying.reduce((s, f) => s + f.value, 0) * 1.5 * machineValueMult(st.level || 0);
-        st.item = { species: `${st.carrying.length}-Fish Bundle`, category: 'Bundle', size: 'Bundle',
-                    value: Math.round(bundleValue * 10) / 10, color: '#e8a030', sx: 0, sy: 0,
-                    mults: ['Washer', 'Icer', 'Smoker', 'Stamper'],
-                    wigglePhase: 0, isBundle: true, count: st.carrying.length };
-        st.carrying = [];
-        stateAt(c, r).flashAnim = game.time + 0.5;
-      }
+  for (const key of blockIndex.packers) {
+    const c = key & REG_MASK, r = key >> REG_SHIFT;
+    const st = cellState[r][c];
+    if (!st.processing) continue;
+    st.timer -= dt;
+    if (st.timer <= 0) {
+      st.processing = false;
+      const bundleValue = st.carrying.reduce((s, f) => s + f.value, 0) * 1.5 * machineValueMult(st.level || 0);
+      st.item = { species: `${st.carrying.length}-Fish Bundle`, category: 'Bundle', size: 'Bundle',
+                  value: Math.round(bundleValue * 10) / 10, color: '#e8a030', sx: 0, sy: 0,
+                  mults: ['Washer', 'Icer', 'Smoker', 'Stamper'],
+                  wigglePhase: 0, isBundle: true, count: st.carrying.length };
+      st.carrying = [];
+      st.flashAnim = game.time + 0.5;
     }
   }
 
@@ -425,6 +427,12 @@ function simUpdate(dt) {
 }
 
 // ─── Belt movement (continuous, progress-based) ───────────────────────────────
+
+// Shared return object for nextCellFor — this runs per belt fish per frame in
+// both the sim sweep and the fish renderer, and every caller consumes the
+// result immediately, so one reusable object replaces thousands of tiny
+// allocations per second. Never hold a reference to it across calls.
+const _nextCell = { nc: 0, nr: 0 };
 
 function nextCellFor(c, r, id, st, fish) {
   let dirIdx = st.dir;
@@ -459,8 +467,18 @@ function nextCellFor(c, r, id, st, fish) {
     dirIdx = st.routeDir;
   }
   const dir = BELT_DIRS[dirIdx];
-  return { nc: c + dir.dx, nr: r + dir.dy };
+  _nextCell.nc = c + dir.dx;
+  _nextCell.nr = r + dir.dy;
+  return _nextCell;
 }
+
+// Persistent scratch arrays for updateBeltFish — refilled each frame with
+// packed ints instead of allocating two arrays + one object per moving fish.
+// Packing: bits 16+ hold the registry key (r<<7|c, so a plain numeric sort is
+// row-major), bits 8-15 hold nr+1 and bits 0-7 hold nc+1 (+1 so the -1 of an
+// off-map neighbor still fits in an unsigned byte).
+const _beltMoversPos = [];
+const _beltMoversNeg = [];
 
 function updateBeltFish(dt) {
   // Two sweeps so fish already-at-edge don't stall for a frame. Cells are
@@ -469,28 +487,29 @@ function updateBeltFish(dt) {
   // differs from st.dir, and grouping by facing instead of actual movement
   // let a Splitter's perpendicular output land in the wrong sweep, racing
   // the belt it just fed into and visibly snapping the fish backward.
-  const positive = [];
-  const negative = [];
-  for (let r = 0; r < WORLD_ROWS; r++) {
-    for (let c = 0; c < WORLD_COLS; c++) {
-      const id = blockAt(c, r);
-      if (!IS_TRANSPORT(id)) continue;
-      const st = stateAt(c, r);
-      if (!st.item) continue;
-      const { nc, nr } = nextCellFor(c, r, id, st, st.item);
-      (nc < c || nr < r ? negative : positive).push({ c, r, nc, nr });
-    }
+  _beltMoversPos.length = 0;
+  _beltMoversNeg.length = 0;
+  for (const key of blockIndex.transports) {
+    const c = key & REG_MASK, r = key >> REG_SHIFT;
+    const st = cellState[r][c];
+    if (!st.item) continue;
+    const { nc, nr } = nextCellFor(c, r, blocks[r][c], st, st.item);
+    const packed = (key << 16) | ((nr + 1) << 8) | (nc + 1);
+    (nc < c || nr < r ? _beltMoversNeg : _beltMoversPos).push(packed);
   }
   // Sweep A: right/down movers — scan from output end (bottom-right)
-  positive.sort((a, b) => (b.r - a.r) || (b.c - a.c));
-  for (const cell of positive) stepBeltCell(cell, dt);
+  _beltMoversPos.sort((a, b) => b - a);
+  for (const p of _beltMoversPos) stepBeltCell(p, dt);
   // Sweep B: left/up movers — scan from output end (top-left)
-  negative.sort((a, b) => (a.r - b.r) || (a.c - b.c));
-  for (const cell of negative) stepBeltCell(cell, dt);
+  _beltMoversNeg.sort((a, b) => a - b);
+  for (const p of _beltMoversNeg) stepBeltCell(p, dt);
 }
 
-function stepBeltCell(cell, dt) {
-  const { c, r, nc, nr } = cell;
+function stepBeltCell(packed, dt) {
+  const c  = (packed >> 16) & REG_MASK;
+  const r  =  packed >>> (16 + REG_SHIFT);
+  const nc = (packed & 255) - 1;
+  const nr = ((packed >> 8) & 255) - 1;
   const id = blockAt(c, r);
   const st = stateAt(c, r);
   if (!st.item) return;
@@ -729,37 +748,41 @@ function transportLeadsAwayFrom(nc, nr, c, r) {
   return nc + dir.dx !== c || nr + dir.dy !== r;
 }
 
+// Push-direction probe orders, hoisted so the fast machine-output tick and the
+// per-catch fisher/drone hand-offs stop re-allocating them on every call.
+const PUSH_DIRS   = [{dc:1,dr:0},{dc:0,dr:1},{dc:-1,dr:0},{dc:0,dr:-1}];
+const FISHER_DIRS = [{dc:1,dr:0},{dc:-1,dr:0},{dc:0,dr:1},{dc:0,dr:-1}];
+
 function tickMachineOutput() {
-  const dirs = [{dc:1,dr:0},{dc:0,dr:1},{dc:-1,dr:0},{dc:0,dr:-1}];
-  for (let r = 0; r < WORLD_ROWS; r++) {
-    for (let c = 0; c < WORLD_COLS; c++) {
-      const id = blockAt(c, r);
-      if (!IS_MACHINE(id) && !IS_CRATE(id) && !IS_PACKER(id)) continue;
-      const st = stateAt(c, r);
-      const outItem = IS_CRATE(id) ? st.carrying[0] : st.item;
-      if (!outItem || st.processing) continue;
-      // Try to push to an adjacent belt (Splitter/Sorter/Recycler included), seller,
-      // drone-delivery, or crate
-      for (const {dc, dr} of dirs) {
-        const nc = c + dc, nr = r + dr;
-        const nb = blockAt(nc, nr);
-        const isSell = nb === B_SELLER || nb === B_DRONE_DELIVERY;
-        let pushed = false;
-        // For sales, clear the source slot BEFORE calling sellFish/droneSellFish —
-        // if the sell call ever threw partway through, leaving the slot filled
-        // would let the same fish get pushed and sold again next tick.
-        if (isSell) { if (IS_CRATE(id)) st.carrying.shift(); else st.item = null; }
-        if (IS_TRANSPORT(nb) && !stateAt(nc, nr).item && transportLeadsAwayFrom(nc, nr, c, r)) {
-          stateAt(nc, nr).item = outItem; pushed = true;
-        } else if (nb === B_SELLER) { sellFish(outItem, nc, nr); pushed = true; }
-        else if (nb === B_DRONE_DELIVERY) { droneSellFish(outItem, nc, nr); pushed = true; }
-        else if (nb === B_CRATE && stateAt(nc, nr).carrying.length < CRATE_CAPACITY) {
-          stateAt(nc, nr).carrying.push(outItem); pushed = true;
-        }
-        if (pushed) {
-          if (!isSell) { if (IS_CRATE(id)) st.carrying.shift(); else st.item = null; }
-          break;
-        }
+  for (const key of blockIndex.outputs) {
+    const c = key & REG_MASK, r = key >> REG_SHIFT;
+    const id = blocks[r][c];
+    const st = cellState[r][c];
+    const outItem = IS_CRATE(id) ? st.carrying[0] : st.item;
+    if (!outItem || st.processing) continue;
+    // Try to push to an adjacent belt (Splitter/Sorter/Recycler included), seller,
+    // drone-delivery, or crate
+    for (const {dc, dr} of PUSH_DIRS) {
+      const nc = c + dc, nr = r + dr;
+      const nb = blockAt(nc, nr);
+      const isSell = nb === B_SELLER || nb === B_DRONE_DELIVERY;
+      let pushed = false;
+      // For sales, clear the source slot BEFORE calling sellFish/droneSellFish —
+      // if the sell call ever threw partway through, leaving the slot filled
+      // would let the same fish get pushed and sold again next tick.
+      if (isSell) { if (IS_CRATE(id)) st.carrying.shift(); else st.item = null; }
+      if (IS_TRANSPORT(nb)) {
+        const nst = stateAt(nc, nr);
+        if (!nst.item && transportLeadsAwayFrom(nc, nr, c, r)) { nst.item = outItem; pushed = true; }
+      } else if (nb === B_SELLER) { sellFish(outItem, nc, nr); pushed = true; }
+      else if (nb === B_DRONE_DELIVERY) { droneSellFish(outItem, nc, nr); pushed = true; }
+      else if (nb === B_CRATE) {
+        const nst = stateAt(nc, nr);
+        if (nst.carrying.length < CRATE_CAPACITY) { nst.carrying.push(outItem); pushed = true; }
+      }
+      if (pushed) {
+        if (!isSell) { if (IS_CRATE(id)) st.carrying.shift(); else st.item = null; }
+        break;
       }
     }
   }
@@ -771,8 +794,7 @@ function tryFisherProduce(c, r) {
   const level = stateAt(c, r).level || 0;
   const interval = effectiveFisherInterval() * machineSpeedMult(level);
   const luck = fisherLuckMult(level) * effectiveGlobalLuckMult();
-  const dirs = [{dc:1,dr:0},{dc:-1,dr:0},{dc:0,dr:1},{dc:0,dr:-1}];
-  for (const {dc, dr} of dirs) {
+  for (const {dc, dr} of FISHER_DIRS) {
     const nc = c + dc, nr = r + dr;
     const nb = blockAt(nc, nr);
     if (IS_TRANSPORT(nb)) {
@@ -814,17 +836,30 @@ function droneTripDuration(c, r, st) {
 }
 
 // Counts other Drone Fishers currently targeting the same water tile — backs
-// the crowding penalty so stacking drones on one pond isn't free.
+// the crowding penalty so stacking drones on one pond isn't free. Counts are
+// cached per water tile and rebuilt only when droneWaterDirty flips (drone
+// pad placed/removed/retargeted, world grown, save loaded) — the old version
+// scanned the entire world per drone per frame.
+const _droneCrowd = new Map(); // regKey(waterC, waterR) → drone count
+
+function _rebuildDroneCrowd() {
+  _droneCrowd.clear();
+  for (const key of blockIndex.droneFishers) {
+    const c = key & REG_MASK, r = key >> REG_SHIFT;
+    const s = cellState[r][c];
+    if (s.waterC === null) continue;
+    const wk = regKey(s.waterC, s.waterR);
+    _droneCrowd.set(wk, (_droneCrowd.get(wk) || 0) + 1);
+  }
+  droneWaterDirty = false;
+}
+
 function dronesSharingWater(wc, wr, excludeC, excludeR) {
-  let n = 0;
-  for (let r = 0; r < WORLD_ROWS; r++)
-    for (let c = 0; c < WORLD_COLS; c++) {
-      if (c === excludeC && r === excludeR) continue;
-      if (blockAt(c, r) !== B_DRONE_FISHER) continue;
-      const s = stateAt(c, r);
-      if (s.waterC === wc && s.waterR === wr) n++;
-    }
-  return n;
+  if (droneWaterDirty) _rebuildDroneCrowd();
+  const n = _droneCrowd.get(regKey(wc, wr)) || 0;
+  // Subtract the asking drone itself out of the count when it targets (wc, wr).
+  const ex = stateAt(excludeC, excludeR);
+  return ex && ex.waterC === wc && ex.waterR === wr ? Math.max(0, n - 1) : n;
 }
 
 function tickDroneFisher(c, r, dt) {
@@ -835,6 +870,7 @@ function tickDroneFisher(c, r, dt) {
     if (!target) return; // no water anywhere on the map — pad sits idle
     st.waterC = target.c;
     st.waterR = target.r;
+    droneWaterDirty = true; // crowd counts must include the new target
   }
 
   if (st.dronePhase === DRONE_OUT) {
@@ -860,8 +896,7 @@ function tickDroneFisher(c, r, dt) {
       st.droneT = 0;
       return;
     }
-    const dirs = [{dc:1,dr:0},{dc:-1,dr:0},{dc:0,dr:1},{dc:0,dr:-1}];
-    for (const {dc, dr} of dirs) {
+    for (const {dc, dr} of FISHER_DIRS) {
       const nc = c + dc, nr = r + dr;
       const nb = blockAt(nc, nr);
       if (IS_TRANSPORT(nb)) {

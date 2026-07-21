@@ -36,11 +36,106 @@ const MACHINE_COLORS = {
 
 let beltAnim = 0;
 
+// ── Terrain layer cache ──────────────────────────────────────────────────────
+// The procedural terrain (grass speckles, sand grains, edge dithers) never
+// changes between edits, so it's rendered ONCE into a world-sized offscreen
+// canvas (with the subtle grid lines baked in) and blitted each frame instead
+// of re-synthesizing thousands of Math.sin + fillRect calls per frame. The
+// animated water sparkle stays dynamic via the _twinkles list collected during
+// rebuild (see drawWaterTwinkles).
+let _terrainCanvas = null;
+let _terrainCtx = null;
+let _terrainCacheDirty = true;
+const _twinkles = []; // { x, y, phase } in world pixels — sparse water sparkle sites
+
+function invalidateTerrainCache() { _terrainCacheDirty = true; }
+
+function _paintGridLines(g, c0, r0, c1, r1) {
+  g.strokeStyle = COLORS.gridLine;
+  g.lineWidth = 0.5;
+  for (let c = c0; c <= c1; c++) {
+    const x = c * TILE_SIZE;
+    g.beginPath(); g.moveTo(x, r0 * TILE_SIZE); g.lineTo(x, r1 * TILE_SIZE); g.stroke();
+  }
+  for (let r = r0; r <= r1; r++) {
+    const y = r * TILE_SIZE;
+    g.beginPath(); g.moveTo(c0 * TILE_SIZE, y); g.lineTo(c1 * TILE_SIZE, y); g.stroke();
+  }
+}
+
+function rebuildTerrainCache() {
+  const w = WORLD_COLS * TILE_SIZE, h = WORLD_ROWS * TILE_SIZE;
+  if (!_terrainCanvas || _terrainCanvas.width !== w || _terrainCanvas.height !== h) {
+    _terrainCanvas = document.createElement('canvas');
+    _terrainCanvas.width  = w;
+    _terrainCanvas.height = h;
+    _terrainCtx = _terrainCanvas.getContext('2d');
+  }
+  _terrainCtx.imageSmoothingEnabled = false;
+  _twinkles.length = 0;
+  for (let r = 0; r < WORLD_ROWS; r++) {
+    for (let c = 0; c < WORLD_COLS; c++) {
+      const t = terrain[r][c];
+      drawTile(_terrainCtx, t, c * TILE_SIZE, r * TILE_SIZE, c, r);
+      // Same hash gates drawWaterTile's old inline sparkle used — collected
+      // here once so the per-frame overlay only visits actual sparkle sites.
+      if (t === T_WATER && tileHash(c, r, 90) > 0.85) {
+        _twinkles.push({
+          x: c * TILE_SIZE + 4 + tileHash(c, r, 91) * (TILE_SIZE - 8),
+          y: r * TILE_SIZE + 4 + tileHash(c, r, 92) * (TILE_SIZE - 8),
+          phase: tileHash(c, r, 93) * Math.PI * 2,
+        });
+      }
+    }
+  }
+  _paintGridLines(_terrainCtx, 0, 0, WORLD_COLS, WORLD_ROWS);
+  _terrainCacheDirty = false;
+}
+
+// Repaints a single edited tile plus its 3×3 neighborhood into the cache —
+// the edge-blend dither of each neighbor depends on this tile's type, and
+// repainting the full 3×3 block (then re-stroking the grid lines clipped to
+// it) leaves no seams or double-drawn lines. Twinkle sites are untouched:
+// tile edits never convert water, so the collected list stays valid.
+function repaintTerrainTile(c, r) {
+  if (!_terrainCanvas || _terrainCacheDirty) return; // full rebuild pending anyway
+  const g = _terrainCtx;
+  const c0 = Math.max(0, c - 1), c1 = Math.min(WORLD_COLS - 1, c + 1);
+  const r0 = Math.max(0, r - 1), r1 = Math.min(WORLD_ROWS - 1, r + 1);
+  for (let rr = r0; rr <= r1; rr++)
+    for (let cc = c0; cc <= c1; cc++)
+      drawTile(g, terrain[rr][cc], cc * TILE_SIZE, rr * TILE_SIZE, cc, rr);
+  g.save();
+  g.beginPath();
+  g.rect(c0 * TILE_SIZE, r0 * TILE_SIZE, (c1 - c0 + 1) * TILE_SIZE, (r1 - r0 + 1) * TILE_SIZE);
+  g.clip();
+  _paintGridLines(g, c0, r0, c1 + 1, r1 + 1);
+  g.restore();
+}
+
+// Animated water sparkle — the only dynamic part of the terrain layer.
+function drawWaterTwinkles(ctx, c0, c1, r0, r1) {
+  const x0 = c0 * TILE_SIZE, x1 = (c1 + 1) * TILE_SIZE;
+  const y0 = r0 * TILE_SIZE, y1 = (r1 + 1) * TILE_SIZE;
+  for (const tw of _twinkles) {
+    if (tw.x < x0 || tw.x >= x1 || tw.y < y0 || tw.y >= y1) continue;
+    const twinkle = (Math.sin(game.time * 2.2 + tw.phase) + 1) / 2;
+    if (twinkle > 0.75) {
+      ctx.fillStyle = `rgba(255,255,255,${(twinkle - 0.75) * 2})`;
+      ctx.fillRect(tw.x - cam.x, tw.y - cam.y, 1.5, 1.5);
+    }
+  }
+}
+
 function draw(ctx, canvas, dt) {
   beltAnim = (beltAnim + dt * effectiveBeltSpeed() * TILE_SIZE) % TILE_SIZE;
 
   const cw = canvas.width, ch = canvas.height;
   ctx.clearRect(0, 0, cw, ch);
+
+  // Pixel-art game: sprites are drawn nearest-neighbor everywhere. Set once
+  // per frame (before save() so it survives restore()) instead of per sprite.
+  ctx.imageSmoothingEnabled = false;
 
   ctx.save();
   ctx.scale(ZOOM, ZOOM);
@@ -57,24 +152,20 @@ function draw(ctx, canvas, dt) {
   ctx.fillStyle = COLORS.water;
   ctx.fillRect(0, 0, vw, vh);
 
-  // Terrain
-  for (let r = r0; r <= r1; r++)
-    for (let c = c0; c <= c1; c++)
-      drawTile(ctx, tileAt(c, r), c * TILE_SIZE - cam.x, r * TILE_SIZE - cam.y, c, r);
-
-  // Subtle grid
-  ctx.strokeStyle = COLORS.gridLine;
-  ctx.lineWidth = 0.5;
-  for (let c = c0; c <= c1 + 1; c++) {
-    const sx = c * TILE_SIZE - cam.x;
-    ctx.beginPath(); ctx.moveTo(sx, r0 * TILE_SIZE - cam.y);
-    ctx.lineTo(sx, (r1 + 1) * TILE_SIZE - cam.y); ctx.stroke();
+  // Terrain + grid — one blit from the cached layer
+  if (_terrainCacheDirty || !_terrainCanvas ||
+      _terrainCanvas.width  !== WORLD_COLS * TILE_SIZE ||
+      _terrainCanvas.height !== WORLD_ROWS * TILE_SIZE) {
+    rebuildTerrainCache();
   }
-  for (let r = r0; r <= r1 + 1; r++) {
-    const sy = r * TILE_SIZE - cam.y;
-    ctx.beginPath(); ctx.moveTo(c0 * TILE_SIZE - cam.x, sy);
-    ctx.lineTo((c1 + 1) * TILE_SIZE - cam.x, sy); ctx.stroke();
+  {
+    const bx = c0 * TILE_SIZE, by = r0 * TILE_SIZE;
+    const bw = (c1 - c0 + 1) * TILE_SIZE, bh = (r1 - r0 + 1) * TILE_SIZE;
+    if (bw > 0 && bh > 0) {
+      ctx.drawImage(_terrainCanvas, bx, by, bw, bh, bx - cam.x, by - cam.y, bw, bh);
+    }
   }
+  drawWaterTwinkles(ctx, c0, c1, r0, r1);
 
   // Blocks (no fish drawn here)
   for (let r = r0; r <= r1; r++)
@@ -391,8 +482,9 @@ function tileHash(c, r, salt) {
 }
 
 // Hand-drawn sand tile: solid base + scattered grain speckles, no sprite assets.
+const SAND_SHADES = ['#cfa86f', '#d6b079', '#c8a065', '#dcb886'];
 function drawSandTile(ctx, sx, sy, S, c, r) {
-  const shades = ['#cfa86f', '#d6b079', '#c8a065', '#dcb886'];
+  const shades = SAND_SHADES;
   ctx.fillStyle = shades[Math.floor(tileHash(c, r, 1) * shades.length)];
   ctx.fillRect(sx, sy, S, S);
 
@@ -443,6 +535,7 @@ function drawEdgeBlend(ctx, sx, sy, S, c, r, neighborType, color) {
 // Hand-drawn grass tile, styled after a reference pixel-art field: flat base +
 // soft speckle dither + larger fuzzy bush patches (continuous noise, multi-tile,
 // no per-tile seams) + occasional small flower clusters.
+const FLOWER_PALETTE = ['#f3c98a', '#e8748a', '#fdf1d6'];
 function drawGrassTile(ctx, sx, sy, S, c, r) {
   ctx.fillStyle = '#436b2c';
   ctx.fillRect(sx, sy, S, S);
@@ -471,7 +564,7 @@ function drawGrassTile(ctx, sx, sy, S, c, r) {
   if (tileHash(c, r, 77) > 0.985) {
     const fx = sx + 5 + tileHash(c, r, 78) * (S - 10);
     const fy = sy + 5 + tileHash(c, r, 79) * (S - 10);
-    const palette = ['#f3c98a', '#e8748a', '#fdf1d6'];
+    const palette = FLOWER_PALETTE;
     for (let i = 0; i < 4; i++) {
       const ox = (tileHash(c, r, i * 2 + 80) - 0.5) * 5;
       const oy = (tileHash(c, r, i * 2 + 81) - 0.5) * 5;
@@ -503,22 +596,14 @@ function drawGrassTile(ctx, sx, sy, S, c, r) {
   drawEdgeBlend(ctx, sx, sy, S, c, r, T_SHORE, 'rgba(206,170,115,0.4)');
 }
 
-// Hand-drawn water tile: flat shade (no gradient — avoids per-tile seams) +
-// a rare, dim sparkle (kept sparse so it doesn't read as "shimmer noise").
+// Hand-drawn water tile: flat shade (no gradient — avoids per-tile seams).
+// The rare animated sparkle lives in drawWaterTwinkles — this tile is baked
+// into the static terrain cache, so nothing time-varying can render here.
+const WATER_SHADES = ['#1a4a6e', '#1b4c70', '#194869', '#1c4e72'];
 function drawWaterTile(ctx, sx, sy, S, c, r) {
-  const shades = ['#1a4a6e', '#1b4c70', '#194869', '#1c4e72'];
+  const shades = WATER_SHADES;
   ctx.fillStyle = shades[Math.floor(tileHash(c, r, 41) * shades.length)];
   ctx.fillRect(sx, sy, S, S);
-
-  if (tileHash(c, r, 90) > 0.85) {
-    const px = sx + 4 + tileHash(c, r, 91) * (S - 8);
-    const py = sy + 4 + tileHash(c, r, 92) * (S - 8);
-    const twinkle = (Math.sin(game.time * 2.2 + tileHash(c, r, 93) * Math.PI * 2) + 1) / 2;
-    if (twinkle > 0.75) {
-      ctx.fillStyle = `rgba(255,255,255,${(twinkle - 0.75) * 2})`;
-      ctx.fillRect(px, py, 1.5, 1.5);
-    }
-  }
 
   // Water-body pets are drawn in a separate post-pass (drawWaterPets) so they
   // always appear above tile shimmer. Nothing to render here.
@@ -526,7 +611,6 @@ function drawWaterTile(ctx, sx, sy, S, c, r) {
 
 function drawTile(ctx, t, sx, sy, c, r) {
   const S = TILE_SIZE;
-  ctx.imageSmoothingEnabled = false;
 
   if (t === T_WATER) {
     drawWaterTile(ctx, sx, sy, S, c, r);
@@ -568,6 +652,10 @@ function drawLevelBadge(ctx, sx, sy, S, level) {
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
 }
+
+// Shared per-frame constants hoisted out of drawBlock's hot loops.
+const STUB_SIDES = [[-1, 0, 'left'], [1, 0, 'right'], [0, -1, 'top'], [0, 1, 'bottom']];
+const CONCRETE_BOLTS = [[5, 5], [TILE_SIZE - 5, 5], [5, TILE_SIZE - 5], [TILE_SIZE - 5, TILE_SIZE - 5]];
 
 // forceDir overrides whatever dir is actually stored at (c, r) — used by the
 // build ghost so a transport block's pending rotation (buildMode.beltDir)
@@ -818,7 +906,7 @@ function drawBlock(ctx, id, sx, sy, c, r, forceDir) {
     }
     if (id === B_WASHER) {
       // Little conveyor nubs on whichever sides actually feed a real belt
-      for (const [dc, dr, side] of [[-1,0,'left'],[1,0,'right'],[0,-1,'top'],[0,1,'bottom']]) {
+      for (const [dc, dr, side] of STUB_SIDES) {
         if (IS_TRANSPORT(blockAt(c + dc, r + dr))) drawConveyorStub(ctx, sx, sy, S, side);
       }
     }
@@ -852,7 +940,7 @@ function drawBlock(ctx, id, sx, sy, c, r, forceDir) {
     ctx.moveTo(sx + 1, sy + S / 2); ctx.lineTo(sx + S - 1, sy + S / 2);
     ctx.stroke();
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    for (const [ox, oy] of [[5,5],[S-5,5],[5,S-5],[S-5,S-5]]) {
+    for (const [ox, oy] of CONCRETE_BOLTS) {
       ctx.beginPath(); ctx.arc(sx + ox, sy + oy, 1, 0, Math.PI * 2); ctx.fill();
     }
 
@@ -895,7 +983,7 @@ function drawBlock(ctx, id, sx, sy, c, r, forceDir) {
     }
 
     // Little conveyor nubs on whichever sides actually feed a real belt
-    for (const [dc, dr, side] of [[-1,0,'left'],[1,0,'right'],[0,-1,'top'],[0,1,'bottom']]) {
+    for (const [dc, dr, side] of STUB_SIDES) {
       if (IS_TRANSPORT(blockAt(c + dc, r + dr))) drawConveyorStub(ctx, sx, sy, S, side);
     }
 
@@ -1113,16 +1201,21 @@ const TELEPORTER_BASE_KEYS   = ['teleporterBase0', 'teleporterBase1', 'teleporte
 const TELEPORTER_ACTIVE_KEYS = ['teleporterActive0', 'teleporterActive1', 'teleporterActive2', 'teleporterActive3', 'teleporterActive4', 'teleporterActive5'];
 
 // Returns the 1-based display number for a teleporter at (tc, tr), sorted
-// in row-major order across all placed teleporters. Stable across frames.
+// in row-major order across all placed teleporters. Numbering is cached and
+// only recomputed when teleporter membership changes (teleporterRev bumps in
+// grid.js) — the old per-frame full-world scan was O(teleporters × world).
+let _teleNums = new Map();
+let _teleNumsRev = -1;
+
 function teleporterDisplayNum(tc, tr) {
-  let n = 1;
-  for (let r = 0; r < WORLD_ROWS; r++)
-    for (let c = 0; c < WORLD_COLS; c++) {
-      if (blockAt(c, r) !== B_TELEPORTER) continue;
-      if (c === tc && r === tr) return n;
-      n++;
-    }
-  return n;
+  if (_teleNumsRev !== teleporterRev) {
+    _teleNums.clear();
+    // Registry keys sort ascending exactly into row-major order.
+    const keys = Array.from(blockIndex.teleporters).sort((a, b) => a - b);
+    for (let i = 0; i < keys.length; i++) _teleNums.set(keys[i], i + 1);
+    _teleNumsRev = teleporterRev;
+  }
+  return _teleNums.get(regKey(tc, tr)) || _teleNums.size + 1;
 }
 
 function drawTeleporterBelt(ctx, dir, dirIdx, hasTarget, sx, sy, S, c, r) {
@@ -1480,9 +1573,8 @@ function drawAllFish(ctx, c0, c1, r0, r1) {
       const fish = st.item;
       const p    = fish.progress || 0;
       const { nc, nr } = nextCellFor(c, r, id, st, fish);
-      const dir  = { dx: nc - c, dy: nr - r };
-      const wx   = (c + 0.5 + dir.dx * p) * TILE_SIZE - cam.x;
-      const wy   = (r + 0.5 + dir.dy * p) * TILE_SIZE - cam.y;
+      const wx   = (c + 0.5 + (nc - c) * p) * TILE_SIZE - cam.x;
+      const wy   = (r + 0.5 + (nr - r) * p) * TILE_SIZE - cam.y;
       // Idle wiggle gives each belt fish a bit of personality — out of phase
       // with every other fish via its own randomized wigglePhase.
       const wob  = Math.sin(game.time * 4 + (fish.wigglePhase || 0)) * 1.5;
@@ -1863,42 +1955,74 @@ function drawParticles(ctx) {
 // own full-grid pass rather than from drawBlock (which only fires for the
 // tile the pad sits on).
 function drawDrones(ctx) {
-  for (let r = 0; r < WORLD_ROWS; r++) {
-    for (let c = 0; c < WORLD_COLS; c++) {
-      if (blockAt(c, r) !== B_DRONE_FISHER) continue;
-      const st = stateAt(c, r);
-      if (!st || st.waterC === null) continue;
+  for (const key of blockIndex.droneFishers) {
+    const c = key & REG_MASK, r = key >> REG_SHIFT;
+    const st = stateAt(c, r);
+    if (!st || st.waterC === null) continue;
 
-      let wx, wy;
-      if (st.dronePhase === DRONE_OUT) {
-        wx = c + (st.waterC - c) * st.droneT;
-        wy = r + (st.waterR - r) * st.droneT;
-      } else if (st.dronePhase === DRONE_FISHING) {
-        wx = st.waterC;
-        wy = st.waterR + Math.sin(game.time * 6) * 0.08;
-      } else if (st.dronePhase === DRONE_BACK) {
-        wx = st.waterC + (c - st.waterC) * st.droneT;
-        wy = st.waterR + (r - st.waterR) * st.droneT;
-      } else {
-        continue; // unloading — drawn sitting on the pad in drawBlock
-      }
-
-      const sx = (wx + 0.5) * TILE_SIZE - cam.x;
-      const sy = (wy + 0.5) * TILE_SIZE - cam.y;
-      drawDroneSprite(ctx, sx, sy, false);
+    let wx, wy;
+    if (st.dronePhase === DRONE_OUT) {
+      wx = c + (st.waterC - c) * st.droneT;
+      wy = r + (st.waterR - r) * st.droneT;
+    } else if (st.dronePhase === DRONE_FISHING) {
+      wx = st.waterC;
+      wy = st.waterR + Math.sin(game.time * 6) * 0.08;
+    } else if (st.dronePhase === DRONE_BACK) {
+      wx = st.waterC + (c - st.waterC) * st.droneT;
+      wy = st.waterR + (r - st.waterR) * st.droneT;
+    } else {
+      continue; // unloading — drawn sitting on the pad in drawBlock
     }
+
+    const sx = (wx + 0.5) * TILE_SIZE - cam.x;
+    const sy = (wy + 0.5) * TILE_SIZE - cam.y;
+    drawDroneSprite(ctx, sx, sy, false);
   }
 }
 
-function drawFishSprite(ctx, fish, cx, cy, size) {
-  const legendary = fish.category === 'Legendary';
-  if (legendary) {
-    ctx.shadowColor = '#f0c030';
-    ctx.shadowBlur  = 7 + Math.sin(game.time * 2.2 + (fish.wigglePhase || 0)) * 3;
+// Legendary glow, pre-rendered once per fish sprite cell. Canvas shadowBlur
+// is one of the most expensive 2D ops, and the old code paid it per legendary
+// fish per frame; instead the blurred silhouette is baked into an offscreen
+// canvas (via the classic shadow-offset trick so only the glow lands on it)
+// and the old animated blur-radius pulse becomes a cheap alpha pulse.
+const _legendGlowCache = new Map();
+
+function _legendaryGlow(fish) {
+  const key = fish.sx * 64 + fish.sy;
+  let cv = _legendGlowCache.get(key);
+  if (cv === undefined) {
+    const img = IMAGES.fishes;
+    if (!img) return null; // don't cache — retry once the sheet loads
+    const pad = FISH_CELL / 2;
+    cv = document.createElement('canvas');
+    cv.width = cv.height = FISH_CELL + pad * 2;
+    const g = cv.getContext('2d');
+    g.shadowColor = '#f0c030';
+    g.shadowBlur = 9;
+    g.shadowOffsetX = 1000; // push the source off-canvas; only its shadow lands
+    // Drawn twice so the baked glow reads as strongly as the old blur at peak.
+    for (let i = 0; i < 2; i++) {
+      g.drawImage(img, fish.sx * FISH_CELL, fish.sy * FISH_CELL, FISH_CELL, FISH_CELL,
+                  pad - 1000, pad, FISH_CELL, FISH_CELL);
+    }
+    _legendGlowCache.set(key, cv);
   }
+  return cv;
+}
+
+function drawFishSprite(ctx, fish, cx, cy, size) {
   const img = IMAGES.fishes;
+  if (fish.category === 'Legendary') {
+    const glow = _legendaryGlow(fish);
+    if (glow) {
+      const gs = size * 2; // glow canvas is 2× the fish cell (padding for the blur)
+      const pulse = (Math.sin(game.time * 2.2 + (fish.wigglePhase || 0)) + 1) / 2;
+      ctx.globalAlpha = 0.55 + 0.45 * pulse;
+      ctx.drawImage(glow, Math.round(cx - gs / 2), Math.round(cy - gs / 2), gs, gs);
+      ctx.globalAlpha = 1;
+    }
+  }
   if (img) {
-    ctx.imageSmoothingEnabled = false;
     ctx.drawImage(img,
       fish.sx * FISH_CELL, fish.sy * FISH_CELL, FISH_CELL, FISH_CELL,
       Math.round(cx - size / 2), Math.round(cy - size / 2), size, size);
@@ -1908,7 +2032,6 @@ function drawFishSprite(ctx, fish, cx, cy, size) {
     ctx.ellipse(cx, cy, size / 2, size / 3, 0, 0, Math.PI * 2);
     ctx.fill();
   }
-  if (legendary) ctx.shadowBlur = 0;
 }
 
 // ─── Fishing rod ──────────────────────────────────────────────────────────────
@@ -1987,7 +2110,6 @@ function drawFishingRod(ctx) {
     const mirror = player.facing === 'left';
     const angle = mirror ? (Math.PI - spriteAngle - targetAngle) : (targetAngle - spriteAngle);
     ctx.save();
-    ctx.imageSmoothingEnabled = false;
     ctx.translate(rx0, ry0);
     if (mirror) ctx.scale(-1, 1);
     ctx.rotate(angle);
@@ -2302,6 +2424,24 @@ function drawRareFlash(ctx, canvas, dt) {
 
 // ── Axolotl Pond ─────────────────────────────────────────────────────────────
 
+// uid → pet lookup shared by drawPond (per pond tile!) and drawWaterPets.
+// Rebuilt only when the pets roster actually changes (buy/sell/save-load
+// all change the array length or replace the array), not per call.
+const _petMap = new Map();
+let _petMapSrc = null;
+let _petMapLen = -1;
+
+function petByUid(uid) {
+  const pets = game.pets;
+  if (_petMapSrc !== pets || _petMapLen !== pets.length) {
+    _petMap.clear();
+    for (const p of pets) _petMap.set(p.uid, p);
+    _petMapSrc = pets;
+    _petMapLen = pets.length;
+  }
+  return _petMap.get(uid);
+}
+
 function drawPond(ctx, sx, sy, S, c, r) {
   // Water fill
   ctx.fillStyle = '#1a5c7a';
@@ -2327,11 +2467,9 @@ function drawPond(ctx, sx, sy, S, c, r) {
   }
 
   // Draw each swimming pet
-  ctx.imageSmoothingEnabled = false;
   const SW = 12;
-  const petMapP = new Map(game.pets.map(p => [p.uid, p]));
   for (const uid of st.pondPets) {
-    const pet = petMapP.get(uid);
+    const pet = petByUid(uid);
     if (!pet) continue;
     const ss = _getSwimState(uid, c, r);
     if (!ss) continue;
@@ -2341,7 +2479,6 @@ function drawPond(ctx, sx, sy, S, c, r) {
     const srcY = (ss.row ?? 0) * AXO_FRAME_H;
     ctx.drawImage(img, srcX, srcY, AXO_FRAME_W, AXO_FRAME_H, sx + ss.px, sy + ss.py, SW, SW);
   }
-  ctx.imageSmoothingEnabled = true;
 }
 
 // Draws a teal pulsing highlight on every valid pet-placement tile (natural water
@@ -2414,10 +2551,9 @@ function drawPetPlaceOverlay(ctx, c0, c1, r0, r1) {
 // above tile shimmer and block graphics.
 function drawWaterPets(ctx, c0, c1, r0, r1) {
   if (typeof game === 'undefined' || !game.waterPonds) return;
-  ctx.imageSmoothingEnabled = false;
   const sw = 12;
-  const petMapW = new Map(game.pets.map(p => [p.uid, p]));
-  const seenAnchors = new Set();
+  const seenAnchors = _waterPetAnchorScratch;
+  seenAnchors.clear();
   for (let r = r0; r <= r1; r++) {
     for (let c = c0; c <= c1; c++) {
       if (tileAt(c, r) !== T_WATER) continue;
@@ -2428,7 +2564,7 @@ function drawWaterPets(ctx, c0, c1, r0, r1) {
       if (!uids || !uids.length) continue;
       const [ancC, ancR] = anchor.split(',').map(Number);
       for (const uid of uids) {
-        const pet = petMapW.get(uid);
+        const pet = petByUid(uid);
         if (!pet) continue;
         const img = IMAGES[axoImgKey(pet.variant)];
         if (!img) continue;
@@ -2446,8 +2582,8 @@ function drawWaterPets(ctx, c0, c1, r0, r1) {
       }
     }
   }
-  ctx.imageSmoothingEnabled = true;
 }
+const _waterPetAnchorScratch = new Set();
 
 // ── Player boat (top-down view) ───────────────────────────────────────────────
 
@@ -2522,7 +2658,6 @@ function drawPlayerBoat(ctx, px, py) {
 
 function drawFrogs(ctx) {
   if (!game.frogs || !game.frogs.length) return;
-  ctx.imageSmoothingEnabled = false;
   for (const frog of game.frogs) {
     if (frog.wx === -9999) continue;
     const img = IMAGES[frogImgKey(frog.variant)];
@@ -2540,7 +2675,6 @@ function drawFrogs(ctx) {
     ctx.drawImage(img, srcX, srcY, FROG_FRAME_W, FROG_FRAME_H,
                   s.wx - cam.x, s.wy - cam.y + arcY, FROG_SIZE, FROG_SIZE);
   }
-  ctx.imageSmoothingEnabled = true;
 }
 
 function drawFrogPlaceOverlay(ctx, c0, c1, r0, r1) {

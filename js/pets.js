@@ -287,6 +287,19 @@ function _getSwimState(uid, pc, pr) {
   return pool[uid];
 }
 
+// "c,r" → [c, r], memoized — tickSwimStates runs per frame and the parse is
+// a pure function of the key string, so it never needs to happen twice.
+const _swimKeyCoordCache = new Map();
+function _swimKeyCoords(key) {
+  let v = _swimKeyCoordCache.get(key);
+  if (!v) {
+    const i = key.indexOf(',');
+    v = [Number(key.slice(0, i)), Number(key.slice(i + 1))];
+    _swimKeyCoordCache.set(key, v);
+  }
+  return v;
+}
+
 function tickSwimStates(dt) {
   const S    = TILE_SIZE;
   const sw   = 12, m = 4;
@@ -295,7 +308,7 @@ function tickSwimStates(dt) {
 
   for (const key in _swimStates) {
     const pool   = _swimStates[key];
-    const [keyC, keyR] = key.split(',').map(Number);
+    const [keyC, keyR] = _swimKeyCoords(key);
 
     for (const uid in pool) {
       const s = pool[uid];

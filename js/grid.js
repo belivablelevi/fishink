@@ -105,16 +105,73 @@ function isBlockUnlocked(id) {
   return true;
 }
 
+// ── Active-block registry ─────────────────────────────────────────────────────
+// Coordinates of placed blocks, bucketed by sim role, so per-frame loops visit
+// only real blocks instead of scanning all WORLD_ROWS×WORLD_COLS tiles. Keys
+// pack (c, r) into one small int: (r << 7) | c — valid because WORLD_COLS_MAX
+// is 128, and sorting keys ascending is exactly row-major order.
+const REG_SHIFT = 7;
+const REG_MASK  = 127;
+const regKey = (c, r) => (r << REG_SHIFT) | c;
+
+const blockIndex = {
+  droneFishers: new Set(),
+  machines:     new Set(),  // IS_MACHINE
+  transports:   new Set(),  // IS_TRANSPORT
+  packers:      new Set(),  // IS_PACKER
+  outputs:      new Set(),  // machines + crates/depots + packers — tickMachineOutput's scan set
+  teleporters:  new Set(),
+};
+
+// Bumped whenever teleporter membership changes — lets render.js cache the
+// row-major display numbering instead of recomputing it per teleporter drawn.
+let teleporterRev = 0;
+// Tells sim.js the drone→water-tile crowd counts need a rebuild (see
+// dronesSharingWater) — set on any drone-fisher add/remove/retarget.
+let droneWaterDirty = true;
+
+function _indexAdd(id, c, r) {
+  const k = regKey(c, r);
+  if (id === B_DRONE_FISHER) { blockIndex.droneFishers.add(k); droneWaterDirty = true; }
+  if (IS_MACHINE(id))   blockIndex.machines.add(k);
+  if (IS_TRANSPORT(id)) blockIndex.transports.add(k);
+  if (IS_PACKER(id))    blockIndex.packers.add(k);
+  if (IS_MACHINE(id) || IS_CRATE(id) || IS_PACKER(id)) blockIndex.outputs.add(k);
+  if (id === B_TELEPORTER) teleporterRev++, blockIndex.teleporters.add(k);
+}
+
+function _indexRemove(id, c, r) {
+  const k = regKey(c, r);
+  blockIndex.droneFishers.delete(k);
+  blockIndex.machines.delete(k);
+  blockIndex.transports.delete(k);
+  blockIndex.packers.delete(k);
+  blockIndex.outputs.delete(k);
+  if (blockIndex.teleporters.delete(k)) teleporterRev++;
+  if (id === B_DRONE_FISHER) droneWaterDirty = true;
+}
+
+// Full rescan — required after any bulk write to blocks[][] that bypasses
+// placeBlock/removeBlock: buildWorld's starter belts, ensureWorkerIslandDepot,
+// growWorld (every coordinate shifts), and save deserialization.
+function rebuildBlockIndex() {
+  for (const key in blockIndex) blockIndex[key].clear();
+  for (let r = 0; r < WORLD_ROWS; r++)
+    for (let c = 0; c < WORLD_COLS; c++)
+      if (blocks[r][c] !== B_NONE) _indexAdd(blocks[r][c], c, r);
+  teleporterRev++;
+  droneWaterDirty = true;
+}
+
 // All placed Teleporter tiles except the one at (excludeC, excludeR) — backs
-// the destination picker in the Teleporter's settings popup (ui.js).
+// the destination picker in the Teleporter's settings popup (ui.js). Sorted
+// row-major to match the on-tile "T1/T2" numbering (teleporterDisplayNum).
 function teleporterTiles(excludeC, excludeR) {
   const out = [];
-  for (let r = 0; r < WORLD_ROWS; r++) {
-    for (let c = 0; c < WORLD_COLS; c++) {
-      if (blockAt(c, r) !== B_TELEPORTER) continue;
-      if (c === excludeC && r === excludeR) continue;
-      out.push({ c, r });
-    }
+  for (const k of Array.from(blockIndex.teleporters).sort((a, b) => a - b)) {
+    const c = k & REG_MASK, r = k >> REG_SHIFT;
+    if (c === excludeC && r === excludeR) continue;
+    out.push({ c, r });
   }
   return out;
 }
@@ -428,6 +485,7 @@ function buildWorld() {
   // default dir (0 = right) from makeCellState() already points them the right way
 
   ensureWorkerIslandDepot();
+  rebuildBlockIndex();
 }
 
 // Places B_FISH_DEPOT at the center of the worker island if it isn't already there.
@@ -556,6 +614,70 @@ function growWorld() {
     cam.y += addTop  * TILE_SIZE;
   }
 
+  // ── Coordinate-keyed stores ─────────────────────────────────────────────────
+  // Everything below also holds absolute coordinates and must shift with the
+  // world, or expansion silently orphans it: Fishers keyed by stale "c,r" go
+  // dead, pond pets detach from their (re-anchored) water bodies, chests
+  // reset their cooldowns, and free-roaming entities stay put while the whole
+  // map moves out from under them.
+  const dx = addLeft * TILE_SIZE, dy = addTop * TILE_SIZE;
+  const _shiftKey = key => {
+    const i = key.indexOf(',');
+    return `${+key.slice(0, i) + addLeft},${+key.slice(i + 1) + addTop}`;
+  };
+  const _remapKeys = obj => {
+    if (!obj) return;
+    const moved = {};
+    for (const k of Object.keys(obj)) { moved[_shiftKey(k)] = obj[k]; delete obj[k]; }
+    Object.assign(obj, moved);
+  };
+
+  // Water-body flood-fill caches are pure functions of the old layout — flush.
+  for (const k of Object.keys(_wbAnchorCache)) delete _wbAnchorCache[k];
+  for (const k of Object.keys(_wbTileCache))   delete _wbTileCache[k];
+
+  if (typeof fisherTimers !== 'undefined') _remapKeys(fisherTimers);
+  if (typeof game !== 'undefined') {
+    _remapKeys(game.waterPonds);
+    _remapKeys(game.islandChests);
+    if (game.frogs) for (const f of game.frogs) {
+      if (f.wx !== -9999) { f.wx += dx; f.wy += dy; }
+    }
+    if (game.workers) for (const w of game.workers) {
+      w.wx += dx; w.wy += dy; w.targetWx += dx; w.targetWy += dy;
+    }
+  }
+  if (typeof _swimStates !== 'undefined') {
+    _remapKeys(_swimStates);
+    for (const key in _swimStates) {
+      const pool = _swimStates[key];
+      for (const uid in pool) {
+        const s = pool[uid];
+        if (s.type === 'water') {
+          s.wx += dx; s.wy += dy;
+          s.twx += dx; s.twy += dy;
+        }
+      }
+    }
+  }
+  if (typeof _frogStates !== 'undefined') {
+    for (const uid in _frogStates) {
+      const s = _frogStates[uid];
+      s.wx += dx; s.wy += dy;
+      s.hopStartX += dx; s.hopStartY += dy;
+      s.hopEndX   += dx; s.hopEndY   += dy;
+    }
+  }
+  if (typeof floatTexts !== 'undefined') {
+    for (const ft of floatTexts) { ft.wx += dx; ft.wy += dy; }
+  }
+  if (typeof particles !== 'undefined') {
+    for (const p of particles) { p.x += dx; p.y += dy; }
+  }
+  if (typeof deliveryFlights !== 'undefined') {
+    for (const f of deliveryFlights) { f.fromC += addLeft; f.fromR += addTop; }
+  }
+
   // Try to place one island in each of the 4 new ocean strips.
   const mid = { c: Math.floor(newCols / 2), r: Math.floor(newRows / 2) };
   const newIslandSlots = [
@@ -576,6 +698,10 @@ function growWorld() {
 
   applyShorePass();
   ensureWorkerIslandDepot();
+  // Every stored coordinate just shifted — rebuild the block registry and
+  // repaint the cached terrain layer from scratch.
+  rebuildBlockIndex();
+  invalidateTerrainCache();
   return true;
 }
 
@@ -679,6 +805,7 @@ function placeBlock(id, c, r, dir) {
   if (!canPlaceBlock(id, c, r, dir)) return false;
   if (id === B_CONCRETE) {
     terrain[r][c] = T_CONCRETE;
+    repaintTerrainTile(c, r); // keep the cached terrain layer in sync
     // Concrete is terrain, not a block — nothing stored in blocks[][]
     return true;
   }
@@ -687,6 +814,7 @@ function placeBlock(id, c, r, dir) {
   cellState[r][c] = makeCellState();
   if (IS_TRANSPORT(id)) cellState[r][c].dir = dir || 0;
   if (IS_AUTO_FISHER(id)) autoFisherCount++;
+  _indexAdd(id, c, r);
   return true;
 }
 
@@ -694,14 +822,17 @@ function removeBlock(c, r) {
   if (c < 0 || r < 0 || c >= WORLD_COLS || r >= WORLD_ROWS) return false;
   if (blocks[r][c] === B_FISH_DEPOT) return false; // immovable world block
   if (blocks[r][c] !== B_NONE) {
-    if (IS_AUTO_FISHER(blocks[r][c])) autoFisherCount--;
+    const id = blocks[r][c];
+    if (IS_AUTO_FISHER(id)) autoFisherCount--;
     blocks[r][c] = B_NONE;
     cellState[r][c] = makeCellState();
+    _indexRemove(id, c, r);
     return true;
   }
   // Right-click bare concrete: remove it
   if (terrain[r][c] === T_CONCRETE) {
     terrain[r][c] = T_EMPTY;
+    repaintTerrainTile(c, r); // keep the cached terrain layer in sync
     return true;
   }
   return false;

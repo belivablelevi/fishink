@@ -240,6 +240,7 @@ let _highlightedMachineTile = null;
 function renderMachinesPanel() {
   const panel = document.getElementById('machinesPanel');
   panel.innerHTML = '';
+  _machinesLiveCache = null; // node cache is stale the moment the DOM rebuilds
 
   const groups = new Map();
   for (let r = 0; r < WORLD_ROWS; r++) {
@@ -290,6 +291,7 @@ function renderMachinesPanel() {
 
 function _renderMachinesDetail(panel, detail) {
   detail.innerHTML = '';
+  _machinesLiveCache = null; // node cache is stale the moment the DOM rebuilds
   const id = _machinesSelectedId;
   const instances = (_machineGroups.get(id) || []).slice().sort((a, b) => a.level - b.level);
   if (!instances.length) return;
@@ -366,26 +368,42 @@ function calcBulkUpgrade(id, instances) {
   return { count, total };
 }
 
-// Called every frame — patches button states without rebuilding DOM.
+// Called every frame — patches button states without rebuilding DOM. The
+// button nodes are cached per rebuild (see _machinesLiveCache invalidation in
+// renderMachinesPanel/_renderMachinesDetail) so this doesn't re-run
+// querySelectorAll 60×/second, and text writes only land on change.
+let _machinesLiveCache = null;
+
 function updateMachinesPanelLive() {
   const panel = document.getElementById('machinesPanel');
   if (!panel || panel.classList.contains('hidden')) return;
 
+  if (!_machinesLiveCache) {
+    const rows = [];
+    panel.querySelectorAll('.upgrade-buy[data-cost]').forEach(btn => {
+      rows.push({ btn, cost: Number(btn.dataset.cost) });
+    });
+    _machinesLiveCache = { rows, allBtn: panel.querySelector('.upgrade-all-btn[data-block-id]') };
+  }
+
   // Individual upgrade buttons
-  panel.querySelectorAll('.upgrade-buy[data-cost]').forEach(btn => {
-    btn.disabled = game.cash < Number(btn.dataset.cost);
-  });
+  for (const { btn, cost } of _machinesLiveCache.rows) {
+    const dis = game.cash < cost;
+    if (btn.disabled !== dis) btn.disabled = dis;
+  }
 
   // Upgrade All button — update count/cost text live
-  const allBtn = panel.querySelector('.upgrade-all-btn[data-block-id]');
+  const allBtn = _machinesLiveCache.allBtn;
   if (allBtn) {
     const id = Number(allBtn.dataset.blockId);
     const instances = _machineGroups.get(id) || [];
     const { count, total } = calcBulkUpgrade(id, instances);
-    allBtn.disabled = count === 0;
-    allBtn.textContent = count > 0
+    const dis = count === 0;
+    if (allBtn.disabled !== dis) allBtn.disabled = dis;
+    const txt = count > 0
       ? `Upgrade All ×${count} ($${formatMoney(total)})`
       : 'Upgrade All';
+    if (allBtn.textContent !== txt) allBtn.textContent = txt;
   }
 }
 
@@ -473,6 +491,7 @@ function initLeaderboardMenu() {
 // ─── Build tab ─────────────────────────────────────────────────────────────
 function renderBuildPanel() {
   buildPanelEl.innerHTML = '';
+  _buildCards = null; // node cache is stale the moment the DOM rebuilds
 
   const hint = document.createElement('div');
   hint.className = 'panel-hint';
@@ -586,21 +605,31 @@ function renderBuildPanel() {
   refreshBuildPanel();
 }
 
-// Lightweight update (selection highlight + afford state) without a full rebuild
+// Lightweight update (selection highlight + afford state) without a full
+// rebuild. This runs every frame while the menu is open, so the card nodes
+// (and their .cost children) are cached once per renderBuildPanel instead of
+// re-querying the DOM 60×/second, and text is only written when it changes.
+let _buildCards = null;
+
 function refreshBuildPanel() {
   if (!buildPanelEl) return;
-  buildPanelEl.querySelectorAll('.item-card').forEach(card => {
-    const id = Number(card.dataset.id);
+  if (!_buildCards) {
+    _buildCards = [];
+    buildPanelEl.querySelectorAll('.item-card').forEach(card => {
+      _buildCards.push({ card, id: Number(card.dataset.id), costEl: card.querySelector('.cost') });
+    });
+  }
+  for (const { card, id, costEl } of _buildCards) {
     const cost = BLOCK_COSTS[id];
     const unlocked = isBlockUnlocked(id);
     const afford = unlocked && game.cash >= cost;
     card.classList.toggle('selected', id === buildMode.selectedId);
     card.classList.toggle('disabled', !afford && unlocked);
     card.classList.toggle('locked', !unlocked);
-    const costEl = card.querySelector('.cost');
-    costEl.textContent = unlocked ? `$${cost}` : BLOCK_UNLOCK_REQ[id].label;
+    const costTxt = unlocked ? `$${cost}` : BLOCK_UNLOCK_REQ[id].label;
+    if (costEl.textContent !== costTxt) costEl.textContent = costTxt;
     costEl.classList.toggle('afford', afford);
-  });
+  }
 
   const id = buildMode.selectedId;
   const previewEl = document.getElementById('actionPreview');
@@ -619,7 +648,8 @@ function refreshBuildPanel() {
       descEl.textContent = BLOCK_DESCS[id];
     }
     const afford = game.cash >= BLOCK_COSTS[id];
-    costEl.textContent = `$${BLOCK_COSTS[id]}`;
+    const actionTxt = `$${BLOCK_COSTS[id]}`;
+    if (costEl.textContent !== actionTxt) costEl.textContent = actionTxt;
     costEl.classList.toggle('afford', afford);
   }
 }
@@ -627,6 +657,7 @@ function refreshBuildPanel() {
 // ─── Upgrades tab ──────────────────────────────────────────────────────────
 function renderUpgradesPanel() {
   upgradesPanelEl.innerHTML = '';
+  _upgradeBuyBtns = null; // node cache is stale the moment the DOM rebuilds
 
   const hint = document.createElement('div');
   hint.className = 'panel-hint';
@@ -1758,15 +1789,21 @@ function updateBlockPopupLive() {
 
 // Cheap per-frame refresh: patches progress text in place on the existing
 // Refresh affordability/levels each frame while the menu is open (cheap: only DOM attr toggles)
+let _upgradeBuyBtns = null; // cached node list, invalidated by renderUpgradesPanel
+
 function updateBuildMenuLive() {
   if (!buildMenuEl || buildMenuEl.classList.contains('hidden')) return;
   refreshBuildPanel();
-  upgradesPanelEl.querySelectorAll('.upgrade-buy').forEach((btn, i) => {
-    const def = UPGRADES[i];
-    const cost = upgradeCost(def);
-    if (cost != null) btn.disabled = game.cash < cost;
-  });
-  menuCashEl.textContent = `$${formatMoney(game.cash)}`;
+  if (!_upgradeBuyBtns) _upgradeBuyBtns = Array.from(upgradesPanelEl.querySelectorAll('.upgrade-buy'));
+  for (let i = 0; i < _upgradeBuyBtns.length; i++) {
+    const cost = upgradeCost(UPGRADES[i]);
+    if (cost != null) {
+      const dis = game.cash < cost;
+      if (_upgradeBuyBtns[i].disabled !== dis) _upgradeBuyBtns[i].disabled = dis;
+    }
+  }
+  const cashTxt = `$${formatMoney(game.cash)}`;
+  if (menuCashEl.textContent !== cashTxt) menuCashEl.textContent = cashTxt;
 }
 
 // ─── Bottom-right build HUD ─────────────────────────────────────────────────
@@ -1793,12 +1830,21 @@ function initBuildHud() {
 }
 
 // Called every frame from the game loop, independent of whether the big
-// build menu modal is open — this is the whole point of the HUD.
+// build menu modal is open — this is the whole point of the HUD. Style writes
+// only land when the cash pill actually moved (text width change / resize) —
+// unconditional per-frame left/top writes kept the style dirty every frame.
+let _machBtnLastRight = -1;
+let _machBtnLastMid   = -1;
+
 function updateMachinesBtnPos() {
+  const mid = (cashPillRect.top + cashPillRect.bottom) / 2;
+  if (cashPillRect.right === _machBtnLastRight && mid === _machBtnLastMid) return;
   const btn = document.getElementById('machinesToggleBtn');
   if (!btn) return;
+  _machBtnLastRight = cashPillRect.right;
+  _machBtnLastMid   = mid;
   btn.style.left = `${cashPillRect.right + 10}px`;
-  btn.style.top  = `${(cashPillRect.top + cashPillRect.bottom) / 2 - 19}px`;
+  btn.style.top  = `${mid - 19}px`;
 }
 
 function updateBuildHud() {
@@ -1814,7 +1860,10 @@ function updateBuildHud() {
     hudPreviewEl.dataset.id = String(id);
     hudNameEl.textContent = BLOCK_NAMES[id];
   }
-  hudArrowEl.style.transform = `rotate(${ARROW_DEG[buildMode.beltDir]}deg)`;
+  if (_hudLastArrowDir !== buildMode.beltDir) {
+    _hudLastArrowDir = buildMode.beltDir;
+    hudArrowEl.style.transform = `rotate(${ARROW_DEG[buildMode.beltDir]}deg)`;
+  }
   hudBoxBtnEl.classList.toggle('active', buildMode.boxMode);
 
   const active = activeBlueprint();
@@ -1823,14 +1872,16 @@ function updateBuildHud() {
   hudPasteBtnEl.classList.toggle('disabled', !active);
   hudBpRotateBtnEl.classList.toggle('disabled', !blueprint.pasting);
 
-  hudBpStatusEl.textContent = blueprint.selecting
+  const statusTxt = blueprint.selecting
     ? 'Drag a box to copy'
     : blueprint.pasting
       ? `Pasting "${active.name}" (${active.w}×${active.h}). Click to stamp.`
       : active
         ? `Active: "${active.name}" (${active.w}×${active.h})`
         : 'No blueprint active. Press C to copy a selection.';
+  if (hudBpStatusEl.textContent !== statusTxt) hudBpStatusEl.textContent = statusTxt;
 }
+let _hudLastArrowDir = null;
 
 // ── Axolotl Pond popup ────────────────────────────────────────────────────────
 

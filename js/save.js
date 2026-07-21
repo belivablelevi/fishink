@@ -137,9 +137,32 @@ function deserializeGame(data) {
   game.chestIncomeBonus = data.chestIncomeBonus || 0;
   game.islandLevel      = data.islandLevel      || 0;
   ensureWorkerIslandDepot(); // backfills B_FISH_DEPOT for saves that predate the depot block
+
+  // The world just got replaced wholesale — rebuild the active-block registry
+  // and repaint the cached terrain layer from the loaded arrays.
+  rebuildBlockIndex();
+  if (typeof invalidateTerrainCache === 'function') invalidateTerrainCache();
 }
 
+// serializeGame deep-copies the whole world and JSON.stringifies it — heavy
+// enough that firing it synchronously on EVERY place/remove/upgrade caused
+// visible hitches while rapid-building (blueprint stamping was the worst).
+// saveGame() now coalesces bursts: the actual write lands once things have
+// been quiet for a second. saveGameNow() is the immediate flush for the
+// paths that must not wait (tab close, autosave cadence).
+let _saveTimer = null;
+
 function saveGame() {
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(saveGameNow, 1000);
+}
+
+function saveGameNow() {
+  clearTimeout(_saveTimer);
+  _saveTimer = null;
+  // A pending debounced save must never resurrect state that restartGame/
+  // cloudSignOut just wiped from localStorage.
+  if (restarting) return;
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(serializeGame()));
   } catch (e) {
@@ -207,6 +230,6 @@ function resetRun() {
 // undoing restartGame()'s removeItem before the page actually unloads.
 window.addEventListener('beforeunload', () => {
   if (restarting) return;
-  saveGame();
+  saveGameNow(); // flush immediately — a debounced save would never fire
   if (typeof cloudPushSaveImmediate === 'function') cloudPushSaveImmediate();
 });
