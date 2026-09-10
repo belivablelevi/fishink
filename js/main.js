@@ -154,11 +154,19 @@ function init() {
     // Resolve a Google OAuth session (set after the redirect back from
     // cloudSignInWithGoogle()) before the legacy username/recovery-code cloud
     // pull below, and before runStartScreens decides which start screen to show.
+    //
+    // This must run on EVERY boot where a session might exist, not just when
+    // getLeaderboardName() is empty — cloudGetGoogleSession() is also what
+    // populates the module-level _googleSession cache that cloudLoadSave()
+    // needs below to authenticate as this player. Without it, a returning
+    // Google-linked player's row is invisible to the plain anon-key query
+    // (RLS only permits `authenticated` requests matching auth.uid()), so
+    // cloudLoadSave() finds nothing and the player looks unlinked again.
     let resolvedViaGoogle = false;
-    if (!linkPending && !skipCloud && typeof cloudGetGoogleSession === 'function' && isLeaderboardConfigured() && !getLeaderboardName()) {
+    if (!linkPending && !skipCloud && typeof cloudGetGoogleSession === 'function' && isLeaderboardConfigured()) {
       try {
         const session = await cloudGetGoogleSession();
-        if (session) {
+        if (session && !getLeaderboardName()) {
           const existing = await cloudFindPlayerByAuthId(session.user.id, session);
           if (existing) {
             localStorage.setItem(LEADERBOARD_ID_KEY,  existing.client_id);
