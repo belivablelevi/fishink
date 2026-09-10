@@ -142,10 +142,16 @@ async function cloudGetGoogleSession() {
 }
 
 // Looks up an existing players row already linked to this Google identity.
-async function cloudFindPlayerByAuthId(userId) {
+// `session` must be passed and its access_token sent as the Authorization
+// bearer — the "google players can select own row" RLS policy only permits
+// authenticated requests matching auth.uid(), so a plain anon-key query (the
+// _cloudFetch default) sees nothing for a Google-linked row, even one that
+// genuinely belongs to the caller.
+async function cloudFindPlayerByAuthId(userId, session) {
   try {
     const res = await _cloudFetch(
-      `${CLOUD_TABLE}?auth_user_id=eq.${encodeURIComponent(userId)}&select=client_id,username,save_data`
+      `${CLOUD_TABLE}?auth_user_id=eq.${encodeURIComponent(userId)}&select=client_id,username,save_data`,
+      { headers: { Authorization: 'Bearer ' + session.access_token } }
     );
     if (!res.ok) return null;
     const rows = await res.json();
@@ -260,8 +266,13 @@ async function cloudSignOut() {
 // Loads this device's cloud save. Returns { username, save_data, updated_at, auth_user_id } or null.
 async function cloudLoadSave() {
   try {
+    // Same reasoning as cloudFindPlayerByAuthId: a Google-linked row is only
+    // visible to a request authenticated as that same auth.uid(), not to the
+    // plain anon key recovery-code accounts otherwise use here.
+    const authHeader = _googleSession ? { Authorization: 'Bearer ' + _googleSession.access_token } : {};
     const res = await _cloudFetch(
-      `${CLOUD_TABLE}?client_id=eq.${cloudId()}&select=username,save_data,updated_at,auth_user_id`
+      `${CLOUD_TABLE}?client_id=eq.${cloudId()}&select=username,save_data,updated_at,auth_user_id`,
+      { headers: authHeader }
     );
     if (!res.ok) return null;
     const rows = await res.json();

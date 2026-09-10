@@ -159,7 +159,7 @@ function init() {
       try {
         const session = await cloudGetGoogleSession();
         if (session) {
-          const existing = await cloudFindPlayerByAuthId(session.user.id);
+          const existing = await cloudFindPlayerByAuthId(session.user.id, session);
           if (existing) {
             localStorage.setItem(LEADERBOARD_ID_KEY,  existing.client_id);
             localStorage.setItem(LEADERBOARD_NAME_KEY, existing.username);
