@@ -48,7 +48,15 @@ const START_SCREENS = [
   },
   {
     id: 'linkGooglePrompt',
+    // Only meaningful for a recovery-code account (that's the whole point —
+    // adding Google as an alternate way in). A Google-created account never
+    // has a recovery code by design, so without this check, any transient
+    // hiccup that left _existingAccountAuthLinked incorrectly false (e.g. a
+    // slow/failed session resolution on this boot) would show this prompt
+    // for an account that can never satisfy it — "Continue with Google"
+    // would then fail every time with a guaranteed no-recovery-code error.
     shouldShow: () => !!getLeaderboardName() && isLeaderboardConfigured()
+      && !!localStorage.getItem(CLOUD_RECOVERY_KEY)
       && !_existingAccountAuthLinked && !localStorage.getItem(_googleLinkDismissKey()),
     render(card, done) {
       showLinkGooglePrompt(card, done);
