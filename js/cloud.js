@@ -265,7 +265,12 @@ async function cloudSignOut() {
   // was discarded on sign-out instead of reaching the server — confirmed
   // live: cash looked reverted after a sign-out/sign-in cycle while the map
   // (which changes far less often) looked consistent.
-  if (typeof cloudPushSaveImmediate === 'function') cloudPushSaveImmediate();
+  //
+  // Awaited, not fire-and-forget with keepalive: this isn't a real page
+  // unload (we control the reload ourselves below), and keepalive fetches
+  // are capped around 64KB — this payload's full terrain/block grids
+  // routinely exceed that, so a keepalive push here would silently drop.
+  if (typeof cloudPushSaveImmediate === 'function') await cloudPushSaveImmediate();
   // Must be awaited BEFORE reload — Supabase persists its session under its
   // own localStorage key (separate from the four we clear below). If reload()
   // fired before this finished, that session could survive sign-out and get
@@ -300,16 +305,19 @@ async function cloudLoadSave() {
 // Upserts the current in-memory game state to the cloud.
 let _pushTimer = null;
 
+// Returns the underlying fetch promise so callers who can afford to wait
+// (i.e. aren't inside a synchronous beforeunload handler) can await the
+// actual response instead of firing-and-forgetting.
 function _doCloudPush(keepalive) {
-  if (!isLeaderboardConfigured()) return;
-  if (!cloudUsername()) return;
+  if (!isLeaderboardConfigured()) return Promise.resolve();
+  if (!cloudUsername()) return Promise.resolve();
   setCloudStatus(CLOUD_STATUS.SYNCING);
   const saveData = typeof serializeGame === 'function' ? serializeGame() : {};
   // Google-linked accounts sync as the authenticated user (see cloudCreatePlayerWithGoogle
   // for why) so the update matches the auth.uid()-scoped RLS policy; recovery-code
   // accounts fall through to _cloudFetch's default anon-key auth, unchanged.
   const authHeader = _googleSession ? { Authorization: 'Bearer ' + _googleSession.access_token } : {};
-  _cloudFetch(`${CLOUD_TABLE}?client_id=eq.${encodeURIComponent(cloudId())}`, {
+  return _cloudFetch(`${CLOUD_TABLE}?client_id=eq.${encodeURIComponent(cloudId())}`, {
     method:    'PATCH',
     headers:   authHeader,
     body:      JSON.stringify({ save_data: saveData }),
@@ -324,10 +332,15 @@ function cloudPushSave() {
   _pushTimer = setTimeout(() => _doCloudPush(false), 3000);
 }
 
-// Immediate version for beforeunload and manual sync.
+// Immediate version for beforeunload and manual sync. `keepalive: true` lets
+// this survive a real page unload, but it's capped around 64KB by browsers —
+// this save payload (full terrain/block grids) routinely exceeds that, so
+// the request can be silently dropped. Callers that control their own
+// navigation (not an actual unload event) should await the returned promise
+// instead of relying on keepalive — see cloudSignOut().
 function cloudPushSaveImmediate() {
   clearTimeout(_pushTimer);
-  _doCloudPush(true);
+  return _doCloudPush(true);
 }
 
 // ── Dev console ────────────────────────────────────────────────────────────────
