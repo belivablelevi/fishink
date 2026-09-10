@@ -881,7 +881,11 @@ function tickDroneFisher(c, r, dt) {
     const crowd = dronesSharingWater(st.waterC, st.waterR, c, r);
     st.droneT += dt / (DRONE_FISH_TIME * (1 + crowd * 0.15) / effectiveDroneSpeedMult() * machineSpeedMult(st.level || 0));
     if (st.droneT >= 1) {
-      for (let i = 0; i < DRONE_BATCH; i++) st.carrying.push(randomFish(droneLuckMult(st.level || 0) * effectiveGlobalLuckMult()));
+      for (let i = 0; i < DRONE_BATCH; i++) {
+        const fish = randomFish(droneLuckMult(st.level || 0) * effectiveGlobalLuckMult());
+        if (fish.category === 'Rare' || fish.category === 'Epic' || fish.category === 'Legendary') game.rareCatches++;
+        st.carrying.push(fish);
+      }
       st.dronePhase = DRONE_BACK;
       st.droneT = 0;
     }
