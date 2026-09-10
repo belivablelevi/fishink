@@ -11,7 +11,17 @@
 -- knowing/guessing its client_id. So the recovery-code check has to happen
 -- inside a single atomic server-side function instead.
 
-create or replace function link_google_account(p_client_id uuid, p_recovery_code text)
+-- players.client_id is `text` in the live schema (confirmed against the
+-- actual database — it's not a uuid column despite holding UUID-shaped
+-- strings), so p_client_id must match that type or the comparison inside
+-- the function fails at runtime with "operator does not exist: text = uuid".
+--
+-- Drop the old uuid-typed version FIRST — `create or replace` can't change a
+-- function's parameter types, so without this you'd end up with two
+-- overloads of the same name and PostgREST would refuse to pick one.
+drop function if exists link_google_account(uuid, text);
+
+create or replace function link_google_account(p_client_id text, p_recovery_code text)
 returns boolean
 language plpgsql
 security definer
@@ -32,6 +42,13 @@ $$;
 
 -- security definer means this function runs with the privileges of whoever
 -- created it (bypassing players' RLS entirely for this one controlled
--- update) — so the only gate on who can call it at all is this grant:
-revoke all on function link_google_account(uuid, text) from public;
-grant execute on function link_google_account(uuid, text) to authenticated;
+-- update) — so the only gate on who can call it at all is this grant.
+--
+-- Supabase projects configure a default-privilege rule that auto-grants
+-- EXECUTE on every new function directly to both `anon` and `authenticated`
+-- (separate from — and not removed by revoking from — the `public`
+-- pseudo-role), so `anon` must be revoked explicitly or it stays callable
+-- without any real Google session at all.
+revoke all on function link_google_account(text, text) from public;
+revoke all on function link_google_account(text, text) from anon;
+grant execute on function link_google_account(text, text) to authenticated;
