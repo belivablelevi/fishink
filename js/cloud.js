@@ -232,9 +232,13 @@ async function cloudLogin(username, code) {
 
 // ── Sign out ───────────────────────────────────────────────────────────────────
 
-function cloudSignOut() {
+async function cloudSignOut() {
   if (typeof restarting !== 'undefined') restarting = true; // prevent beforeunload from re-saving
-  if (_sb && _googleSession) _sb.auth.signOut().catch(() => {}); // best-effort, don't block the wipe below
+  // Must be awaited BEFORE reload — Supabase persists its session under its
+  // own localStorage key (separate from the four we clear below). If reload()
+  // fired before this finished, that session could survive sign-out and get
+  // picked up fresh on the next boot as if the player never signed out.
+  if (_sb) { try { await _sb.auth.signOut(); } catch { /* best-effort */ } }
   localStorage.removeItem(SAVE_KEY);       // don't let this account's save bleed into next session
   localStorage.removeItem(LEADERBOARD_ID_KEY);
   localStorage.removeItem(LEADERBOARD_NAME_KEY);

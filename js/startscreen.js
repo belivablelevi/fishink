@@ -175,7 +175,12 @@ function showPickNameForGoogle(card, done, session) {
         return;
       }
 
-      await cloudCreatePlayerWithGoogle(input.value.trim(), session);
+      const createResult = await cloudCreatePlayerWithGoogle(input.value.trim(), session);
+      // This account is created WITH auth_user_id already set — without this,
+      // linkGooglePrompt's shouldShow() (which defaults to false) would think
+      // a brand-new Google account still needs linking and re-show itself
+      // immediately after signup.
+      if (createResult.ok) _existingAccountAuthLinked = true;
       _pendingGoogleSession = null;
       done();
     };
