@@ -256,7 +256,16 @@ async function cloudLogin(username, code) {
 // ── Sign out ───────────────────────────────────────────────────────────────────
 
 async function cloudSignOut() {
-  if (typeof restarting !== 'undefined') restarting = true; // prevent beforeunload from re-saving
+  if (typeof restarting !== 'undefined') restarting = true; // prevent beforeunload from re-saving locally
+  // The `restarting` guard above stops beforeunload's saveGameNow() from
+  // resurrecting the local save we're about to delete — but beforeunload
+  // ALSO does the final cloudPushSaveImmediate() flush, so that guard was
+  // silently skipping it too. Without an explicit push here, any progress
+  // made since the last debounced cloud save (up to a few seconds' worth)
+  // was discarded on sign-out instead of reaching the server — confirmed
+  // live: cash looked reverted after a sign-out/sign-in cycle while the map
+  // (which changes far less often) looked consistent.
+  if (typeof cloudPushSaveImmediate === 'function') cloudPushSaveImmediate();
   // Must be awaited BEFORE reload — Supabase persists its session under its
   // own localStorage key (separate from the four we clear below). If reload()
   // fired before this finished, that session could survive sign-out and get
