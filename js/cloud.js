@@ -332,15 +332,19 @@ function cloudPushSave() {
   _pushTimer = setTimeout(() => _doCloudPush(false), 3000);
 }
 
-// Immediate version for beforeunload and manual sync. `keepalive: true` lets
-// this survive a real page unload, but it's capped around 64KB by browsers —
-// this save payload (full terrain/block grids) routinely exceeds that, so
-// the request can be silently dropped. Callers that control their own
-// navigation (not an actual unload event) should await the returned promise
-// instead of relying on keepalive — see cloudSignOut().
-function cloudPushSaveImmediate() {
+// Immediate version for manual sync, sign-out, restart, etc. Defaults to NOT
+// keepalive: browsers cap keepalive request bodies around 64KB, and this
+// save payload (full terrain/block grids) routinely exceeds that — verified
+// live, a keepalive PATCH with this payload throws "Failed to fetch"
+// immediately, before the request even leaves the browser. The ONLY caller
+// that should pass `keepalive: true` is the actual beforeunload handler,
+// where the page is genuinely disappearing and a normal fetch would be
+// aborted outright — everywhere else (sign-out, restart, the Save/Sync
+// buttons) controls its own timing and should just let this resolve
+// normally, awaiting it where that's possible (see cloudSignOut()).
+function cloudPushSaveImmediate(keepalive = false) {
   clearTimeout(_pushTimer);
-  return _doCloudPush(true);
+  return _doCloudPush(keepalive);
 }
 
 // ── Dev console ────────────────────────────────────────────────────────────────

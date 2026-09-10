@@ -231,5 +231,8 @@ function resetRun() {
 window.addEventListener('beforeunload', () => {
   if (restarting) return;
   saveGameNow(); // flush immediately — a debounced save would never fire
-  if (typeof cloudPushSaveImmediate === 'function') cloudPushSaveImmediate();
+  // keepalive:true here specifically — this IS a real page unload, the one
+  // case a normal fetch would get aborted outright. Every other call site
+  // now defaults to keepalive:false (see cloudPushSaveImmediate's comment).
+  if (typeof cloudPushSaveImmediate === 'function') cloudPushSaveImmediate(true);
 });
