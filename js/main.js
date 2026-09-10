@@ -1,6 +1,6 @@
 // Fish INK Factory — game loop
 
-const GAME_VERSION = '1.7.0';
+const GAME_VERSION = '1.8.0';
 
 let canvas, ctx;
 let lastTime = 0;
@@ -304,7 +304,9 @@ async function checkForUpdate() {
     const { version } = await res.json();
     if (version && version !== GAME_VERSION) {
       saveGame();
-      if (typeof cloudPushSaveImmediate === 'function') cloudPushSaveImmediate();
+      // Awaited — same keepalive:false-vs-immediate-reload race as
+      // restartGame() in save.js; this function is already async.
+      if (typeof cloudPushSaveImmediate === 'function') await cloudPushSaveImmediate();
       location.reload(true);
     }
   } catch (e) { /* offline — skip silently */ }

@@ -53,5 +53,10 @@ itself.
    through checking your `players` table's actual existing RLS policies
    before narrowing them, since blindly guessing policy names risks either a
    no-op or breaking the existing recovery-code flow.
-5. Reload the game. The welcome screen gains a "Continue with Google" option
+5. **Supabase SQL Editor**: also run `leaderboard/link_google_account_rpc.sql`.
+   This is a separate file — `cloudLinkGoogleAccount()` (the "Link Google
+   Account?" prompt existing recovery-code players see) depends on the
+   `link_google_account` function it defines, and won't work without it even
+   if step 4 above is done.
+6. Reload the game. The welcome screen gains a "Continue with Google" option
    alongside New Player / Sign In — Returning Player.

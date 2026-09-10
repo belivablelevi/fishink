@@ -84,10 +84,28 @@ function showAccountChoice(card, done) {
 // a new or returning Google identity once the redirect comes back).
 function _wireGoogleButton(card, selector) {
   const btn = card.querySelector(selector);
-  btn.addEventListener('click', () => {
+  const originalText = btn.textContent;
+  btn.addEventListener('click', async () => {
     btn.disabled = true;
     btn.textContent = 'Redirecting…';
-    cloudSignInWithGoogle(); // navigates away; flow resumes after the redirect back
+    // Normally this navigates away and the line below never really matters —
+    // but if it DIDN'T (supabase-js blocked/failed to load, OAuth rejected),
+    // the button would otherwise stay stuck on "Redirecting…" forever with
+    // no way to retry short of a full page refresh. Since Sign Up requires
+    // Google when the backend is configured, that's a dead end for a new
+    // player — recover instead.
+    const result = await cloudSignInWithGoogle();
+    if (result?.error) {
+      btn.disabled = false;
+      btn.textContent = originalText;
+      let err = card.querySelector('.start-screen-error');
+      if (!err) {
+        err = document.createElement('div');
+        err.className = 'start-screen-error';
+        btn.before(err);
+      }
+      err.textContent = "Couldn't reach Google — check your connection and try again.";
+    }
   });
 }
 
