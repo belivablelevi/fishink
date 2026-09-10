@@ -179,8 +179,12 @@ async function cloudCreatePlayerWithGoogle(username, session) {
         auth_user_id: session.user.id,
       }),
     });
-    return { ok: res.ok || res.status === 409 };
-  } catch { return { ok: false }; }
+    if (res.ok || res.status === 409) return { ok: true };
+    let detail = '';
+    try { detail = (await res.json())?.message || ''; } catch { /* non-JSON error body */ }
+    console.warn('cloudCreatePlayerWithGoogle failed', res.status, detail);
+    return { ok: false, error: detail || `HTTP ${res.status}` };
+  } catch (e) { return { ok: false, error: e.message }; }
 }
 
 // Links an ALREADY-active Google session to the current device's EXISTING
@@ -205,10 +209,15 @@ async function cloudLinkGoogleAccount(session) {
       },
       body: JSON.stringify({ p_client_id: cloudId(), p_recovery_code: code }),
     });
-    if (!res.ok) return { error: 'network' };
+    if (!res.ok) {
+      let detail = '';
+      try { detail = (await res.json())?.message || ''; } catch { /* non-JSON error body */ }
+      console.warn('cloudLinkGoogleAccount failed', res.status, detail);
+      return { error: detail || `HTTP ${res.status}` };
+    }
     const linked = await res.json();
     return linked ? { ok: true } : { error: 'mismatch' };
-  } catch { return { error: 'network' }; }
+  } catch (e) { return { error: e.message }; }
 }
 
 // ── Cross-device login ─────────────────────────────────────────────────────────

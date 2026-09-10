@@ -138,7 +138,12 @@ function init() {
           if (session) {
             const linkResult = await cloudLinkGoogleAccount(session);
             existingAccountAuthLinked = !!linkResult.ok;
-            if (!linkResult.ok) console.warn('Google account link failed', linkResult.error);
+            if (linkResult.ok) {
+              if (typeof queueToast === 'function') queueToast('Google account linked!', '#4dca7c');
+            } else {
+              console.warn('Google account link failed', linkResult.error);
+              if (typeof queueToast === 'function') queueToast(`Google link failed: ${linkResult.error || 'unknown error'}`, '#e85d4a');
+            }
           }
         } catch (e) { console.warn('Google link resolution failed', e); }
       }

@@ -176,11 +176,19 @@ function showPickNameForGoogle(card, done, session) {
       }
 
       const createResult = await cloudCreatePlayerWithGoogle(input.value.trim(), session);
+      if (!createResult.ok) {
+        // Don't silently proceed into a broken local-only state that looks
+        // signed up but has no matching row — surface it and let them retry.
+        localStorage.removeItem(LEADERBOARD_NAME_KEY);
+        btn.disabled = false; btn.textContent = "Let's go"; input.disabled = false;
+        setErr(`Couldn't create your account (${createResult.error || 'unknown error'}) — try again.`);
+        return;
+      }
       // This account is created WITH auth_user_id already set — without this,
       // linkGooglePrompt's shouldShow() (which defaults to false) would think
       // a brand-new Google account still needs linking and re-show itself
       // immediately after signup.
-      if (createResult.ok) _existingAccountAuthLinked = true;
+      _existingAccountAuthLinked = true;
       _pendingGoogleSession = null;
       done();
     };
