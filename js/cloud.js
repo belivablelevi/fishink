@@ -2,9 +2,24 @@
 //
 // Depends on leaderboard.js (loaded first) for:
 //   SUPABASE_URL, SUPABASE_ANON, LEADERBOARD_ID_KEY, LEADERBOARD_NAME_KEY
+// Depends on the supabase-js UMD bundle (loaded between leaderboard.js and
+// this file) for Google OAuth only — everything else still uses the existing
+// raw fetch()/PostgREST calls below, unchanged.
 
 const CLOUD_TABLE        = 'players';
 const CLOUD_RECOVERY_KEY = 'fishink_recovery_code';
+
+// Set right before redirecting to Google when an EXISTING recovery-code
+// player chooses to link their account (as opposed to a fresh sign-up/sign-in).
+// Survives the full-page OAuth redirect via localStorage; consumed once on
+// the next boot by main.js to decide which Google-session branch to take.
+const GOOGLE_LINK_PENDING_KEY = 'fishink_google_link_pending';
+
+// ── Supabase Auth client (Google sign-in only) ──────────────────────────────────
+
+const _sb = (typeof supabase !== 'undefined')
+  ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON)
+  : null;
 
 // ── Sync-status state machine ──────────────────────────────────────────────────
 
@@ -75,28 +90,125 @@ async function cloudUsernameAvailable(username) {
   } catch { return null; }
 }
 
-// ── Account creation ───────────────────────────────────────────────────────────
+// ── Google sign-in ─────────────────────────────────────────────────────────────
+//
+// Additive alongside the username + recovery-code flow above — this never
+// replaces it. A Google-authenticated player still gets a `players` row keyed
+// by client_id like everyone else, just with `auth_user_id` set so RLS can
+// scope it to `auth.uid()` instead of relying on the open anon-key policies
+// the recovery-code path uses.
 
-// Creates a players row for this device, uploading any existing local save.
-// Returns { ok: true, code } on success, { ok: false } on failure.
-async function cloudCreatePlayer(username) {
+// Kicks off the OAuth redirect. Resolves once Google sends the browser away —
+// the actual sign-in result is picked up after the redirect back, in
+// cloudGetGoogleSession().
+function cloudSignInWithGoogle() {
+  if (!_sb) return Promise.resolve({ error: 'unavailable' });
+  const redirectTo = location.origin + location.pathname;
+
+  // Google's own sign-in page sends X-Frame-Options: DENY, so it refuses to
+  // render inside an iframe. If this game is embedded (e.g. on a Google
+  // Sites page), redirecting in place would just show players a blank or
+  // blocked frame — the OAuth step has to happen on the top-level window
+  // instead. Note this means, once embedded, finishing sign-in lands the
+  // player on the bare game URL rather than back inside the embedding page —
+  // an unavoidable side effect of Google refusing to be framed at all.
+  if (window.top !== window.self) {
+    return _sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo, skipBrowserRedirect: true },
+    }).then(({ data, error }) => {
+      if (error || !data?.url) return { error: error || 'no-url' };
+      window.top.location.href = data.url;
+      return { ok: true };
+    });
+  }
+
+  return _sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
+}
+
+// Cached in-memory so synchronous call sites (e.g. the beforeunload-triggered
+// _doCloudPush below) can attach the right auth header without awaiting a
+// fresh lookup — refreshed every time cloudGetGoogleSession() is called.
+let _googleSession = null;
+
+// Returns the current Supabase Auth session (or null) without redirecting.
+async function cloudGetGoogleSession() {
+  if (!_sb) return null;
   try {
-    const code     = generateRecoveryCode();
+    const { data } = await _sb.auth.getSession();
+    _googleSession = data?.session || null;
+    return _googleSession;
+  } catch { return null; }
+}
+
+// Looks up an existing players row already linked to this Google identity.
+async function cloudFindPlayerByAuthId(userId) {
+  try {
+    const res = await _cloudFetch(
+      `${CLOUD_TABLE}?auth_user_id=eq.${encodeURIComponent(userId)}&select=client_id,username,save_data`
+    );
+    if (!res.ok) return null;
+    const rows = await res.json();
+    return rows[0] || null;
+  } catch { return null; }
+}
+
+// Creates a players row for a first-time Google sign-in. Google-created
+// accounts don't use the recovery-code system at all — Google *is* the
+// credential — so the code is generated only to satisfy the column (in case
+// it's non-nullable) and is deliberately never cached to localStorage or
+// shown to the player; the recovery-code sign-in path stays exclusive to
+// pre-existing accounts made before this feature.
+//
+// `session` is the Supabase Auth session from cloudGetGoogleSession() — we
+// send its access_token as the request's Authorization bearer (instead of
+// the plain anon key) so the insert runs as an authenticated user and can be
+// matched by the auth.uid()-scoped RLS policy on `players`.
+async function cloudCreatePlayerWithGoogle(username, session) {
+  try {
     const saveData = typeof serializeGame === 'function' ? serializeGame() : {};
     const res = await _cloudFetch(CLOUD_TABLE, {
       method:  'POST',
-      headers: { Prefer: 'resolution=ignore-duplicates,return=minimal' },
+      headers: {
+        Prefer:        'resolution=ignore-duplicates,return=minimal',
+        Authorization: 'Bearer ' + session.access_token,
+      },
       body: JSON.stringify({
         client_id: cloudId(), username,
-        save_data: saveData, recovery_code: code,
+        save_data: saveData, recovery_code: generateRecoveryCode(),
+        auth_user_id: session.user.id,
       }),
     });
-    if (res.ok || res.status === 409) {
-      localStorage.setItem(CLOUD_RECOVERY_KEY, code);
-      return { ok: true, code };
-    }
-    return { ok: false };
+    return { ok: res.ok || res.status === 409 };
   } catch { return { ok: false }; }
+}
+
+// Links an ALREADY-active Google session to the current device's EXISTING
+// recovery-code account, rather than creating a separate new one. Proof of
+// ownership is the recovery code already cached locally from when this
+// device originally signed into that account — no re-typing needed, since a
+// device that has it cached already demonstrated it once. The actual check
+// happens server-side in the link_google_account() Postgres function
+// (leaderboard/link_google_account_rpc.sql), which atomically verifies
+// client_id + recovery_code match before setting auth_user_id — this can't
+// be done as a plain RLS policy (see that file's comments for why).
+async function cloudLinkGoogleAccount(session) {
+  const code = localStorage.getItem(CLOUD_RECOVERY_KEY);
+  if (!code) return { error: 'no-recovery-code' };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/link_google_account`, {
+      method: 'POST',
+      headers: {
+        apikey:        SUPABASE_ANON,
+        Authorization: 'Bearer ' + session.access_token,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ p_client_id: cloudId(), p_recovery_code: code }),
+    });
+    if (!res.ok) return { error: 'network' };
+    const linked = await res.json();
+    return linked ? { ok: true } : { error: 'mismatch' };
+  } catch { return { error: 'network' }; }
 }
 
 // ── Cross-device login ─────────────────────────────────────────────────────────
@@ -122,6 +234,7 @@ async function cloudLogin(username, code) {
 
 function cloudSignOut() {
   if (typeof restarting !== 'undefined') restarting = true; // prevent beforeunload from re-saving
+  if (_sb && _googleSession) _sb.auth.signOut().catch(() => {}); // best-effort, don't block the wipe below
   localStorage.removeItem(SAVE_KEY);       // don't let this account's save bleed into next session
   localStorage.removeItem(LEADERBOARD_ID_KEY);
   localStorage.removeItem(LEADERBOARD_NAME_KEY);
@@ -131,11 +244,11 @@ function cloudSignOut() {
 
 // ── Save sync ──────────────────────────────────────────────────────────────────
 
-// Loads this device's cloud save. Returns { username, save_data, updated_at } or null.
+// Loads this device's cloud save. Returns { username, save_data, updated_at, auth_user_id } or null.
 async function cloudLoadSave() {
   try {
     const res = await _cloudFetch(
-      `${CLOUD_TABLE}?client_id=eq.${cloudId()}&select=username,save_data,updated_at`
+      `${CLOUD_TABLE}?client_id=eq.${cloudId()}&select=username,save_data,updated_at,auth_user_id`
     );
     if (!res.ok) return null;
     const rows = await res.json();
@@ -151,8 +264,13 @@ function _doCloudPush(keepalive) {
   if (!cloudUsername()) return;
   setCloudStatus(CLOUD_STATUS.SYNCING);
   const saveData = typeof serializeGame === 'function' ? serializeGame() : {};
+  // Google-linked accounts sync as the authenticated user (see cloudCreatePlayerWithGoogle
+  // for why) so the update matches the auth.uid()-scoped RLS policy; recovery-code
+  // accounts fall through to _cloudFetch's default anon-key auth, unchanged.
+  const authHeader = _googleSession ? { Authorization: 'Bearer ' + _googleSession.access_token } : {};
   _cloudFetch(`${CLOUD_TABLE}?client_id=eq.${encodeURIComponent(cloudId())}`, {
     method:    'PATCH',
+    headers:   authHeader,
     body:      JSON.stringify({ save_data: saveData }),
     keepalive: keepalive || false,
   }).then(r => setCloudStatus(r.ok ? CLOUD_STATUS.SYNCED : CLOUD_STATUS.ERROR))

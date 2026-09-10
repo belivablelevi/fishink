@@ -123,9 +123,63 @@ function init() {
     // overwrite the intentionally fresh local start.
     const skipCloud = localStorage.getItem('fishink_skip_cloud');
     localStorage.removeItem('fishink_skip_cloud');
-    if (!skipCloud && typeof cloudLoadSave === 'function' && cloudUsername() && isLeaderboardConfigured()) {
+
+    // If this device just came back from an OAuth redirect that was started
+    // by an EXISTING recovery-code player linking their account (rather than
+    // a fresh sign-up/sign-in), handle that first — it must not fall into the
+    // fresh-signup lookup below, which would treat it as a brand-new identity.
+    let existingAccountAuthLinked = false;
+    const linkPending = localStorage.getItem(GOOGLE_LINK_PENDING_KEY);
+    if (linkPending) {
+      localStorage.removeItem(GOOGLE_LINK_PENDING_KEY);
+      if (typeof cloudGetGoogleSession === 'function') {
+        try {
+          const session = await cloudGetGoogleSession();
+          if (session) {
+            const linkResult = await cloudLinkGoogleAccount(session);
+            existingAccountAuthLinked = !!linkResult.ok;
+            if (!linkResult.ok) console.warn('Google account link failed', linkResult.error);
+          }
+        } catch (e) { console.warn('Google link resolution failed', e); }
+      }
+      // Falls through to the normal cloud pull below — this is still the
+      // same existing account, its save still needs loading as usual.
+    }
+
+    // Resolve a Google OAuth session (set after the redirect back from
+    // cloudSignInWithGoogle()) before the legacy username/recovery-code cloud
+    // pull below, and before runStartScreens decides which start screen to show.
+    let resolvedViaGoogle = false;
+    if (!linkPending && !skipCloud && typeof cloudGetGoogleSession === 'function' && isLeaderboardConfigured() && !getLeaderboardName()) {
+      try {
+        const session = await cloudGetGoogleSession();
+        if (session) {
+          const existing = await cloudFindPlayerByAuthId(session.user.id);
+          if (existing) {
+            localStorage.setItem(LEADERBOARD_ID_KEY,  existing.client_id);
+            localStorage.setItem(LEADERBOARD_NAME_KEY, existing.username);
+            if (existing.save_data && Object.keys(existing.save_data).length > 0) {
+              try {
+                const data = existing.save_data;
+                for (let v = (data.version || 1); v < SAVE_VERSION; v++) SAVE_MIGRATIONS[v]?.(data);
+                deserializeGame(data);
+                localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+              } catch (e) { console.warn('Failed to apply Google-linked save', e); }
+            }
+            resolvedViaGoogle = true;
+          } else {
+            // First time this Google identity has signed in — the googleName
+            // start screen (startscreen.js) will pick this up and create the row.
+            _pendingGoogleSession = session;
+          }
+        }
+      } catch (e) { /* offline — fall through to the normal account-setup screen */ }
+    }
+
+    if (!resolvedViaGoogle && !skipCloud && typeof cloudLoadSave === 'function' && cloudUsername() && isLeaderboardConfigured()) {
       try {
         const cloud = await cloudLoadSave();
+        if (cloud) existingAccountAuthLinked = existingAccountAuthLinked || !!cloud.auth_user_id;
         if (cloud?.save_data && Object.keys(cloud.save_data).length > 0) {
           try {
             const localRaw  = localStorage.getItem(SAVE_KEY);
@@ -143,6 +197,10 @@ function init() {
         }
       } catch (e) { /* offline — local save already loaded */ }
     }
+
+    // Read by the linkGooglePrompt start screen (startscreen.js) to decide
+    // whether to nudge an existing recovery-code player to link Google.
+    _existingAccountAuthLinked = existingAccountAuthLinked;
 
     checkForUpdate();
 
