@@ -1169,7 +1169,7 @@ function renderStatsPanel() {
   const rows = [
     ['Lifetime earnings', `$${formatMoney(game.lifetimeEarned)}`],
     ['Fish sold', game.fishSold],
-    ['Uptime', formatUptime(game.time)],
+    ['Playtime', formatUptime(game.time)],
     ['Fish Index discovered', `${game.fishIndex.size} / ${FISH.length}`],
     ['Achievements unlocked', `${game.unlockedAchievements.size} / ${ACHIEVEMENTS.length}`],
   ];
