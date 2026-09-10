@@ -176,6 +176,33 @@ function showPickNameForGoogle(card, done, session) {
       }
 
       const createResult = await cloudCreatePlayerWithGoogle(input.value.trim(), session);
+      if (createResult.alreadyLinked) {
+        // This Google identity already has an existing row under a
+        // different client_id/username — not actually a fresh signup.
+        // Adopt that existing account instead of pretending this name pick
+        // created a new one (it didn't; the insert was rejected).
+        const existing = await cloudFindPlayerByAuthId(session.user.id, session);
+        if (existing) {
+          localStorage.setItem(LEADERBOARD_ID_KEY,  existing.client_id);
+          localStorage.setItem(LEADERBOARD_NAME_KEY, existing.username);
+          if (existing.save_data && Object.keys(existing.save_data).length > 0) {
+            try {
+              const data = existing.save_data;
+              for (let v = (data.version || 1); v < SAVE_VERSION; v++) SAVE_MIGRATIONS[v]?.(data);
+              deserializeGame(data);
+              localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+            } catch (e) { console.warn('Failed to apply existing Google-linked save', e); }
+          }
+          _existingAccountAuthLinked = true;
+          _pendingGoogleSession = null;
+          done();
+          return;
+        }
+        localStorage.removeItem(LEADERBOARD_NAME_KEY);
+        btn.disabled = false; btn.textContent = "Let's go"; input.disabled = false;
+        setErr('This Google account is already linked to another player, but it could not be loaded — try again.');
+        return;
+      }
       if (!createResult.ok) {
         // Don't silently proceed into a broken local-only state that looks
         // signed up but has no matching row — surface it and let them retry.

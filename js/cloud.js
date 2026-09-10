@@ -185,10 +185,18 @@ async function cloudCreatePlayerWithGoogle(username, session) {
         auth_user_id: session.user.id,
       }),
     });
-    if (res.ok || res.status === 409) return { ok: true };
+    if (res.ok) return { ok: true };
     let detail = '';
     try { detail = (await res.json())?.message || ''; } catch { /* non-JSON error body */ }
     console.warn('cloudCreatePlayerWithGoogle failed', res.status, detail);
+    // `Prefer: resolution=ignore-duplicates` already silently absorbs a
+    // client_id conflict (the intended idempotent-retry case) by targeting
+    // the primary key — so any 409 that actually reaches here can only be
+    // the auth_user_id unique constraint, meaning this Google identity
+    // already has an EXISTING row under a different client_id. That's not a
+    // fresh signup at all; the caller must adopt the existing row instead of
+    // treating this as success (there's no new row to point at).
+    if (res.status === 409) return { ok: false, alreadyLinked: true, error: detail };
     return { ok: false, error: detail || `HTTP ${res.status}` };
   } catch (e) { return { ok: false, error: e.message }; }
 }
