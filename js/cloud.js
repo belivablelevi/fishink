@@ -218,7 +218,7 @@ async function cloudLinkGoogleAccount(session) {
 async function cloudLogin(username, code) {
   try {
     const res = await _cloudFetch(
-      `${CLOUD_TABLE}?username=eq.${encodeURIComponent(username)}&recovery_code=eq.${encodeURIComponent(code.trim())}&select=client_id,save_data`
+      `${CLOUD_TABLE}?username=eq.${encodeURIComponent(username)}&recovery_code=eq.${encodeURIComponent(code.trim())}&select=client_id,save_data,auth_user_id`
     );
     if (!res.ok) return { error: 'network' };
     const rows = await res.json();
@@ -226,7 +226,7 @@ async function cloudLogin(username, code) {
     localStorage.setItem(LEADERBOARD_ID_KEY,   rows[0].client_id);
     localStorage.setItem(LEADERBOARD_NAME_KEY,  username);
     localStorage.setItem(CLOUD_RECOVERY_KEY,    code.trim());
-    return { ok: true, saveData: rows[0].save_data };
+    return { ok: true, saveData: rows[0].save_data, authUserId: rows[0].auth_user_id };
   } catch { return { error: 'network' }; }
 }
 

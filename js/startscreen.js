@@ -269,6 +269,7 @@ function showSignIn(card, done) {
       // returning players had an empty name and every leaderboard submit
       // silently bailed.
       _setLeaderboardNameInternal(username);
+      _existingAccountAuthLinked = !!res.authUserId;
 
       if (res.saveData && Object.keys(res.saveData).length > 0) {
         try {
@@ -297,21 +298,21 @@ function showSignIn(card, done) {
 // ── Screen runner ──────────────────────────────────────────────────────────────
 
 function runStartScreens(onAllDone) {
-  const pending = START_SCREENS.filter(s => s.shouldShow());
-  if (pending.length === 0) { onAllDone(); return; }
-
   const overlay = document.getElementById('startScreenOverlay');
   const card    = document.getElementById('startScreenCard');
-  overlay.classList.remove('hidden');
 
-  let i = 0;
+  // Re-checks shouldShow() fresh each time, rather than freezing a list up
+  // front — a screen like linkGooglePrompt only becomes eligible as a side
+  // effect of an earlier screen (Sign In setting the player's name), so it
+  // must be picked up on the next round, not decided before that happened.
   const showNext = () => {
-    if (i >= pending.length) {
+    const screen = START_SCREENS.find(s => s.shouldShow());
+    if (!screen) {
       overlay.classList.add('hidden');
       onAllDone();
       return;
     }
-    const screen = pending[i++];
+    overlay.classList.remove('hidden');
     card.innerHTML = '';
     screen.render(card, showNext);
   };
