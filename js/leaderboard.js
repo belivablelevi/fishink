@@ -185,6 +185,12 @@ function leaderboardHeaders(extra) {
 }
 
 let _lastSubmittedEarned = 0;
+let _lastSubmitGameTime  = 0; // game.time (seconds) as of the last successful submission
+
+// $/min ceiling for the anti-cheat check below — far above any realistic
+// late-game burst (many machines/deliveries completing in the same tick),
+// far below the jump a stat-editing cheat produces.
+const LEADERBOARD_RATE_CEILING = 50000000;
 
 // Called every sim frame — submits whenever lifetime earnings jump by $10k.
 function checkLeaderboardEarnThreshold() {
@@ -200,12 +206,30 @@ function submitLeaderboardScore() {
   const name = getLeaderboardName();
   if (!name) return Promise.resolve();
 
-  // Sanity check: reject earnings that are impossible at any legitimate pace.
-  // Generous ceiling is ~$500k/min; beyond that the score was console-edited.
-  const playtimeMins = game.time / 60;
-  if (playtimeMins > 1 && game.lifetimeEarned / playtimeMins > 500000) return Promise.resolve();
+  // Sanity check: reject a submission whose earnings grew implausibly fast
+  // since the LAST successful submission — not since the game began. The
+  // original version compared the lifetime average rate (earned / total
+  // playtime) against a flat ceiling, which becomes a one-way ratchet in
+  // this game's exponential economy: a well-progressed player's average
+  // rate only ever climbs (nothing here reduces income over time), so once
+  // it legitimately crossed the old 500k/min ceiling the leaderboard row
+  // froze forever, even for entirely normal play (reported live: 228M
+  // actual vs. 30M frozen on the board).
+  //
+  // The denominator is floored rather than the whole check being skipped
+  // for a short window — an earlier version skipped evaluating when
+  // deltaMins was tiny to avoid false positives from back-to-back
+  // $10k-threshold-triggered calls, but that let the most blatant cheats
+  // (a huge jump applied in near-zero time) sail through unrejected, since
+  // skipping defaults to "allow." Flooring keeps small legitimate deltas
+  // safe (a modest $ gain over <6s still computes a modest rate) while
+  // still catching a huge jump in that same short window.
+  const deltaEarned = game.lifetimeEarned - _lastSubmittedEarned;
+  const deltaMins   = Math.max((game.time - _lastSubmitGameTime) / 60, 0.1);
+  if (deltaEarned / deltaMins > LEADERBOARD_RATE_CEILING) return Promise.resolve();
 
   _lastSubmittedEarned = game.lifetimeEarned;
+  _lastSubmitGameTime  = game.time;
 
   const payload = {
     client_id: getLeaderboardClientId(),
