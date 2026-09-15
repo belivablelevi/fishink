@@ -200,14 +200,18 @@ let restarting = false;
 
 // Full wipe — clears the run save AND prestige data. Used by the Restart Game
 // button so the player gets a completely clean slate.
-function restartGame() {
+async function restartGame() {
   restarting = true;
   if (typeof submitLeaderboardScore === 'function') submitLeaderboardScore();
   game.lifetimeEarned = 0;
   localStorage.removeItem(SAVE_KEY);
   localStorage.setItem('fishink_skip_cloud', '1');
   localStorage.removeItem(PRESTIGE_KEY); // prestige.js declares this constant
-  if (typeof cloudPushSaveImmediate === 'function') cloudPushSaveImmediate();
+  // Awaited — cloudPushSaveImmediate() now defaults to keepalive:false (see
+  // its own comment in cloud.js), so an un-awaited call here would just get
+  // cut off by the reload on the very next line, same failure mode as the
+  // sign-out bug this was originally fixed for.
+  if (typeof cloudPushSaveImmediate === 'function') await cloudPushSaveImmediate();
   location.reload();
 }
 
@@ -231,5 +235,8 @@ function resetRun() {
 window.addEventListener('beforeunload', () => {
   if (restarting) return;
   saveGameNow(); // flush immediately — a debounced save would never fire
-  if (typeof cloudPushSaveImmediate === 'function') cloudPushSaveImmediate();
+  // keepalive:true here specifically — this IS a real page unload, the one
+  // case a normal fetch would get aborted outright. Every other call site
+  // now defaults to keepalive:false (see cloudPushSaveImmediate's comment).
+  if (typeof cloudPushSaveImmediate === 'function') cloudPushSaveImmediate(true);
 });

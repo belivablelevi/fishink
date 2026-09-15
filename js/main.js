@@ -1,6 +1,6 @@
 // Fish INK Factory — game loop
 
-const GAME_VERSION = '1.7.0';
+const GAME_VERSION = '1.8.1';
 
 let canvas, ctx;
 let lastTime = 0;
@@ -123,9 +123,76 @@ function init() {
     // overwrite the intentionally fresh local start.
     const skipCloud = localStorage.getItem('fishink_skip_cloud');
     localStorage.removeItem('fishink_skip_cloud');
-    if (!skipCloud && typeof cloudLoadSave === 'function' && cloudUsername() && isLeaderboardConfigured()) {
+
+    // If this device just came back from an OAuth redirect that was started
+    // by an EXISTING recovery-code player linking their account (rather than
+    // a fresh sign-up/sign-in), handle that first — it must not fall into the
+    // fresh-signup lookup below, which would treat it as a brand-new identity.
+    let existingAccountAuthLinked = false;
+    const linkPending = localStorage.getItem(GOOGLE_LINK_PENDING_KEY);
+    if (linkPending) {
+      localStorage.removeItem(GOOGLE_LINK_PENDING_KEY);
+      if (typeof cloudGetGoogleSession === 'function') {
+        try {
+          const session = await cloudGetGoogleSession();
+          if (session) {
+            const linkResult = await cloudLinkGoogleAccount(session);
+            existingAccountAuthLinked = !!linkResult.ok;
+            if (linkResult.ok) {
+              if (typeof queueToast === 'function') queueToast('Google account linked!', '#4dca7c');
+            } else {
+              console.warn('Google account link failed', linkResult.error);
+              if (typeof queueToast === 'function') queueToast(`Google link failed: ${linkResult.error || 'unknown error'}`, '#e85d4a');
+            }
+          }
+        } catch (e) { console.warn('Google link resolution failed', e); }
+      }
+      // Falls through to the normal cloud pull below — this is still the
+      // same existing account, its save still needs loading as usual.
+    }
+
+    // Resolve a Google OAuth session (set after the redirect back from
+    // cloudSignInWithGoogle()) before the legacy username/recovery-code cloud
+    // pull below, and before runStartScreens decides which start screen to show.
+    //
+    // This must run on EVERY boot where a session might exist, not just when
+    // getLeaderboardName() is empty — cloudGetGoogleSession() is also what
+    // populates the module-level _googleSession cache that cloudLoadSave()
+    // needs below to authenticate as this player. Without it, a returning
+    // Google-linked player's row is invisible to the plain anon-key query
+    // (RLS only permits `authenticated` requests matching auth.uid()), so
+    // cloudLoadSave() finds nothing and the player looks unlinked again.
+    let resolvedViaGoogle = false;
+    if (!linkPending && !skipCloud && typeof cloudGetGoogleSession === 'function' && isLeaderboardConfigured()) {
+      try {
+        const session = await cloudGetGoogleSession();
+        if (session && !getLeaderboardName()) {
+          const existing = await cloudFindPlayerByAuthId(session.user.id, session);
+          if (existing) {
+            localStorage.setItem(LEADERBOARD_ID_KEY,  existing.client_id);
+            localStorage.setItem(LEADERBOARD_NAME_KEY, existing.username);
+            if (existing.save_data && Object.keys(existing.save_data).length > 0) {
+              try {
+                const data = existing.save_data;
+                for (let v = (data.version || 1); v < SAVE_VERSION; v++) SAVE_MIGRATIONS[v]?.(data);
+                deserializeGame(data);
+                localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+              } catch (e) { console.warn('Failed to apply Google-linked save', e); }
+            }
+            resolvedViaGoogle = true;
+          } else {
+            // First time this Google identity has signed in — the googleName
+            // start screen (startscreen.js) will pick this up and create the row.
+            _pendingGoogleSession = session;
+          }
+        }
+      } catch (e) { /* offline — fall through to the normal account-setup screen */ }
+    }
+
+    if (!resolvedViaGoogle && !skipCloud && typeof cloudLoadSave === 'function' && cloudUsername() && isLeaderboardConfigured()) {
       try {
         const cloud = await cloudLoadSave();
+        if (cloud) existingAccountAuthLinked = existingAccountAuthLinked || !!cloud.auth_user_id;
         if (cloud?.save_data && Object.keys(cloud.save_data).length > 0) {
           try {
             const localRaw  = localStorage.getItem(SAVE_KEY);
@@ -143,6 +210,10 @@ function init() {
         }
       } catch (e) { /* offline — local save already loaded */ }
     }
+
+    // Read by the linkGooglePrompt start screen (startscreen.js) to decide
+    // whether to nudge an existing recovery-code player to link Google.
+    _existingAccountAuthLinked = existingAccountAuthLinked;
 
     checkForUpdate();
 
@@ -233,7 +304,9 @@ async function checkForUpdate() {
     const { version } = await res.json();
     if (version && version !== GAME_VERSION) {
       saveGame();
-      if (typeof cloudPushSaveImmediate === 'function') cloudPushSaveImmediate();
+      // Awaited — same keepalive:false-vs-immediate-reload race as
+      // restartGame() in save.js; this function is already async.
+      if (typeof cloudPushSaveImmediate === 'function') await cloudPushSaveImmediate();
       location.reload(true);
     }
   } catch (e) { /* offline — skip silently */ }

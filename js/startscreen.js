@@ -16,12 +16,50 @@
 // Screens run in array order; each one's shouldShow() is checked at game
 // start, and only screens that return true are shown, one at a time.
 
+// Set by main.js during boot, before runStartScreens(), when a Google OAuth
+// session exists but has no players row linked to it yet — i.e. this is the
+// first time this Google identity has signed in. Consumed by the googleName
+// screen below, then cleared.
+let _pendingGoogleSession = null;
+
+// Set by main.js during boot: whether the current EXISTING recovery-code
+// account (if any) already has a Google identity linked to it. Drives the
+// linkGooglePrompt screen below.
+let _existingAccountAuthLinked = false;
+
+function _googleLinkDismissKey() {
+  return `fishink_google_link_dismissed_${cloudId()}`;
+}
+
 const START_SCREENS = [
   {
+    id: 'googleName',
+    shouldShow: () => !!_pendingGoogleSession && !getLeaderboardName(),
+    render(card, done) {
+      showPickNameForGoogle(card, done, _pendingGoogleSession);
+    },
+  },
+  {
     id: 'accountSetup',
-    shouldShow: () => !getLeaderboardName(),
+    shouldShow: () => !getLeaderboardName() && !_pendingGoogleSession,
     render(card, done) {
       showAccountChoice(card, done);
+    },
+  },
+  {
+    id: 'linkGooglePrompt',
+    // Only meaningful for a recovery-code account (that's the whole point —
+    // adding Google as an alternate way in). A Google-created account never
+    // has a recovery code by design, so without this check, any transient
+    // hiccup that left _existingAccountAuthLinked incorrectly false (e.g. a
+    // slow/failed session resolution on this boot) would show this prompt
+    // for an account that can never satisfy it — "Continue with Google"
+    // would then fail every time with a guaranteed no-recovery-code error.
+    shouldShow: () => !!getLeaderboardName() && isLeaderboardConfigured()
+      && !!localStorage.getItem(CLOUD_RECOVERY_KEY)
+      && !_existingAccountAuthLinked && !localStorage.getItem(_googleLinkDismissKey()),
+    render(card, done) {
+      showLinkGooglePrompt(card, done);
     },
   },
 ];
@@ -32,27 +70,105 @@ function showAccountChoice(card, done) {
   card.innerHTML = `
     <div class="start-screen-title">Welcome to Fish INK!</div>
     <div class="start-screen-sub">Create an account to save your progress across devices.</div>
-    <button id="ssBtnNew" class="start-screen-btn">New Player</button>
+    <button id="ssBtnSignUp" class="start-screen-btn">Sign Up</button>
     <div class="start-screen-divider"></div>
     <button id="ssBtnSignIn" class="start-screen-btn-ghost">Sign In — Returning Player</button>
   `;
-  card.querySelector('#ssBtnNew').addEventListener('click', () => showPickName(card, done));
+  card.querySelector('#ssBtnSignUp').addEventListener('click', () => showSignUp(card, done));
   card.querySelector('#ssBtnSignIn').addEventListener('click', () => showSignIn(card, done));
 }
 
-function showPickName(card, done) {
+// Wires a "Continue with Google" button already present in `card` — shared by
+// showSignUp and showSignIn since cloudSignInWithGoogle() behaves identically
+// either way (the boot-time resolution in main.js figures out whether this is
+// a new or returning Google identity once the redirect comes back).
+function _wireGoogleButton(card, selector) {
+  const btn = card.querySelector(selector);
+  const originalText = btn.textContent;
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    btn.textContent = 'Redirecting…';
+    // Normally this navigates away and the line below never really matters —
+    // but if it DIDN'T (supabase-js blocked/failed to load, OAuth rejected),
+    // the button would otherwise stay stuck on "Redirecting…" forever with
+    // no way to retry short of a full page refresh. Since Sign Up requires
+    // Google when the backend is configured, that's a dead end for a new
+    // player — recover instead.
+    const result = await cloudSignInWithGoogle();
+    if (result?.error) {
+      btn.disabled = false;
+      btn.textContent = originalText;
+      let err = card.querySelector('.start-screen-error');
+      if (!err) {
+        err = document.createElement('div');
+        err.className = 'start-screen-error';
+        btn.before(err);
+      }
+      err.textContent = "Couldn't reach Google — check your connection and try again.";
+    }
+  });
+}
+
+// Google is the only way to create a NEW account — recovery codes are being
+// phased out for new sign-ups (existing recovery-code accounts keep working
+// unchanged via Sign In). If there's no backend configured at all, cloud
+// accounts of any kind are impossible, so fall back to local-only play
+// (a plain name, no recovery code, no cloud sync) same as always.
+function showSignUp(card, done) {
+  if (!isLeaderboardConfigured()) {
+    showPickName(card, done);
+    return;
+  }
+  card.innerHTML = `
+    <button id="ssBtnBack" class="start-screen-back">&#8592; Back</button>
+    <div class="start-screen-title">Sign Up</div>
+    <div class="start-screen-sub">Sign up with Google to save your progress across devices.</div>
+    <button id="ssBtnGoogle" class="start-screen-btn">Continue with Google</button>
+  `;
+  card.querySelector('#ssBtnBack').addEventListener('click', () => showAccountChoice(card, done));
+  _wireGoogleButton(card, '#ssBtnGoogle');
+}
+
+// One-time (dismissible) nudge for an existing recovery-code player to also
+// link Google to their SAME account. Accepting sets the "this OAuth redirect
+// is a link, not a fresh sign-up" flag (consumed by main.js on the next
+// boot) then reuses the normal cloudSignInWithGoogle() redirect.
+function showLinkGooglePrompt(card, done) {
+  card.innerHTML = `
+    <div class="start-screen-title">Link Google Account?</div>
+    <div class="start-screen-sub">Sign in with Google so you can get back into your save without typing a recovery code.</div>
+    <button id="ssBtnLinkGoogle" class="start-screen-btn">Continue with Google</button>
+    <button id="ssBtnLinkSkip" class="start-screen-btn-ghost">Not now</button>
+  `;
+  const linkBtn = card.querySelector('#ssBtnLinkGoogle');
+  linkBtn.addEventListener('click', () => {
+    linkBtn.disabled = true;
+    linkBtn.textContent = 'Redirecting…';
+    localStorage.setItem(GOOGLE_LINK_PENDING_KEY, '1');
+    cloudSignInWithGoogle(); // navigates away; main.js picks up the link on the redirect back
+  });
+  card.querySelector('#ssBtnLinkSkip').addEventListener('click', () => {
+    localStorage.setItem(_googleLinkDismissKey(), '1');
+    done();
+  });
+}
+
+// First-time Google sign-in with no players row yet — same name validation as
+// showPickName, but creates the row via cloudCreatePlayerWithGoogle and skips
+// the recovery-code screen (Google is the credential now; a code is still
+// generated as a fallback and surfaced later in the Cloud menu).
+function showPickNameForGoogle(card, done, session) {
   const render = (errMsg) => {
+    const emailHint = session.user?.email ? ` as ${session.user.email}` : '';
     card.innerHTML = `
-      <button id="ssBtnBack" class="start-screen-back">&#8592; Back</button>
       <div class="start-screen-title">Choose your name</div>
-      <div class="start-screen-sub">Names are unique across all players.</div>
-      <input type="text" id="startNameInput" class="start-screen-input" maxlength="20" placeholder="Your name" autocomplete="off">
+      <div class="start-screen-sub">Signed in with Google${emailHint}. Names are unique across all players.</div>
+      <input type="text" id="startGoogleNameInput" class="start-screen-input" maxlength="20" placeholder="Your name" autocomplete="off">
       ${errMsg ? `<div class="start-screen-error">${errMsg}</div>` : ''}
-      <button id="startNameBtn" class="start-screen-btn">Let's go</button>
+      <button id="startGoogleNameBtn" class="start-screen-btn">Let's go</button>
     `;
-    const input = card.querySelector('#startNameInput');
-    const btn   = card.querySelector('#startNameBtn');
-    card.querySelector('#ssBtnBack').addEventListener('click', () => showAccountChoice(card, done));
+    const input = card.querySelector('#startGoogleNameInput');
+    const btn   = card.querySelector('#startGoogleNameBtn');
 
     const setErr = (msg) => {
       let el = card.querySelector('.start-screen-error');
@@ -77,22 +193,56 @@ function showPickName(card, done) {
       btn.textContent = 'Checking…';
       input.disabled = true;
 
-      if (isLeaderboardConfigured()) {
-        const available = await cloudUsernameAvailable(input.value.trim());
-        if (available === false) {
-          localStorage.removeItem(LEADERBOARD_NAME_KEY);
-          btn.disabled = false; btn.textContent = "Let's go"; input.disabled = false;
-          setErr('That name is already taken — try another!');
-          return;
-        }
-        const createResult = await cloudCreatePlayer(input.value.trim());
-        if (createResult.ok) {
-          showRecoveryCode(card, done, createResult.code);
-          return;
-        }
-        // Cloud failed — proceed anyway, will retry on next load
+      const available = await cloudUsernameAvailable(input.value.trim());
+      if (available === false) {
+        localStorage.removeItem(LEADERBOARD_NAME_KEY);
+        btn.disabled = false; btn.textContent = "Let's go"; input.disabled = false;
+        setErr('That name is already taken — try another!');
+        return;
       }
 
+      const createResult = await cloudCreatePlayerWithGoogle(input.value.trim(), session);
+      if (createResult.alreadyLinked) {
+        // This Google identity already has an existing row under a
+        // different client_id/username — not actually a fresh signup.
+        // Adopt that existing account instead of pretending this name pick
+        // created a new one (it didn't; the insert was rejected).
+        const existing = await cloudFindPlayerByAuthId(session.user.id, session);
+        if (existing) {
+          localStorage.setItem(LEADERBOARD_ID_KEY,  existing.client_id);
+          localStorage.setItem(LEADERBOARD_NAME_KEY, existing.username);
+          if (existing.save_data && Object.keys(existing.save_data).length > 0) {
+            try {
+              const data = existing.save_data;
+              for (let v = (data.version || 1); v < SAVE_VERSION; v++) SAVE_MIGRATIONS[v]?.(data);
+              deserializeGame(data);
+              localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+            } catch (e) { console.warn('Failed to apply existing Google-linked save', e); }
+          }
+          _existingAccountAuthLinked = true;
+          _pendingGoogleSession = null;
+          done();
+          return;
+        }
+        localStorage.removeItem(LEADERBOARD_NAME_KEY);
+        btn.disabled = false; btn.textContent = "Let's go"; input.disabled = false;
+        setErr('This Google account is already linked to another player, but it could not be loaded — try again.');
+        return;
+      }
+      if (!createResult.ok) {
+        // Don't silently proceed into a broken local-only state that looks
+        // signed up but has no matching row — surface it and let them retry.
+        localStorage.removeItem(LEADERBOARD_NAME_KEY);
+        btn.disabled = false; btn.textContent = "Let's go"; input.disabled = false;
+        setErr(`Couldn't create your account (${createResult.error || 'unknown error'}) — try again.`);
+        return;
+      }
+      // This account is created WITH auth_user_id already set — without this,
+      // linkGooglePrompt's shouldShow() (which defaults to false) would think
+      // a brand-new Google account still needs linking and re-show itself
+      // immediately after signup.
+      _existingAccountAuthLinked = true;
+      _pendingGoogleSession = null;
       done();
     };
 
@@ -104,16 +254,49 @@ function showPickName(card, done) {
   render();
 }
 
-function showRecoveryCode(card, done, code) {
-  const display = code.slice(0, 4) + '-' + code.slice(4);
-  card.innerHTML = `
-    <div class="start-screen-title">Save your recovery code</div>
-    <div class="start-screen-sub">You'll need this to sign in on a new device.<br>Write it down — it won't be shown again.</div>
-    <div class="recovery-code-box">${display}</div>
-    <div class="start-screen-hint">You can also find it later in the game menu under <strong>Cloud</strong>.</div>
-    <button id="ssCodeDone" class="start-screen-btn">I've saved it — Continue</button>
-  `;
-  card.querySelector('#ssCodeDone').addEventListener('click', done);
+// Local-only fallback used exclusively when no backend is configured at all
+// (see showSignUp) — no cloud account, no recovery code, just a display name.
+function showPickName(card, done) {
+  const render = (errMsg) => {
+    card.innerHTML = `
+      <button id="ssBtnBack" class="start-screen-back">&#8592; Back</button>
+      <div class="start-screen-title">Choose your name</div>
+      <div class="start-screen-sub">Names are unique across all players.</div>
+      <input type="text" id="startNameInput" class="start-screen-input" maxlength="20" placeholder="Your name" autocomplete="off">
+      ${errMsg ? `<div class="start-screen-error">${errMsg}</div>` : ''}
+      <button id="startNameBtn" class="start-screen-btn">Let's go</button>
+    `;
+    const input = card.querySelector('#startNameInput');
+    const btn   = card.querySelector('#startNameBtn');
+    card.querySelector('#ssBtnBack').addEventListener('click', () => showSignUp(card, done));
+
+    const setErr = (msg) => {
+      let el = card.querySelector('.start-screen-error');
+      if (!el) {
+        el = document.createElement('div');
+        el.className = 'start-screen-error';
+        btn.before(el);
+      }
+      el.textContent = msg;
+      input.style.borderColor = 'var(--c-red)';
+      input.value = '';
+      input.focus();
+    };
+
+    const submit = () => {
+      const result = _setLeaderboardNameInternal(input.value);
+      if (result === 'fancy')         { setErr('Letters, numbers and punctuation only!'); return; }
+      if (result === 'inappropriate') { setErr('Keep it clean!'); return; }
+      if (!result) return;
+      done();
+    };
+
+    btn.addEventListener('click', submit);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+    input.focus();
+  };
+
+  render();
 }
 
 function showSignIn(card, done) {
@@ -126,11 +309,14 @@ function showSignIn(card, done) {
       <input type="text" id="ssSignInCode" class="start-screen-input ss-code-input" maxlength="9" placeholder="XXXX-XXXX" autocomplete="off" autocorrect="off" spellcheck="false">
       ${errMsg ? `<div class="start-screen-error">${errMsg}</div>` : ''}
       <button id="ssSignInBtn" class="start-screen-btn">Sign In</button>
+      <div class="start-screen-divider"></div>
+      <button id="ssBtnGoogleSignIn" class="start-screen-btn-ghost">Continue with Google</button>
     `;
     const nameInput = card.querySelector('#ssSignInName');
     const codeInput = card.querySelector('#ssSignInCode');
     const btn = card.querySelector('#ssSignInBtn');
     card.querySelector('#ssBtnBack').addEventListener('click', () => showAccountChoice(card, done));
+    _wireGoogleButton(card, '#ssBtnGoogleSignIn');
 
     const submit = async () => {
       const username = nameInput.value.trim();
@@ -149,6 +335,7 @@ function showSignIn(card, done) {
       // returning players had an empty name and every leaderboard submit
       // silently bailed.
       _setLeaderboardNameInternal(username);
+      _existingAccountAuthLinked = !!res.authUserId;
 
       if (res.saveData && Object.keys(res.saveData).length > 0) {
         try {
@@ -177,21 +364,21 @@ function showSignIn(card, done) {
 // ── Screen runner ──────────────────────────────────────────────────────────────
 
 function runStartScreens(onAllDone) {
-  const pending = START_SCREENS.filter(s => s.shouldShow());
-  if (pending.length === 0) { onAllDone(); return; }
-
   const overlay = document.getElementById('startScreenOverlay');
   const card    = document.getElementById('startScreenCard');
-  overlay.classList.remove('hidden');
 
-  let i = 0;
+  // Re-checks shouldShow() fresh each time, rather than freezing a list up
+  // front — a screen like linkGooglePrompt only becomes eligible as a side
+  // effect of an earlier screen (Sign In setting the player's name), so it
+  // must be picked up on the next round, not decided before that happened.
   const showNext = () => {
-    if (i >= pending.length) {
+    const screen = START_SCREENS.find(s => s.shouldShow());
+    if (!screen) {
       overlay.classList.add('hidden');
       onAllDone();
       return;
     }
-    const screen = pending[i++];
+    overlay.classList.remove('hidden');
     card.innerHTML = '';
     screen.render(card, showNext);
   };

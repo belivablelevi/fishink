@@ -65,6 +65,10 @@ function enterBulkSelectMode() {
     queueToast('Exit pet placement first', '#e8a030');
     return;
   }
+  if (typeof frogPlaceMode !== 'undefined' && frogPlaceMode.active) {
+    queueToast('Exit frog placement first', '#e8a030');
+    return;
+  }
   if (typeof blueprint !== 'undefined' && (blueprint.pasting || blueprint.selecting)) {
     queueToast('Exit blueprint mode first', '#e8a030');
     return;

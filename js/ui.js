@@ -30,7 +30,8 @@ function updateCloudStatusUI() {
     const ago = lastSync
       ? (Date.now() - lastSync < 60000 ? 'just now' : `${Math.round((Date.now() - lastSync) / 60000)}m ago`)
       : 'not yet';
-    label.textContent = `${name} · ${ago}`;
+    const viaGoogle = typeof _googleSession !== 'undefined' && !!_googleSession;
+    label.textContent = viaGoogle ? `${name} (Google) · ${ago}` : `${name} · ${ago}`;
     if (syncBtn)    syncBtn.style.display    = '';
     if (signOutBtn) signOutBtn.style.display = '';
     if (recovRow && recovCode) {
@@ -1168,7 +1169,7 @@ function renderStatsPanel() {
   const rows = [
     ['Lifetime earnings', `$${formatMoney(game.lifetimeEarned)}`],
     ['Fish sold', game.fishSold],
-    ['Uptime', formatUptime(game.time)],
+    ['Playtime', formatUptime(game.time)],
     ['Fish Index discovered', `${game.fishIndex.size} / ${FISH.length}`],
     ['Achievements unlocked', `${game.unlockedAchievements.size} / ${ACHIEVEMENTS.length}`],
   ];

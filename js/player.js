@@ -63,6 +63,7 @@ let _placeCooldown = false; // one-frame guard prevents double-fire on touch
 function enterPetPlaceMode(uid) {
   petPlaceMode.active = true;
   petPlaceMode.uid = uid;
+  exitFrogPlaceMode();
   exitBuildMode();
 }
 
@@ -78,6 +79,7 @@ const frogPlaceMode = { active: false, uid: null };
 function enterFrogPlaceMode(uid) {
   frogPlaceMode.active = true;
   frogPlaceMode.uid = uid;
+  exitPetPlaceMode();
   exitBuildMode();
 }
 
@@ -679,6 +681,17 @@ function handleClick(e) {
   if (petPlaceMode.active) {
     if (e.button === 0) triggerInteract();
     else { exitPetPlaceMode(); queueToast('Placement cancelled', '#9aa0a8'); }
+    return;
+  }
+
+  // Frog placement mode — same pattern as pets above. Without this branch,
+  // clicks/taps while placing a frog fell through into ordinary world-click
+  // handling (silent no-op on land, or an accidental fishing cast on water)
+  // and frogPlaceMode.active never cleared — the only way out was a page
+  // reload, since Escape (the sole other exit) doesn't exist on mobile.
+  if (frogPlaceMode.active) {
+    if (e.button === 0) triggerInteract();
+    else { exitFrogPlaceMode(); queueToast('Placement cancelled', '#9aa0a8'); }
     return;
   }
 
