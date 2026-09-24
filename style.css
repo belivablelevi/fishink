@@ -997,7 +997,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   left: 50%;
   transform: translateX(-50%);
   z-index: 25;
-  width: min(92vw, 460px);
+  width: min(92vw, 540px);
   font-family: var(--font-ui);
   background: rgba(10,18,16,0.97);
   border: 1px solid var(--c-border);
@@ -1058,6 +1058,64 @@ body.touch-active .tutorial-overlay { bottom: 180px; }
   transition: background 0.15s, color 0.15s;
 }
 .tutorial-skip-btn:hover { background: rgba(255,255,255,0.16); color: var(--c-text); }
+
+.tutorial-step-why {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--c-muted);
+  margin: -4px 0 10px;
+}
+.tutorial-step-why strong { color: var(--c-text); }
+.tutorial-step-hint {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--c-mint);
+  margin: -2px 0 10px;
+}
+.tutorial-step-why:empty, .tutorial-step-hint:empty { display: none; }
+.tutorial-btn-row { display: flex; gap: 8px; justify-content: center; }
+.tutorial-next-btn {
+  appearance: none;
+  border: none;
+  background: var(--c-accent);
+  color: #1a1208;
+  border-radius: 6px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 16px;
+  cursor: pointer;
+}
+.tutorial-next-btn:hover { filter: brightness(1.12); }
+.tutorial-next-btn.hidden, .tutorial-skip-choice.hidden, .tutorial-skip-btn.hidden { display: none; }
+.tutorial-skip-choice { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; }
+.tutorial-skip-q { width: 100%; font-size: 12px; font-weight: 700; color: var(--c-text); }
+
+/* Pulsing ring on the DOM element a step points at, plus a bobbing arrow
+   (positioned by tutorial.js) so a first-time player can see where to click. */
+.tutorial-ui-highlight {
+  outline: 2px solid #e8c43f !important;
+  outline-offset: 2px;
+  animation: tutUiPulse 1.1s ease-in-out infinite;
+}
+@keyframes tutUiPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(232,196,63,0.6); }
+  50%      { box-shadow: 0 0 0 9px rgba(232,196,63,0); }
+}
+.tutorial-ui-arrow {
+  position: fixed;
+  z-index: 60;
+  transform: translateX(-50%);
+  color: #e8c43f;
+  font-size: 22px;
+  line-height: 1;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.7);
+  pointer-events: none;
+  animation: tutUiBob 0.7s ease-in-out infinite alternate;
+}
+.tutorial-ui-arrow.hidden { display: none; }
+@keyframes tutUiBob { from { margin-top: 0; } to { margin-top: 6px; } }
 
 /* Inline key badge — used inside tutorial step text for hotkey callouts */
 .tutorial-key {
@@ -1552,6 +1610,13 @@ body.touch-active .bottom-right-group { right: 90px; bottom: 20px; }
   letter-spacing: 0.02em;
 }
 .start-screen-btn-ghost:hover { background: rgba(255,255,255,0.13); border-color: rgba(255,255,255,0.38); }
+
+.start-screen-btn-small {
+  width: 78%;
+  align-self: center;
+  padding: 7px 12px;
+  font-size: 11.5px;
+}
 
 .start-screen-divider {
   width: 100%;

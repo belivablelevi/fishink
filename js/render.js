@@ -342,12 +342,14 @@ function drawFloatTexts(ctx) {
 
 // ─── Tutorial arrow ──────────────────────────────────────────────────────────
 // Points at whatever the active tutorial step wants the player to go to (the
-// nearest water/belt/seller — see tutorialTargetWorldPos() in tutorial.js).
+// nearest water/belt/seller — see tutorialTargets() in tutorial.js).
 // Bobs in place above the target when it's on screen; otherwise clamps to the
 // screen edge and rotates to point off toward it, like a quest-marker compass.
 function drawTutorialArrow(ctx, canvas) {
-  const target = tutorialTargetWorldPos();
-  if (!target) return;
+  for (const target of tutorialTargets()) drawTutorialArrowAt(ctx, canvas, target);
+}
+
+function drawTutorialArrowAt(ctx, canvas, target) {
   const cw = canvas.width, ch = canvas.height;
   const sx = (target.wx - cam.x) * ZOOM;
   const sy = (target.wy - cam.y) * ZOOM;
@@ -372,6 +374,27 @@ function drawTutorialArrow(ctx, canvas) {
   ctx.fill();
   ctx.stroke();
   ctx.restore();
+
+  // Label chip above the bobbing arrow (only when the target is on screen —
+  // an edge-clamped arrow has no room and is rotated anyway).
+  if (onScreen && target.label) {
+    ctx.save();
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const w = ctx.measureText(target.label).width + 14;
+    const cy = ay - 30 + bob - 20;
+    ctx.fillStyle = 'rgba(10,18,16,0.92)';
+    ctx.strokeStyle = '#e8c43f';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(ax - w / 2, cy - 10, w, 20, 6);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(target.label, ax, cy + 1);
+    ctx.restore();
+  }
 }
 
 // ─── Hover tooltips ──────────────────────────────────────────────────────────

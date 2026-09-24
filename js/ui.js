@@ -1174,6 +1174,16 @@ function renderControlsPanel() {
   hint.textContent = 'Every keybind and combo, grouped by what you’re doing';
   controlsPanelEl.appendChild(hint);
 
+  const replayRow = document.createElement('div');
+  replayRow.className = 'upgrade-row';
+  replayRow.innerHTML = '<div class="upgrade-info"><div class="name">Fishing tutorial</div><div class="desc">Replay the basics: casting, dropping fish on a belt, selling</div></div>';
+  const replayBtn = document.createElement('button');
+  replayBtn.className = 'upgrade-buy';
+  replayBtn.textContent = 'Replay';
+  replayBtn.addEventListener('click', () => { replayTutorial(); });
+  replayRow.appendChild(replayBtn);
+  controlsPanelEl.appendChild(replayRow);
+
   for (const group of CONTROL_GROUPS) {
     const divider = document.createElement('div');
     divider.className = 'cat-divider';

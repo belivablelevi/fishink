@@ -27,6 +27,10 @@ let _pendingGoogleSession = null;
 // linkGooglePrompt screen below.
 let _existingAccountAuthLinked = false;
 
+// Set when a player picks "Sign Up Without Leaderboard" — local-only play, no
+// name, no cloud row. Cleared on sign-out (cloud.js).
+const GUEST_KEY = 'fishink_guest';
+
 function _googleLinkDismissKey() {
   return `fishink_google_link_dismissed_${cloudId()}`;
 }
@@ -41,7 +45,7 @@ const START_SCREENS = [
   },
   {
     id: 'accountSetup',
-    shouldShow: () => !getLeaderboardName() && !_pendingGoogleSession,
+    shouldShow: () => !getLeaderboardName() && !_pendingGoogleSession && !localStorage.getItem(GUEST_KEY),
     render(card, done) {
       showAccountChoice(card, done);
     },
@@ -124,9 +128,18 @@ function showSignUp(card, done) {
     <div class="start-screen-title">Sign Up</div>
     <div class="start-screen-sub">Sign up with Google to save your progress across devices.</div>
     <button id="ssBtnGoogle" class="start-screen-btn">Continue with Google</button>
+    <button id="ssBtnGuest" class="start-screen-btn-ghost start-screen-btn-small">Sign Up Without Leaderboard</button>
+    <div class="start-screen-hint">No account: progress saves on this device only — no cloud backup and no leaderboard.</div>
   `;
   card.querySelector('#ssBtnBack').addEventListener('click', () => showAccountChoice(card, done));
   _wireGoogleButton(card, '#ssBtnGoogle');
+  // Deliberately sets NO player name: a name is what turns on leaderboard
+  // submits and cloud saves, so this flag is what stops the account screen
+  // from reappearing every boot instead.
+  card.querySelector('#ssBtnGuest').addEventListener('click', () => {
+    localStorage.setItem(GUEST_KEY, '1');
+    done();
+  });
 }
 
 // One-time (dismissible) nudge for an existing recovery-code player to also

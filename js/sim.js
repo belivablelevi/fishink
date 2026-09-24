@@ -324,6 +324,7 @@ function simUpdate(dt) {
 
   checkAchievements();
   maybeShowUpgradeTip();
+  tutorialTick();
   tickParticles(dt);
   simUpdateWorkers(dt);
   if (typeof updateMusicForTimeOfDay === 'function') {
@@ -1136,14 +1137,9 @@ function buyAndPlace(id, c, r, dir, silent = false) {
   if (id === B_FISHER) fisherTimers[`${c},${r}`] = effectiveFisherInterval();
   if (!silent) sfxPlace();
   notifyPlaced(id, c, r, dir, cost);
-  // Tutorial Phase 2 — notify on first placement of each key block type
-  const tutAction = id === B_CONCRETE  ? 'place_concrete'
-                  : id === B_FISHER    ? 'place_fisher'
-                  : IS_TRANSPORT(id)   ? 'place_belt'
-                  : null;
-  if (tutAction) tutorialNotify(tutAction);
-  // link_seller advances on any subsequent belt placement (same trigger, different step)
-  if (IS_TRANSPORT(id)) tutorialNotify('link_seller');
+  // Tutorial Phase 2 steps are predicate-driven (fisher placed, floor laid, belt
+  // path actually connected) — just give it a chance to re-check.
+  tutorialOnPlaced(id, c, r);
   saveGame();
   return true;
 }

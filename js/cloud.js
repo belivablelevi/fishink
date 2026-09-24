@@ -280,6 +280,7 @@ async function cloudSignOut() {
   localStorage.removeItem(LEADERBOARD_ID_KEY);
   localStorage.removeItem(LEADERBOARD_NAME_KEY);
   localStorage.removeItem(CLOUD_RECOVERY_KEY);
+  localStorage.removeItem('fishink_guest');
   location.reload();
 }
 

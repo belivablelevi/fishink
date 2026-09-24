@@ -466,7 +466,11 @@ function triggerInteract(fromKey = false) {
     dropHeldFishOnBelt(hoverTile.c, hoverTile.r);
   } else if (heldFish.length > 0) {
     closeBlockPopup();
-    dropNearestBelt();
+    // Silent before — a first-time player pressing E away from the belt just
+    // saw nothing happen. Only nagged about during the tutorial.
+    if (!dropNearestBelt() && TUT.active) {
+      queueToast('Stand right next to a belt to drop fish — or just click the belt.', '#e8a030');
+    }
   }
 }
 
