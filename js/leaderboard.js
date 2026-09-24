@@ -64,7 +64,7 @@ const STRONG_WORDS = [
   'bastard','wanker','jizz','twat','sloot','slut',
   'whore',
   // Racial slurs + common vowel-drop / misspelling bypasses
-  'nigger','nigga','niga','nigg','ngger','nggr','neega','neeger','neegar','nigah','nigguh',
+  'nigger','nigga','niga','nigg','ngger','nggr','neega','neeger','neegar','nigah','nigguh','niglet','nigglet',
   'beaner','wetback','raghead','towelhead',
   // Homophobic / transphobic / ableist slurs
   'faggot','fagot','tranny','retard',
@@ -81,6 +81,7 @@ const WEAK_WORDS = [
 ];
 
 const TOKEN_WORDS = [
+  'stfu','gtfo',
   'tit','fak','fok','cok','cck','dik','dck','sht','pis','cnt','pusi',
 ];
 
@@ -208,7 +209,16 @@ function _maskBenign(n) {
 }
 
 function nameIsClean(name) {
-  const n = _maskBenign(normaliseName(name));
+  const raw = String(name);
+  // "@" and friends are both leet letters (@ss) and popular separators
+  // (@n@i@g@g@e@r), and reading them as letters garbles the second kind, so
+  // check the name both ways.
+  const noSymbols = raw.replace(/[^A-Za-z0-9À-ɏͰ-ϿЀ-ӿ]/g, '');
+  return _cleanNormalised(normaliseName(raw), raw) && _cleanNormalised(normaliseName(noSymbols), noSymbols);
+}
+
+function _cleanNormalised(normalised, name) {
+  const n = _maskBenign(normalised);
   if (!n) return true;
   if (STRONG_RX.some(rx => rx.test(n))) return false;
   if (WEAK_RX.some(rx => rx.test(n))) return false;
