@@ -139,6 +139,12 @@ html, body {
 .tab-discord:hover { background: rgba(10,18,16,0.88); transform: translateY(0); }
 .tab-discord img { width: 24px; height: 24px; display: block; opacity: 0.65; transition: opacity 0.15s; }
 .tab-discord:hover img { opacity: 1; }
+.tab-playtest {
+  margin-left: 4px; padding: 9px 14px;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  font-family: var(--font-ui); color: var(--c-muted);
+}
+.tab-playtest:hover { color: var(--c-text); }
 .tab.active {
   color: #fff;
   background: rgba(10,18,16,0.96);
