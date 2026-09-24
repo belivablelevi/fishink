@@ -64,7 +64,7 @@ const STRONG_WORDS = [
   'bastard','wanker','jizz','twat','sloot','slut',
   'whore',
   // Racial slurs + common vowel-drop / misspelling bypasses
-  'nigger','nigga','niga','nigg','ngger','nggr','neega','neeger','neegar','nigah','nigguh','niglet','nigglet',
+  'nigger','nigga','niga','nigg','ngger','nggr','neega','neeger','neegar','nigah','nigguh','niglet','nigglet','reggin',
   'beaner','wetback','raghead','towelhead',
   // Homophobic / transphobic / ableist slurs
   'faggot','fagot','tranny','retard',
@@ -142,6 +142,17 @@ const STRONG_RX = STRONG_WORDS.map(w => new RegExp(_rep(w)));
 // whole name, or at the start, or at the end
 const WEAK_RX   = WEAK_WORDS.map(w => new RegExp(`^${_rep(w)}|${_rep(w)}$`));
 const TOKEN_RX  = TOKEN_WORDS.map(w => new RegExp(`^${_rep(w)}$`));
+
+// Backwards spellings ("aggin" = nigga, "reggin" = nigger, "kcuf" = fuck). Only
+// a short list of core slurs/profanity, and only as the whole name or at its
+// start/end - the reversed forms sit inside innocent words ("Bragging",
+// "Baggins", "Tagging" all contain "aggin"), so a substring rule would be wrong.
+const REVERSED_WORDS = ['nigger','nigga','faggot','fuck','shit','cunt','bitch','whore','slut','retard','pussy'];
+const REVERSED_RX = REVERSED_WORDS.map(w => {
+  const rev = _foldWord(w.split('').reverse().join(''));
+  const r = rev.split('').map(c => `${c}+`).join('');
+  return new RegExp(`^${r}|${r}$`);
+});
 
 // Steps 1-4 of normalisation (everything except the non-alpha strip), so word
 // boundaries survive for tokenising.
@@ -223,6 +234,7 @@ function _cleanNormalised(normalised, name) {
   if (STRONG_RX.some(rx => rx.test(n))) return false;
   if (WEAK_RX.some(rx => rx.test(n))) return false;
   if (TOKEN_RX.some(rx => rx.test(n))) return false;
+  if (REVERSED_RX.some(rx => rx.test(n))) return false;
   // Word-level checks catch short words hiding in the middle of a compound
   // that the start/end rules can't see (e.g. "big_ass_fish", "FishGayLord").
   for (const tok of nameTokens(name)) {
