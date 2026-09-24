@@ -403,10 +403,16 @@ function triggerInteract(fromKey = false) {
   const CHEST_INCOME_INC  = [0.005, 0.008, 0.012];   // income bonus per open per island
   const CHEST_INCOME_CAP  = 0.30;                     // total cap across all chests
   const CHEST_COOLDOWN    = 300;                      // 5 minutes between opens
-  if (offshoreIslands.length > 1) {
+  if (offshoreIslands.length > 1 && hoverTile) {
     for (let i = 1; i < offshoreIslands.length; i++) {
       const isl = offshoreIslands[i];
-      if (Math.hypot(pc - isl.cx, pr - isl.cy) < 3) {
+      // isl.cx/cy are fractional tile coordinates (the chest is drawn at
+      // their pixel center, not snapped to a tile), so the tile it actually
+      // occupies is their floor — compare against that, not the raw float.
+      // Cursor must be right on the chest's own tile (not just "somewhere
+      // on the island") — matches how every other single-tile interaction
+      // (machines, ponds, frogs) requires hovering the exact tile.
+      if (hoverTile.c === Math.floor(isl.cx) && hoverTile.r === Math.floor(isl.cy) && inReach) {
         const idx = Math.min(i - 1, CHEST_EARN_GATES.length - 1);
         const gate = CHEST_EARN_GATES[idx];
         if ((game.lifetimeEarned || 0) < gate) {
