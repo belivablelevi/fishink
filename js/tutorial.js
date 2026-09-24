@@ -14,6 +14,9 @@
 // selector (or array) for a DOM element to ring + point at.
 
 const GLYPH = ['→', '↓', '←', '↑'];
+// Canvas label chips use a small sans font where the arrow glyphs render as
+// unreadable slivers ("Belt |"), so spell the direction out there.
+const DIR_WORD = ['RIGHT', 'DOWN', 'LEFT', 'UP'];
 
 const TUTORIAL_PHASE1_STEPS = [
   {
@@ -113,7 +116,7 @@ const TUTORIAL_PHASE2_STEPS = [
       const p = TUT.plan;
       if (!p) return '';
       const done = p.path.filter(t => tileAt(t.c, t.r) === T_CONCRETE).length;
-      return `Concrete laid: ${done} / ${p.path.length}`;
+      return shortCashNote() + `Concrete laid: ${done} / ${p.path.length}`;
     },
     targets: () => planTargets('concrete'),
     advance: () => floorReady(),
@@ -129,7 +132,7 @@ const TUTORIAL_PHASE2_STEPS = [
   },
   {
     id: 'close_build',
-    ui: '#menuCloseBtn',
+    ui: ['#hudExitBtn', '#menuCloseBtn'], // the palette is closed here, so the HUD's Exit button is the visible one
     text: 'Path connected! Press <span class="tutorial-key">B</span> or <span class="tutorial-key">Esc</span> to leave Build Mode and watch it work.',
     why: 'Your Fisher now catches fish on its own and the belt carries every one to the Seller.',
   },
@@ -312,18 +315,34 @@ function planTargets(kind) {
   for (let i = 0; i < p.path.length && out.length < 3; i++) {
     const t = p.path[i];
     if (kind === 'concrete') {
-      if (tileAt(t.c, t.r) !== T_CONCRETE) out.push({ tile: t, label: 'Concrete' });
+      if (tileAt(t.c, t.r) !== T_CONCRETE) out.push({ tile: t, label: out.length === 0 ? 'Concrete' : '' });
     } else {
       const ok = IS_TRANSPORT(blockAt(t.c, t.r)) && (stateAt(t.c, t.r).dir || 0) === p.dirs[i];
-      if (!ok) out.push({ tile: t, label: `Belt ${GLYPH[p.dirs[i]]}` });
+      // Only the first pending tile gets a chip — stacked chips overlap.
+      if (!ok) out.push({ tile: t, label: out.length === 0 ? `Belt: face ${DIR_WORD[p.dirs[i]]}` : '' });
     }
   }
   return out;
 }
 
+// Cash still needed for whatever part of the planned path isn't built yet.
+// Placing with too little cash only ever produced a "Not enough cash!" toast.
+function shortCashNote() {
+  const p = TUT.plan;
+  if (!p) return '';
+  let need = 0;
+  for (const t of p.path) {
+    if (!IS_TRANSPORT(blockAt(t.c, t.r))) need += BLOCK_COSTS[B_BELT];
+    if (tileAt(t.c, t.r) !== T_CONCRETE) need += BLOCK_COSTS[B_CONCRETE];
+  }
+  return game.cash < need ? `Not enough cash — you need $${Math.ceil(need - game.cash)} more. Keep fishing by hand. ` : '';
+}
+
 function beltHint() {
   const p = TUT.plan;
   if (!p) return '';
+  const short = shortCashNote();
+  if (short) return short;
   let placed = 0, wrong = null, next = null;
   for (let i = 0; i < p.path.length; i++) {
     const t = p.path[i];
@@ -608,7 +627,11 @@ function _syncUiPointer(spec) {
 // ─── World arrows ────────────────────────────────────────────────────────────
 // [{ wx, wy, label }] for the current step's world targets.
 function tutorialTargets() {
-  if (!TUT.active || UPGRADE_TIP.active) return [];
+  if (UPGRADE_TIP.active) {
+    const f = findFisher();
+    return f ? [{ wx: (f.c + 0.5) * TILE_SIZE, wy: (f.r + 0.5) * TILE_SIZE, label: 'Hover + E' }] : [];
+  }
+  if (!TUT.active) return [];
   const step = currentStep();
   if (!step || !step.targets) return [];
   return step.targets().map(t => ({ wx: (t.tile.c + 0.5) * TILE_SIZE, wy: (t.tile.r + 0.5) * TILE_SIZE, label: t.label || '' }));

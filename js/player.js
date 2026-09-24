@@ -406,13 +406,11 @@ function triggerInteract(fromKey = false) {
   if (offshoreIslands.length > 1 && hoverTile) {
     for (let i = 1; i < offshoreIslands.length; i++) {
       const isl = offshoreIslands[i];
-      // isl.cx/cy are fractional tile coordinates (the chest is drawn at
-      // their pixel center, not snapped to a tile), so the tile it actually
-      // occupies is their floor — compare against that, not the raw float.
       // Cursor must be right on the chest's own tile (not just "somewhere
       // on the island") — matches how every other single-tile interaction
       // (machines, ponds, frogs) requires hovering the exact tile.
-      if (hoverTile.c === Math.floor(isl.cx) && hoverTile.r === Math.floor(isl.cy) && inReach) {
+      const ct = chestTile(isl);
+      if (hoverTile.c === ct.c && hoverTile.r === ct.r && inReach) {
         const idx = Math.min(i - 1, CHEST_EARN_GATES.length - 1);
         const gate = CHEST_EARN_GATES[idx];
         if ((game.lifetimeEarned || 0) < gate) {

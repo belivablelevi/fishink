@@ -1647,8 +1647,9 @@ function drawChests(ctx) {
   const CHEST_EARN_GATES = [5000, 25000, 100000];
   for (let i = 1; i < offshoreIslands.length; i++) {
     const isl = offshoreIslands[i];
-    const sx = (isl.cx + 0.5) * S - cam.x;
-    const sy = (isl.cy + 0.5) * S - cam.y;
+    const ct = chestTile(isl);
+    const sx = (ct.c + 0.5) * S - cam.x;
+    const sy = (ct.r + 0.5) * S - cam.y;
     if (sx < -S * 3 || sx > VW + S * 3 || sy < -S * 3 || sy > VH + S * 3) continue;
 
     const idx = Math.min(i - 1, CHEST_EARN_GATES.length - 1);

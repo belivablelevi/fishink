@@ -488,6 +488,31 @@ function buildWorld() {
   rebuildBlockIndex();
 }
 
+// The tile an offshore island's treasure chest sits on. Nominally the island's
+// centre, but the starter dock is placed on whichever dry patch is nearest the
+// map centre — which can be an offshore island — leaving the chest under the
+// dock's belts (pressing E on that belt then opened the chest instead of
+// dropping fish). Picks the nearest free land tile once and caches it on the
+// island (islands are saved with the game, so it stays put).
+function chestTile(isl) {
+  if (isl.chestC !== undefined) return { c: isl.chestC, r: isl.chestR };
+  const bc = Math.floor(isl.cx), br = Math.floor(isl.cy);
+  let pick = null;
+  for (let radius = 0; radius <= 4 && !pick; radius++) {
+    for (let dr = -radius; dr <= radius && !pick; dr++) {
+      for (let dc = -radius; dc <= radius; dc++) {
+        if (Math.max(Math.abs(dr), Math.abs(dc)) !== radius) continue;
+        const c = bc + dc, r = br + dr, t = tileAt(c, r);
+        if ((t === T_EMPTY || t === T_SHORE) && blockAt(c, r) === B_NONE) { pick = { c, r }; break; }
+      }
+    }
+  }
+  if (!pick) pick = { c: bc, r: br };
+  isl.chestC = pick.c;
+  isl.chestR = pick.r;
+  return pick;
+}
+
 // Places B_FISH_DEPOT at the center of the worker island if it isn't already there.
 // Called on new world gen and on save load so old saves get backfilled automatically.
 function ensureWorkerIslandDepot() {
@@ -589,6 +614,8 @@ function growWorld() {
     isl.cy += addTop;
     if (isl.depotC !== undefined) isl.depotC += addLeft;
     if (isl.depotR !== undefined) isl.depotR += addTop;
+    if (isl.chestC !== undefined) isl.chestC += addLeft;
+    if (isl.chestR !== undefined) isl.chestR += addTop;
   }
 
   // Shift teleporter links and drone water-target cache.
