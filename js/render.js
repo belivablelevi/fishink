@@ -363,14 +363,34 @@ function drawTutorialArrowAt(ctx, canvas, target) {
   const ay = ch / 2 + dy * scale;
   const bob = onScreen ? Math.sin(performance.now() / 200) * 6 : 0;
 
+  // Pulsing highlight box on the target tile itself, so the exact tile reads
+  // at a glance instead of just "somewhere under that arrow".
+  if (onScreen) {
+    const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 320);
+    const half = TILE_SIZE * ZOOM / 2 - 2 + pulse * 3;
+    ctx.save();
+    ctx.fillStyle = `rgba(240,208,96,${(0.10 + 0.12 * pulse).toFixed(3)})`;
+    ctx.strokeStyle = `rgba(240,208,96,${(0.6 + 0.35 * pulse).toFixed(3)})`;
+    ctx.lineWidth = 3;
+    ctx.shadowColor = 'rgba(240,208,96,0.8)';
+    ctx.shadowBlur = 10 + pulse * 8;
+    roundRect(ctx, ax - half, ay - half, half * 2, half * 2, 8);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
   ctx.save();
   ctx.translate(ax, onScreen ? ay - 30 + bob : ay);
   if (!onScreen) ctx.rotate(Math.atan2(dy, dx) - Math.PI / 2);
-  ctx.fillStyle = '#e8c43f';
-  ctx.strokeStyle = 'rgba(0,0,0,0.55)';
-  ctx.lineWidth = 2;
+  ctx.fillStyle = '#f0d060';
+  ctx.strokeStyle = 'rgba(60,36,0,0.85)';
+  ctx.lineWidth = 2.5;
+  ctx.lineJoin = 'round';
+  ctx.shadowColor = 'rgba(0,0,0,0.5)';
+  ctx.shadowBlur = 6;
   ctx.beginPath();
-  ctx.moveTo(0, 12); ctx.lineTo(-9, -6); ctx.lineTo(9, -6); ctx.closePath();
+  ctx.moveTo(0, 13); ctx.lineTo(-10, -6); ctx.lineTo(10, -6); ctx.closePath();
   ctx.fill();
   ctx.stroke();
   ctx.restore();
@@ -2099,20 +2119,27 @@ function drawFishingRod(ctx) {
 
   // Bobber sits at the world position that was clicked, not at a fixed
   // offset from the player — bobbing gently in place there.
-  const bob = Math.sin(game.time * 5) * 2;
-  const bx = manualCast.wx - cam.x + Math.sin(game.time * 1.5) * 1;
-  const by = manualCast.wy - cam.y + bob;
+  // The waterline stays put; only the float rides on it. In the last ~0.7s of
+  // the cast a fish is nibbling, so the float twitches and is tugged under.
+  const castDur     = manualCast.duration || effectiveCastTime();
+  const castElapsed = castDur - manualCast.timer;
+  const biting      = manualCast.timer < 0.7;
+  const dip = biting ? (0.5 + 0.5 * Math.sin(game.time * 26)) * (1.2 + 2.4 * (1 - manualCast.timer / 0.7)) : 0;
+  const bx = manualCast.wx - cam.x + Math.sin(game.time * 1.5) * 0.6;
+  const surfaceY = manualCast.wy - cam.y + 3;
+  const by = surfaceY - 3 + Math.sin(game.time * 4) * 0.9 + dip;
+  const topY = by - 9; // top of the float's antenna — where the line ties on
 
-  // Line from rod tip → control point → bobber (slight arc). Drawn before the
+  // Line from rod tip → control point → float (slight arc). Drawn before the
   // rod sprite below so the rod's art renders on top of it near the tip,
   // instead of the thin line floating visibly over the rod.
   const cpx = (rx1 + bx) / 2 + 6;
-  const cpy = (ry1 + by) / 2 - 8;
-  ctx.strokeStyle = 'rgba(200,225,255,0.65)';
+  const cpy = (ry1 + topY) / 2 - 8;
+  ctx.strokeStyle = 'rgba(210,230,255,0.7)';
   ctx.lineWidth = 0.7;
   ctx.beginPath();
   ctx.moveTo(rx1, ry1);
-  ctx.quadraticCurveTo(cpx, cpy, bx, by);
+  ctx.quadraticCurveTo(cpx, cpy, bx, topY);
   ctx.stroke();
 
   // Rod body — drawn from img/rod.png. The sprite's own handle/tip pixel
@@ -2142,24 +2169,82 @@ function drawFishingRod(ctx) {
     ctx.restore();
   }
 
-  // Bobber
-  ctx.fillStyle = '#cc2222';
-  ctx.beginPath(); ctx.arc(bx, by + 1.5, 3, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath(); ctx.arc(bx, by - 1.5, 3, 0, Math.PI * 2); ctx.fill();
-  // Bobber reflection
-  ctx.fillStyle = 'rgba(150,200,255,0.3)';
-  ctx.beginPath(); ctx.ellipse(bx, by + 3, 3, 1, 0, 0, Math.PI * 2); ctx.fill();
-
-  // Cast progress arc around bobber
-  const progress = 1 - manualCast.timer / (manualCast.duration || effectiveCastTime());
-  ctx.strokeStyle = '#4dca7c';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.arc(bx, by, 7, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
-  ctx.stroke();
-
+  drawBobber(ctx, bx, by, surfaceY, castElapsed, castDur, biting);
   ctx.lineCap = 'butt';
+}
+
+// Classic red-and-white fishing float sitting in the water: a dome on top, a
+// white belly that dips below the waterline, a thin antenna, ripples that
+// spread out from it, and a splash the moment it lands. `by` is the float's
+// centre, `surfaceY` the waterline, both in screen-space world units.
+function drawBobber(ctx, bx, by, surfaceY, elapsed, dur, biting) {
+  const t = game.time;
+
+  // Ripples — two rings spreading out and fading; faster while a fish bites.
+  const speed = biting ? 2.6 : 0.85;
+  for (let k = 0; k < 2; k++) {
+    const u = (t * speed + k * 0.5) % 1;
+    const rx = 3 + u * (biting ? 11 : 8);
+    ctx.strokeStyle = `rgba(225,242,255,${((1 - u) * 0.55).toFixed(3)})`;
+    ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.ellipse(bx, surfaceY, rx, rx * 0.4, 0, 0, Math.PI * 2); ctx.stroke();
+  }
+
+  // Landing splash — a bigger ring plus a few droplets thrown up in the first 0.35s.
+  if (elapsed < 0.35) {
+    const u = Math.max(0, elapsed) / 0.35;
+    ctx.strokeStyle = `rgba(255,255,255,${((1 - u) * 0.8).toFixed(3)})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(bx, surfaceY, 4 + u * 12, (4 + u * 12) * 0.4, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = `rgba(255,255,255,${(1 - u).toFixed(3)})`;
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 + 0.4;
+      ctx.fillRect(bx + Math.cos(a) * u * 8 - 0.5, surfaceY - Math.sin(u * Math.PI) * (5 + (i % 3) * 2) - 0.5, 1.2, 1.2);
+    }
+  }
+
+  // Cast progress — a ring on the water that fills as the fish gets closer.
+  // Drawn before the float so the float sits in front of it.
+  const progress = Math.min(1, Math.max(0, elapsed / dur));
+  ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.ellipse(bx, surfaceY, 10, 4.2, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.strokeStyle = biting ? '#f0c419' : '#4dca7c';
+  ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.ellipse(bx, surfaceY, 10, 4.2, 0, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress); ctx.stroke();
+  ctx.lineCap = 'butt';
+
+  // The float, clipped at the waterline so its belly reads as submerged.
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(bx - 10, surfaceY - 30, 20, 30);
+  ctx.clip();
+
+  ctx.fillStyle = '#2a2a33';                       // antenna
+  ctx.fillRect(bx - 0.5, by - 9, 1, 4);
+  ctx.fillStyle = '#ff5a48';                       // antenna tip
+  ctx.fillRect(bx - 1, by - 10, 2, 1.6);
+
+  ctx.fillStyle = '#5a1414';                       // outline (behind the fills)
+  ctx.beginPath(); ctx.arc(bx, by - 2, 3.9, Math.PI, 0); ctx.rect(bx - 3.9, by - 2, 7.8, 2.4);
+  ctx.arc(bx, by + 0.4, 3.9, 0, Math.PI); ctx.fill();
+
+  ctx.fillStyle = '#d92b2b';                       // red dome
+  ctx.beginPath(); ctx.arc(bx, by - 2, 3.1, Math.PI, 0); ctx.rect(bx - 3.1, by - 2, 6.2, 1.6); ctx.fill();
+  ctx.fillStyle = '#f6f3ea';                       // white belly
+  ctx.beginPath(); ctx.rect(bx - 3.1, by - 0.4, 6.2, 1); ctx.arc(bx, by + 0.6, 3.1, 0, Math.PI); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.75)';        // highlight
+  ctx.fillRect(bx - 2, by - 4.3, 1.3, 1.3);
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';              // shade on the far side
+  ctx.fillRect(bx + 1.6, by - 3, 1.2, 4);
+  ctx.restore();
+
+  // Meniscus where the float meets the water, and its soft reflection.
+  ctx.strokeStyle = 'rgba(235,248,255,0.75)';
+  ctx.lineWidth = 0.9;
+  ctx.beginPath(); ctx.ellipse(bx, surfaceY, 4.6, 1.7, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = 'rgba(217,43,43,0.22)';
+  ctx.beginPath(); ctx.ellipse(bx, surfaceY + 2.4, 2.4, 1.1, 0, 0, Math.PI * 2); ctx.fill();
 }
 
 // ─── Player ───────────────────────────────────────────────────────────────────
@@ -2390,7 +2475,7 @@ function drawToasts(ctx, canvas, dt) {
     if (t.life <= 0) { toasts.splice(i, 1); continue; }
     t.age = (t.age || 0) + dt;
 
-    const isMilestone = t.type === 'milestone' || t.type === 'achievement';
+    const isMilestone = t.type === 'achievement'; // the larger gold-framed style
 
     // Eased opacity: ease-in over 0.1s, ease-out over 0.35s
     const entryAlpha = Math.min(1, t.age / 0.1);

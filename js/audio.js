@@ -312,6 +312,14 @@ function sfxTeleport(volMult = 1) {
   playBuffer('teleport', volMult);
 }
 
+// Soft two-note rising chime for finishing a tutorial step — gentler than the
+// upgrade fanfare so a whole tutorial's worth of them doesn't grate.
+function sfxTutorialStep() {
+  if (!_sfxGate('tutorialStep')) return;
+  playTone({ freq: 659.25, dur: 0.09, type: 'triangle', vol: 0.15 });
+  playTone({ freq: 987.77, dur: 0.18, type: 'triangle', vol: 0.15, delay: 0.08 });
+}
+
 // Permanent level-up confirmation — global upgrades, per-instance machine
 // upgrades, and Research nodes all play this instead of sfxCoin, so a
 // level-up reads as distinct from a fish sale. Square wave to read distinct

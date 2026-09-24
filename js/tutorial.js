@@ -413,8 +413,24 @@ function replayTutorial() {
   startTutorial();
 }
 
+// A small "you did it" beat when a step completes: a chime, sparkles over the
+// player, and a green pulse on the card (which then swaps to the next step).
+function tutorialCelebrate(big) {
+  if (typeof sfxTutorialStep === 'function') sfxTutorialStep();
+  if (typeof spawnParticles === 'function') spawnParticles(player.wx, player.wy - 22, 'sparkle', big ? 22 : 9);
+  const el = document.getElementById('tutorialOverlay');
+  const badge = document.getElementById('tutorialBadge');
+  if (!el || el.classList.contains('hidden')) return;
+  el.classList.add('tut-done');
+  if (badge) { badge.classList.add('done'); badge.textContent = '✓'; }
+  clearTimeout(tutorialCelebrate._t);
+  tutorialCelebrate._t = setTimeout(() => el.classList.remove('tut-done'), 420);
+}
+
 function advanceStep() {
   const steps = currentSteps();
+  // The very first "Let's go" is just a greeting, not an accomplishment.
+  if (!(TUT.phase === 1 && TUT.stepIndex === 0)) tutorialCelebrate(TUT.stepIndex >= steps.length - 1);
   if (TUT.stepIndex >= steps.length - 1) {
     TUT.phase === 2 ? finishPhase2Tutorial() : finishTutorial();
   } else {
@@ -573,6 +589,7 @@ function _setOverlayParts(count, text, why, showNext, nextLabel) {
   next.textContent = nextLabel || 'Got it';
 }
 
+let _lastStepKey = null;
 function renderTutorialOverlay() {
   const el = document.getElementById('tutorialOverlay');
   if (!el) return;
@@ -604,6 +621,24 @@ function renderTutorialOverlay() {
   el.classList.remove('hidden');
   _setOverlayParts(`${phaseLabel} — Step ${TUT.stepIndex + 1} of ${steps.length}`,
     _val(step.text), _val(step.why), !!step.manual, step.nextLabel);
+
+  // Progress across the whole tutorial (both phases), and the step badge.
+  const total = TUTORIAL_PHASE1_STEPS.length + TUTORIAL_PHASE2_STEPS.length;
+  const doneCount = (TUT.phase === 2 ? TUTORIAL_PHASE1_STEPS.length : 0) + TUT.stepIndex;
+  const fill = document.getElementById('tutorialProgressFill');
+  if (fill) fill.style.width = Math.round((doneCount / total) * 100) + '%';
+  const badge = document.getElementById('tutorialBadge');
+  if (badge) { badge.classList.remove('done'); badge.textContent = String(TUT.stepIndex + 1); }
+
+  // Slide the card in whenever the step actually changed (not on re-renders
+  // for the skip prompt etc.).
+  const key = TUT.phase + ':' + TUT.stepIndex;
+  if (key !== _lastStepKey) {
+    _lastStepKey = key;
+    el.classList.remove('tut-enter');
+    void el.offsetWidth; // restart the CSS animation
+    el.classList.add('tut-enter');
+  }
 
   if (TUT.skipAsk && choice) {
     document.getElementById('tutorialSkipBtn').classList.add('hidden');

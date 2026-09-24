@@ -999,14 +999,46 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   z-index: 25;
   width: min(92vw, 540px);
   font-family: var(--font-ui);
-  background: rgba(10,18,16,0.97);
-  border: 1px solid var(--c-border);
-  border-radius: 10px;
-  box-shadow: 0 14px 32px rgba(0,0,0,0.5);
-  padding: 14px 18px;
+  background: linear-gradient(180deg, rgba(18,30,26,0.98), rgba(9,16,14,0.98));
+  border: 1px solid rgba(232,196,63,0.35);
+  border-radius: 12px;
+  box-shadow: 0 14px 32px rgba(0,0,0,0.55), 0 0 0 1px rgba(0,0,0,0.4), 0 0 22px rgba(232,196,63,0.10);
+  padding: 16px 20px 14px;
   text-align: center;
+  overflow: hidden;
+  transition: border-color 0.25s, box-shadow 0.25s;
 }
 .tutorial-overlay.hidden { display: none; }
+/* Slides up + fades in each time the step changes (retriggered from JS). */
+.tutorial-overlay.tut-enter { animation: tutEnter 0.32s cubic-bezier(.2,.9,.3,1.15); }
+@keyframes tutEnter {
+  from { opacity: 0; translate: 0 16px; }
+  to   { opacity: 1; translate: 0 0; }
+}
+/* Brief green pulse when a step is completed. */
+.tutorial-overlay.tut-done {
+  border-color: rgba(77,202,124,0.9);
+  box-shadow: 0 14px 32px rgba(0,0,0,0.55), 0 0 30px rgba(77,202,124,0.45);
+}
+
+/* Thin bar across the top of the card: how far through the whole tutorial. */
+.tutorial-progress { position: absolute; left: 0; right: 0; top: 0; height: 3px; background: rgba(255,255,255,0.07); }
+.tutorial-progress-fill {
+  height: 100%; width: 0;
+  background: linear-gradient(90deg, #e8a030, #f0d060);
+  box-shadow: 0 0 8px rgba(240,208,96,0.7);
+  transition: width 0.5s cubic-bezier(.3,.8,.3,1);
+}
+.tutorial-head { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 7px; }
+.tutorial-badge {
+  width: 20px; height: 20px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--c-accent); color: #1a1208;
+  font-size: 11px; font-weight: 800; line-height: 1;
+  box-shadow: 0 0 0 3px rgba(232,160,48,0.22);
+  flex: none;
+}
+.tutorial-badge.done { background: var(--c-mint); box-shadow: 0 0 0 3px rgba(77,202,124,0.25); }
 /* The joystick (110px tall) and action buttons (60px tall, stacked) sit in
    the same bottom corners on touch devices — lift the tutorial box clear of
    both instead of letting it sit underneath them. */
@@ -1020,7 +1052,9 @@ body.touch-active .tutorial-overlay {
   width: min(50vw, 400px);
   padding: 6px 12px 8px;
 }
-body.touch-active .tutorial-step-count { font-size: 9.5px; margin-bottom: 3px; }
+body.touch-active .tutorial-head       { margin-bottom: 3px; }
+body.touch-active .tutorial-badge      { width: 16px; height: 16px; font-size: 9.5px; }
+body.touch-active .tutorial-step-count { font-size: 9.5px; }
 body.touch-active .tutorial-step-text  { font-size: 12px; margin-bottom: 4px; }
 body.touch-active .tutorial-step-why   { font-size: 10.5px; line-height: 1.35; margin: -2px 0 5px; }
 body.touch-active .tutorial-step-hint  { font-size: 10.5px; margin: 0 0 5px; }
@@ -1049,13 +1083,13 @@ body.touch-active .tutorial-step-hint  { font-size: 10.5px; margin: 0 0 5px; }
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--c-accent);
-  margin-bottom: 6px;
 }
 .tutorial-step-text {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--c-text);
-  margin-bottom: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #fff;
+  margin-bottom: 8px;
 }
 .tutorial-skip-btn {
   appearance: none;
@@ -1081,26 +1115,39 @@ body.touch-active .tutorial-step-hint  { font-size: 10.5px; margin: 0 0 5px; }
 }
 .tutorial-step-why strong { color: var(--c-text); }
 .tutorial-step-hint {
+  display: inline-block;
   font-size: 12px;
   font-weight: 700;
   color: var(--c-mint);
-  margin: -2px 0 10px;
+  background: rgba(77,202,124,0.10);
+  border: 1px solid rgba(77,202,124,0.28);
+  border-radius: 999px;
+  padding: 3px 12px;
+  margin: 0 0 10px;
 }
 .tutorial-step-why:empty, .tutorial-step-hint:empty { display: none; }
 .tutorial-btn-row { display: flex; gap: 8px; justify-content: center; }
 .tutorial-next-btn {
   appearance: none;
   border: none;
-  background: var(--c-accent);
+  background: linear-gradient(180deg, #f0b040, #d98f22);
   color: #1a1208;
-  border-radius: 6px;
+  border-radius: 7px;
   font-family: var(--font-ui);
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 800;
-  padding: 6px 16px;
+  padding: 7px 20px;
   cursor: pointer;
+  box-shadow: 0 2px 0 #8a5a10, 0 4px 10px rgba(0,0,0,0.35);
+  transition: transform 0.1s, filter 0.15s;
+  animation: tutNextPulse 1.6s ease-in-out infinite;
 }
-.tutorial-next-btn:hover { filter: brightness(1.12); }
+.tutorial-next-btn:hover { filter: brightness(1.1); }
+.tutorial-next-btn:active { transform: translateY(2px); box-shadow: 0 0 0 #8a5a10, 0 2px 6px rgba(0,0,0,0.35); }
+@keyframes tutNextPulse {
+  0%, 100% { box-shadow: 0 2px 0 #8a5a10, 0 4px 10px rgba(0,0,0,0.35), 0 0 0 0 rgba(240,176,64,0.5); }
+  50%      { box-shadow: 0 2px 0 #8a5a10, 0 4px 10px rgba(0,0,0,0.35), 0 0 0 7px rgba(240,176,64,0); }
+}
 .tutorial-next-btn.hidden, .tutorial-skip-choice.hidden, .tutorial-skip-btn.hidden { display: none; }
 .tutorial-skip-choice { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; }
 .tutorial-skip-q { width: 100%; font-size: 12px; font-weight: 700; color: var(--c-text); }
@@ -1133,9 +1180,12 @@ body.touch-active .tutorial-step-hint  { font-size: 10.5px; margin: 0 0 5px; }
 /* Inline key badge — used inside tutorial step text for hotkey callouts */
 .tutorial-key {
   display: inline-block;
-  background: var(--c-accent);
-  color: #07080f;
-  border-radius: 4px;
+  min-width: 20px;
+  text-align: center;
+  background: linear-gradient(180deg, #f6c060, #e09a2a);
+  color: #1a1208;
+  border-radius: 5px;
+  border-bottom: 2px solid #8a5a10; /* keycap look */
   padding: 1px 6px;
   font-size: 11px;
   font-weight: 800;
@@ -1143,6 +1193,7 @@ body.touch-active .tutorial-step-hint  { font-size: 10.5px; margin: 0 0 5px; }
   vertical-align: middle;
   margin: 0 2px;
   font-style: normal;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.4);
 }
 
 /* ─── Build hint button ─────────────────────────────────────────────────────── */
