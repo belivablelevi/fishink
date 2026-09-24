@@ -1011,6 +1011,19 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
    the same bottom corners on touch devices — lift the tutorial box clear of
    both instead of letting it sit underneath them. */
 body.touch-active .tutorial-overlay { bottom: 180px; }
+/* Phone landscape is only ~360-400px tall. The taller tutorial card (why-line,
+   live hint, buttons) plus a 180px lift would cover most of the screen, so on
+   touch it goes compact at the top-centre, clear of the joystick/buttons
+   (bottom corners), the icon row (top-left) and the stats box (top-right). */
+body.touch-active .tutorial-overlay {
+  top: 6px; bottom: auto;
+  width: min(50vw, 400px);
+  padding: 6px 12px 8px;
+}
+body.touch-active .tutorial-step-count { font-size: 9.5px; margin-bottom: 3px; }
+body.touch-active .tutorial-step-text  { font-size: 12px; margin-bottom: 4px; }
+body.touch-active .tutorial-step-why   { font-size: 10.5px; line-height: 1.35; margin: -2px 0 5px; }
+body.touch-active .tutorial-step-hint  { font-size: 10.5px; margin: 0 0 5px; }
 
 .rotate-overlay {
   position: fixed;
@@ -1517,6 +1530,8 @@ body.touch-active .bottom-right-group { right: 90px; bottom: 20px; }
 }
 .start-screen-overlay.hidden { display: none; }
 .start-screen-card {
+  max-height: 96vh;
+  overflow-y: auto; /* phone landscape is ~360px tall — the taller cards (Sign In) must scroll instead of clipping */
   width: 320px;
   display: flex;
   flex-direction: column;

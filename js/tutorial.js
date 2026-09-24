@@ -13,6 +13,11 @@
 // `targets` returns [{tile, label}] for the world arrow; `ui` is a CSS
 // selector (or array) for a DOM element to ring + point at.
 
+// Phones have no keyboard or right-click: the same steps say "tap" and point at
+// the on-screen joystick/Interact/Build/Rotate/Exit buttons instead.
+const onTouch = () => typeof IS_TOUCH !== 'undefined' && IS_TOUCH;
+const keyBadge = k => `<span class="tutorial-key">${k}</span>`;
+
 const GLYPH = ['→', '↓', '←', '↑'];
 // Canvas label chips use a small sans font where the arrow glyphs render as
 // unreadable slivers ("Belt |"), so spell the direction out there.
@@ -29,7 +34,9 @@ const TUTORIAL_PHASE1_STEPS = [
   },
   {
     id: 'move',
-    text: 'Use <span class="tutorial-key">WASD</span> or the Arrow Keys to walk around.',
+    text: () => onTouch()
+      ? 'Drag the <strong>joystick</strong> (bottom-left) to walk around.'
+      : 'Use ' + keyBadge('WASD') + ' or the Arrow Keys to walk around.',
     why: 'The dark floor is your dock. The belt on it carries fish to the <strong>SELL</strong> box at its end.',
     targets: () => TUT.sandTile ? [{ tile: TUT.sandTile, label: 'Walk here' }] : [],
     onEnter() {
@@ -39,15 +46,15 @@ const TUTORIAL_PHASE1_STEPS = [
   },
   {
     id: 'cast',
-    text: 'Left-click a <strong>water</strong> tile to cast your line.',
+    text: () => (onTouch() ? 'Tap' : 'Left-click') + ' a <strong>water</strong> tile to cast your line.',
     why: 'You can only cast about 6 tiles from where you stand. If you see "Too far to cast!", walk closer to the water first.',
     hint: () => {
       const t = TUT.fishingTile;
       if (!t) return '';
       const d = Math.hypot((t.c + 0.5) * TILE_SIZE - player.wx, (t.r + 0.5) * TILE_SIZE - player.wy);
-      return d > FISHING_ROD_RANGE ? 'A bit too far — walk toward the arrow.' : 'In range — click the water!';
+      return d > FISHING_ROD_RANGE ? 'A bit too far — walk toward the arrow.' : (onTouch() ? 'In range — tap the water!' : 'In range — click the water!');
     },
-    targets: () => TUT.fishingTile ? [{ tile: TUT.fishingTile, label: 'Click here' }] : [],
+    targets: () => TUT.fishingTile ? [{ tile: TUT.fishingTile, label: onTouch() ? 'Tap here' : 'Click here' }] : [],
     onEnter() { TUT.fishingTile = tileNear(player, (c, r) => tileAt(c, r) === T_WATER, 0); },
   },
   {
@@ -57,8 +64,12 @@ const TUTORIAL_PHASE1_STEPS = [
   },
   {
     id: 'drop',
-    text: 'Walk to the belt, then press <span class="tutorial-key">E</span> — or just click the belt — to drop your fish on it.',
-    why: 'For <strong>E</strong> to work you must be standing right next to the belt (hover it with your mouse). Clicking the belt works from anywhere.',
+    text: () => onTouch()
+      ? 'Tap the belt to drop your fish on it.'
+      : 'Walk to the belt, then press ' + keyBadge('E') + ' — or just click the belt — to drop your fish on it.',
+    why: () => onTouch()
+      ? 'Tapping the belt works from anywhere. (Or stand right next to it, tap it, then press <strong>Interact</strong>.)'
+      : 'For <strong>E</strong> to work you must be standing right next to the belt (hover it with your mouse). Clicking the belt works from anywhere.',
     targets: () => TUT.beltTile ? [{ tile: TUT.beltTile, label: 'Belt' }] : [],
     onEnter() { TUT.beltTile = tileNear(player, (c, r) => IS_TRANSPORT(blockAt(c, r)), 0); },
   },
@@ -95,15 +106,16 @@ const TUTORIAL_PHASE2_STEPS = [
   {
     id: 'build_open',
     ui: '#buildHint',
-    text: 'You can afford it! Press <span class="tutorial-key">B</span> to open Build Mode.',
-    why: 'Build Mode is where you place machines. Everything you place costs cash, and right-click removes things (you get half back).',
+    text: () => 'You can afford it! ' + (onTouch() ? 'Tap the <strong>Build</strong> button' : 'Press ' + keyBadge('B')) + ' to open Build Mode.',
+    why: () => 'Build Mode is where you place machines. Everything you place costs cash' + (onTouch() ? '.' : ', and right-click removes things (you get half back).'),
     advance: () => fisherExists(),
   },
   {
     id: 'place_fisher',
     ui: () => cardSelector(B_FISHER),
-    text: 'Click the <strong>Fisher</strong> card, then click the glowing <strong>shore</strong> tile.',
-    why: 'Fishers only work on shore tiles (sand next to water). It catches fish forever and pushes them onto any belt beside it. Tip: with the menu closed, press <span class="tutorial-key">1</span> Concrete, <span class="tutorial-key">2</span> Fisher, <span class="tutorial-key">3</span> Belt.',
+    text: () => (onTouch() ? 'Tap' : 'Click') + ' the <strong>Fisher</strong> card, then ' + (onTouch() ? 'tap' : 'click') + ' the glowing <strong>shore</strong> tile.',
+    why: () => 'Fishers only work on shore tiles (sand next to water). It catches fish forever and pushes them onto any belt beside it.'
+      + (onTouch() ? '' : ' Tip: with the menu closed, press ' + keyBadge('1') + ' Concrete, ' + keyBadge('2') + ' Fisher, ' + keyBadge('3') + ' Belt.'),
     targets: () => TUT.plan ? [{ tile: TUT.plan.fisher, label: 'Place Fisher' }] : [],
     advance: () => fisherExists(),
   },
@@ -111,7 +123,7 @@ const TUTORIAL_PHASE2_STEPS = [
     id: 'place_concrete',
     ui: () => cardSelector(B_CONCRETE),
     text: 'Now lay <strong>Concrete</strong> on the glowing tiles to make a path.',
-    why: 'Belts can only be built on concrete floor ($5 a tile). Select Concrete (<span class="tutorial-key">1</span> or its card) and click each glowing tile.',
+    why: () => 'Belts can only be built on concrete floor ($5 a tile). Select Concrete (' + (onTouch() ? 'open <strong>Build</strong> and tap its card' : keyBadge('1') + ' or its card') + ') and ' + (onTouch() ? 'tap' : 'click') + ' each glowing tile.',
     hint: () => {
       const p = TUT.plan;
       if (!p) return '';
@@ -125,7 +137,7 @@ const TUTORIAL_PHASE2_STEPS = [
     id: 'place_belt',
     ui: () => cardSelector(B_BELT),
     text: 'Place <strong>Belts</strong> on those same tiles, each one facing the way fish should travel.',
-    why: () => `Belts carry fish the way their arrows point. Select Belt (<span class="tutorial-key">3</span>) and press <span class="tutorial-key">R</span> to rotate it before placing. The last belt should point into the ${TUT.plan ? TUT.plan.goalName : 'Seller'}.`,
+    why: () => `Belts carry fish the way their arrows point. Select Belt (${onTouch() ? 'its card in Build' : keyBadge('3')}) and ${onTouch() ? 'tap <strong>Rotate</strong>' : 'press ' + keyBadge('R')} to turn it before placing. The last belt should point into the ${TUT.plan ? TUT.plan.goalName : 'Seller'}.`,
     hint: () => beltHint(),
     targets: () => planTargets('belt'),
     advance: () => pathConnected().ok,
@@ -133,7 +145,7 @@ const TUTORIAL_PHASE2_STEPS = [
   {
     id: 'close_build',
     ui: ['#hudExitBtn', '#menuCloseBtn'], // the palette is closed here, so the HUD's Exit button is the visible one
-    text: 'Path connected! Press <span class="tutorial-key">B</span> or <span class="tutorial-key">Esc</span> to leave Build Mode and watch it work.',
+    text: () => 'Path connected! ' + (onTouch() ? 'Tap <strong>Exit</strong>' : 'Press ' + keyBadge('B') + ' or ' + keyBadge('Esc')) + ' to leave Build Mode and watch it work.',
     why: 'Your Fisher now catches fish on its own and the belt carries every one to the Seller.',
   },
   {
@@ -141,7 +153,9 @@ const TUTORIAL_PHASE2_STEPS = [
     manual: true,
     nextLabel: 'Finish',
     text: 'Your factory is running! Fish sell automatically now.',
-    why: 'Next: hover your Fisher and press <strong>E</strong> to upgrade it, check the <strong>Upgrades</strong> and <strong>Research</strong> tabs in the Build menu (<strong>B</strong>), and add more Fishers as your cash grows.',
+    why: () => onTouch()
+      ? 'Next: tap your Fisher then <strong>Interact</strong> to upgrade it, check the <strong>Upgrades</strong> and <strong>Research</strong> tabs in the Build menu, and add more Fishers as your cash grows.'
+      : 'Next: hover your Fisher and press <strong>E</strong> to upgrade it, check the <strong>Upgrades</strong> and <strong>Research</strong> tabs in the Build menu (<strong>B</strong>), and add more Fishers as your cash grows.',
     targets: () => TUT.fisher ? [{ tile: TUT.fisher, label: 'Your Fisher' }] : [],
   },
 ];
@@ -352,7 +366,7 @@ function beltHint() {
   }
   if (wrong !== null) return `A belt is facing the wrong way — the glowing tile needs ${GLYPH[p.dirs[wrong]]}. Right-click it and place it again.`;
   if (next !== null) {
-    const rot = (buildMode.beltDir % 4) === p.dirs[next] ? ' (facing is right!)' : ' — press R to rotate';
+    const rot = (buildMode.beltDir % 4) === p.dirs[next] ? ' (facing is right!)' : (onTouch() ? ' — tap Rotate' : ' — press R to rotate');
     return `Belts placed: ${placed} / ${p.path.length} · next belt should face ${GLYPH[p.dirs[next]]}${rot}`;
   }
   const res = pathConnected();
@@ -436,11 +450,29 @@ function tutorialOnPlaced(id, c, r) {
   tutorialTick();
 }
 
+// Phones have no right-click, so a wrongly-faced belt in the planned path
+// couldn't be removed and re-placed — the touch player would be stuck. Turn it
+// for them instead.
+function fixWrongBelts() {
+  const p = TUT.plan;
+  if (!p) return;
+  for (let i = 0; i < p.path.length; i++) {
+    const t = p.path[i];
+    if (!IS_TRANSPORT(blockAt(t.c, t.r))) continue;
+    const st = stateAt(t.c, t.r);
+    if ((st.dir || 0) === p.dirs[i]) continue;
+    st.dir = p.dirs[i];
+    st.routeLockedFor = null;
+    queueToast('Turned that belt to face the right way.', '#4dca7c');
+  }
+}
+
 // Polled every sim frame: advance predicate steps, refresh hint text and the
 // DOM pointer.
 let _lastHint = null;
 function tutorialTick() {
   if (!TUT.active) { _syncUiPointer(null); return; }
+  if (onTouch() && TUT.phase === 2 && currentStep()?.id === 'place_belt') fixWrongBelts();
   for (let guard = 0; guard < 8; guard++) {
     const s = currentStep();
     if (!TUT.active || !s || !s.advance || !s.advance()) break;
@@ -554,7 +586,9 @@ function renderTutorialOverlay() {
   if (UPGRADE_TIP.active) {
     el.classList.remove('hidden');
     _setOverlayParts('Tip',
-      'You can afford to upgrade your Fisher! Hover it and press <span class="tutorial-key">E</span>, then click Upgrade.',
+      onTouch()
+        ? 'You can afford to upgrade your Fisher! Tap it, press <strong>Interact</strong>, then tap Upgrade.'
+        : 'You can afford to upgrade your Fisher! Hover it and press <span class="tutorial-key">E</span>, then click Upgrade.',
       'Upgrades make a machine catch or process faster and worth more.', false);
     document.getElementById('tutorialSkipBtn').textContent = 'Got it';
     return;
@@ -629,7 +663,7 @@ function _syncUiPointer(spec) {
 function tutorialTargets() {
   if (UPGRADE_TIP.active) {
     const f = findFisher();
-    return f ? [{ wx: (f.c + 0.5) * TILE_SIZE, wy: (f.r + 0.5) * TILE_SIZE, label: 'Hover + E' }] : [];
+    return f ? [{ wx: (f.c + 0.5) * TILE_SIZE, wy: (f.r + 0.5) * TILE_SIZE, label: onTouch() ? 'Tap + Interact' : 'Hover + E' }] : [];
   }
   if (!TUT.active) return [];
   const step = currentStep();
