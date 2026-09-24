@@ -1107,13 +1107,13 @@ body.touch-active .tutorial-step-hint  { font-size: 10.5px; margin: 0 0 5px; }
 .tutorial-skip-btn:hover { background: rgba(255,255,255,0.16); color: var(--c-text); }
 
 .tutorial-step-why {
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--c-muted);
+  color: #d3ddd8; /* near-white with a slight green tint; was the dim muted grey */
   margin: -4px 0 10px;
 }
-.tutorial-step-why strong { color: var(--c-text); }
+.tutorial-step-why strong { color: #fff; }
 .tutorial-step-hint {
   display: inline-block;
   font-size: 12px;

@@ -1,7 +1,7 @@
-// Fish INK Factory — two-phase tutorial
+// Fish INK Factory - two-phase tutorial
 //
-// Phase 1 (6 steps): manual fishing loop — intro, move, cast, catch, drop, sell.
-// Phase 2 (7 steps): automation — earn the cash, open Build Mode, place a
+// Phase 1 (6 steps): manual fishing loop - intro, move, cast, catch, drop, sell.
+// Phase 2 (7 steps): automation - earn the cash, open Build Mode, place a
 //   Fisher, lay concrete, lay belts to the Seller, exit, wrap-up. Fires
 //   automatically after Phase 1, only for players who have never placed a
 //   block (game.blocksPlaced === 0), so returning players aren't re-tutorialed.
@@ -30,7 +30,7 @@ const TUTORIAL_PHASE1_STEPS = [
     nextLabel: "Let's go",
     ui: '#cashHud',
     text: 'Welcome to <strong>Fish INK</strong>! You\'ll catch fish, sell them for cash, then build a factory that fishes for you.',
-    why: 'This takes about two minutes. Your cash is shown bottom-left — it\'s what you\'ll spend on machines.',
+    why: 'This takes about two minutes. Your cash is shown bottom-left. It\'s what you\'ll spend on machines.',
   },
   {
     id: 'move',
@@ -52,7 +52,7 @@ const TUTORIAL_PHASE1_STEPS = [
       const t = TUT.fishingTile;
       if (!t) return '';
       const d = Math.hypot((t.c + 0.5) * TILE_SIZE - player.wx, (t.r + 0.5) * TILE_SIZE - player.wy);
-      return d > FISHING_ROD_RANGE ? 'A bit too far — walk toward the arrow.' : (onTouch() ? 'In range — tap the water!' : 'In range — click the water!');
+      return d > FISHING_ROD_RANGE ? 'A bit too far. Walk toward the arrow.' : (onTouch() ? 'In range. Tap the water!' : 'In range. Click the water!');
     },
     targets: () => TUT.fishingTile ? [{ tile: TUT.fishingTile, label: onTouch() ? 'Tap here' : 'Click here' }] : [],
     onEnter() { TUT.fishingTile = tileNear(player, (c, r) => tileAt(c, r) === T_WATER, 0); },
@@ -66,7 +66,7 @@ const TUTORIAL_PHASE1_STEPS = [
     id: 'drop',
     text: () => onTouch()
       ? 'Tap the belt to drop your fish on it.'
-      : 'Walk to the belt, then press ' + keyBadge('E') + ' — or just click the belt — to drop your fish on it.',
+      : 'Walk to the belt, then press ' + keyBadge('E') + ' (or just click the belt) to drop your fish on it.',
     why: () => onTouch()
       ? 'Tapping the belt works from anywhere. (Or stand right next to it, tap it, then press <strong>Interact</strong>.)'
       : 'For <strong>E</strong> to work you must be standing right next to the belt (hover it with your mouse). Clicking the belt works from anywhere.',
@@ -77,7 +77,7 @@ const TUTORIAL_PHASE1_STEPS = [
     id: 'sell',
     ui: '#cashHud',
     text: 'Watch your fish ride the belt to the <strong>Seller</strong> and turn into cash!',
-    why: 'The Seller buys any fish that reaches it — bigger and rarer fish sell for more. Watch your cash (bottom-left) go up.',
+    why: 'The Seller buys any fish that reaches it. Bigger and rarer fish sell for more. Watch your cash (bottom-left) go up.',
     targets: () => TUT.sellerTile ? [{ tile: TUT.sellerTile, label: 'Seller' }] : [],
     onEnter() { TUT.sellerTile = tileNear(player, (c, r) => blockAt(c, r) === B_SELLER, 0); },
   },
@@ -87,7 +87,7 @@ const TUTORIAL_PHASE2_STEPS = [
   {
     id: 'fund',
     ui: '#cashHud',
-    text: 'Now let\'s <strong>automate</strong>! A <strong>Fisher</strong> catches fish for you — but first you need some cash.',
+    text: 'Now let\'s <strong>automate</strong>! A <strong>Fisher</strong> catches fish for you, but first you need some cash.',
     why: () => {
       const p = TUT.plan;
       const tiles = p ? p.path.length : 0;
@@ -332,7 +332,7 @@ function planTargets(kind) {
       if (tileAt(t.c, t.r) !== T_CONCRETE) out.push({ tile: t, label: out.length === 0 ? 'Concrete' : '' });
     } else {
       const ok = IS_TRANSPORT(blockAt(t.c, t.r)) && (stateAt(t.c, t.r).dir || 0) === p.dirs[i];
-      // Only the first pending tile gets a chip — stacked chips overlap.
+      // Only the first pending tile gets a chip - stacked chips overlap.
       if (!ok) out.push({ tile: t, label: out.length === 0 ? `Belt: face ${DIR_WORD[p.dirs[i]]}` : '' });
     }
   }
@@ -349,7 +349,7 @@ function shortCashNote() {
     if (!IS_TRANSPORT(blockAt(t.c, t.r))) need += BLOCK_COSTS[B_BELT];
     if (tileAt(t.c, t.r) !== T_CONCRETE) need += BLOCK_COSTS[B_CONCRETE];
   }
-  return game.cash < need ? `Not enough cash — you need $${Math.ceil(need - game.cash)} more. Keep fishing by hand. ` : '';
+  return game.cash < need ? `Not enough cash: you need $${Math.ceil(need - game.cash)} more. Keep fishing by hand. ` : '';
 }
 
 function beltHint() {
@@ -364,13 +364,13 @@ function beltHint() {
       if ((stateAt(t.c, t.r).dir || 0) === p.dirs[i]) placed++; else if (!wrong) wrong = i;
     } else if (next === null) next = i;
   }
-  if (wrong !== null) return `A belt is facing the wrong way — the glowing tile needs ${GLYPH[p.dirs[wrong]]}. Right-click it and place it again.`;
+  if (wrong !== null) return `A belt is facing the wrong way. The glowing tile needs ${GLYPH[p.dirs[wrong]]}. Right-click it and place it again.`;
   if (next !== null) {
-    const rot = (buildMode.beltDir % 4) === p.dirs[next] ? ' (facing is right!)' : (onTouch() ? ' — tap Rotate' : ' — press R to rotate');
+    const rot = (buildMode.beltDir % 4) === p.dirs[next] ? ' (facing is right!)' : (onTouch() ? ' (tap Rotate)' : ' (press R to rotate)');
     return `Belts placed: ${placed} / ${p.path.length} · next belt should face ${GLYPH[p.dirs[next]]}${rot}`;
   }
   const res = pathConnected();
-  return res.ok ? '' : 'Almost — make sure every belt faces along the path.';
+  return res.ok ? '' : 'Almost there. Make sure every belt faces along the path.';
 }
 
 // ─── Lifecycle ───────────────────────────────────────────────────────────────
@@ -467,7 +467,7 @@ function tutorialOnPlaced(id, c, r) {
 }
 
 // Phones have no right-click, so a wrongly-faced belt in the planned path
-// couldn't be removed and re-placed — the touch player would be stuck. Turn it
+// couldn't be removed and re-placed - the touch player would be stuck. Turn it
 // for them instead.
 function fixWrongBelts() {
   const p = TUT.plan;
@@ -507,7 +507,7 @@ function tutorialTick() {
 
 function skipTutorial() {
   if (UPGRADE_TIP.active) { dismissUpgradeTip(); return; }
-  // In phase 1, skipping used to silently skip the automation lessons too —
+  // In phase 1, skipping used to silently skip the automation lessons too -
   // ask which one the player means.
   if (TUT.phase === 1 && !TUT.skipAsk) {
     TUT.skipAsk = true;
@@ -619,7 +619,7 @@ function renderTutorialOverlay() {
   const phaseLabel = TUT.phase === 2 ? 'Automation Tutorial' : 'Fishing Tutorial';
 
   el.classList.remove('hidden');
-  _setOverlayParts(`${phaseLabel} — Step ${TUT.stepIndex + 1} of ${steps.length}`,
+  _setOverlayParts(`${phaseLabel} · Step ${TUT.stepIndex + 1} of ${steps.length}`,
     _val(step.text), _val(step.why), !!step.manual, step.nextLabel);
 
   // Progress across the whole tutorial (both phases), and the step badge.
@@ -654,7 +654,7 @@ function renderTutorialOverlay() {
 }
 
 // ─── Build hint button ───────────────────────────────────────────────────────
-// A persistent "B — Build" button visible when not in build mode. Pulses
+// A persistent "B - Build" button visible when not in build mode. Pulses
 // during the build_open tutorial step so players know exactly what to press.
 function updateBuildHintUI() {
   const el = document.getElementById('buildHint');
