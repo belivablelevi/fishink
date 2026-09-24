@@ -39,7 +39,7 @@ function serializeGame() {
     },
     upgradeLevels,
     researchLevels,
-    blueprintLibrary: blueprint.library, blueprintActiveId: blueprint.activeId, nextBlueprintId,
+    blueprintCurrent: blueprint.current,
     heldFish,
     STARTER_C, STARTER_R,
     offshoreIslands,
@@ -81,9 +81,13 @@ function deserializeGame(data) {
   Object.assign(upgradeLevels, data.upgradeLevels);
   Object.assign(researchLevels, data.researchLevels || {});
 
-  blueprint.library  = data.blueprintLibrary || [];
-  blueprint.activeId = data.blueprintActiveId || null;
-  nextBlueprintId     = data.nextBlueprintId || (blueprint.library.reduce((m, b) => Math.max(m, b.id), 0) + 1);
+  // blueprintCurrent is the current single-slot format; blueprintLibrary/
+  // blueprintActiveId is a save from before the multi-slot "library" (whose
+  // management UI was never actually reachable in-game) got collapsed back
+  // down to one clipboard slot — pull whatever was active out of it.
+  blueprint.current = data.blueprintCurrent
+    || (data.blueprintLibrary || []).find(b => b.id === data.blueprintActiveId)
+    || null;
   blueprint.pasting   = false;
   blueprint.selecting = false;
   blueprint.pasteRotation = 0;

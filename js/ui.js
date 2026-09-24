@@ -1,6 +1,6 @@
 // Fish INK Factory — build/upgrades menu (DOM overlay, tabbed Godot-style)
 
-let buildMenuEl, buildPanelEl, upgradesPanelEl, fishIndexPanelEl, statsPanelEl, controlsPanelEl, researchPanelEl, prestigePanelEl, blueprintsPanelEl, menuCashEl;
+let buildMenuEl, buildPanelEl, upgradesPanelEl, fishIndexPanelEl, statsPanelEl, controlsPanelEl, researchPanelEl, prestigePanelEl, menuCashEl;
 let leaderboardPanelEl;
 
 function updateCloudStatusUI() {
@@ -417,7 +417,6 @@ function initBuildMenu() {
   controlsPanelEl  = document.getElementById('controlsPanel');
   researchPanelEl  = document.getElementById('researchPanel');
   prestigePanelEl  = document.getElementById('prestigePanel');
-  blueprintsPanelEl = document.getElementById('blueprintsPanel');
   menuCashEl       = document.getElementById('menuCash');
 
   buildMenuEl.querySelectorAll('.tab').forEach(tab => {
@@ -432,7 +431,6 @@ function initBuildMenu() {
   renderControlsPanel();
   renderResearchPanel();
   renderPrestigePanel();
-  renderBlueprintsPanel();
 }
 
 function switchMenuTab(name) {
@@ -462,7 +460,6 @@ function setBuildMenuOpen(open) {
     renderResearchPanel();
     renderPrestigePanel();
     renderPetsPanel();
-    renderBlueprintsPanel();
     menuCashEl.textContent = `$${formatMoney(game.cash)}`;
   }
   if (typeof updateBuildHintUI === 'function') updateBuildHintUI();
@@ -830,98 +827,6 @@ function renderPrestigePanel() {
     row.appendChild(info);
     row.appendChild(buyBtn);
     prestigePanelEl.appendChild(row);
-  }
-}
-
-// ─── Blueprints tab ────────────────────────────────────────────────────────
-function renderBlueprintsPanel() {
-  blueprintsPanelEl.innerHTML = '';
-
-  const hint = document.createElement('div');
-  hint.className = 'panel-hint';
-  hint.textContent = 'Copy (C) saves a layout here. Pick one Active, then Paste (V) to stamp it.';
-  blueprintsPanelEl.appendChild(hint);
-
-  const importRow = document.createElement('div');
-  importRow.className = 'upgrade-row';
-  importRow.innerHTML = `<div class="upgrade-info"><div class="name">Import a shared layout</div><div class="desc">Paste a blueprint code someone shared on Discord</div></div>`;
-  const importBtn = document.createElement('button');
-  importBtn.className = 'upgrade-buy';
-  importBtn.textContent = 'Paste Code';
-  importBtn.addEventListener('click', () => {
-    const code = prompt('Paste blueprint code:');
-    if (code && importBlueprintCode(code)) { renderBlueprintsPanel(); updateBuildHud(); }
-  });
-  importRow.appendChild(importBtn);
-  blueprintsPanelEl.appendChild(importRow);
-
-  if (blueprint.library.length === 0) {
-    const empty = document.createElement('div');
-    empty.className = 'panel-hint';
-    empty.textContent = 'No blueprints yet. Drag-select an area with Copy (C) to save one.';
-    blueprintsPanelEl.appendChild(empty);
-    return;
-  }
-
-  for (const entry of blueprint.library) {
-    const isActive = blueprint.activeId === entry.id;
-
-    const row = document.createElement('div');
-    row.className = 'upgrade-row';
-
-    const info = document.createElement('div');
-    info.className = 'upgrade-info';
-    info.innerHTML = `
-      <div class="name">
-        <input class="bp-name-input" type="text" value="${entry.name}" maxlength="40">
-        ${isActive ? '<span class="level-badge">ACTIVE</span>' : ''}
-      </div>
-      <div class="desc">${entry.w}&times;${entry.h} tiles &middot; ${entry.tiles.length} cell(s)</div>
-    `;
-    const nameInput = info.querySelector('.bp-name-input');
-    nameInput.addEventListener('change', () => {
-      renameBlueprint(entry.id, nameInput.value);
-      renderBlueprintsPanel();
-      updateBuildHud();
-    });
-
-    const btnGroup = document.createElement('div');
-    btnGroup.className = 'level-pair';
-
-    const loadBtn = document.createElement('button');
-    loadBtn.className = 'upgrade-buy';
-    loadBtn.textContent = isActive ? 'Active' : 'Load';
-    loadBtn.disabled = isActive;
-    loadBtn.addEventListener('click', () => {
-      selectBlueprint(entry.id);
-      renderBlueprintsPanel();
-      updateBuildHud();
-    });
-
-    const copyBtn = document.createElement('button');
-    copyBtn.className = 'upgrade-buy';
-    copyBtn.textContent = 'Copy Code';
-    copyBtn.addEventListener('click', () => {
-      const code = exportBlueprintCode(entry.id);
-      if (code) navigator.clipboard.writeText(code).then(() => queueToast('Blueprint code copied to clipboard', '#4dca7c'));
-    });
-
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'upgrade-buy bp-delete-btn';
-    deleteBtn.textContent = 'Delete';
-    deleteBtn.addEventListener('click', () => {
-      deleteBlueprint(entry.id);
-      renderBlueprintsPanel();
-      updateBuildHud();
-    });
-
-    btnGroup.appendChild(loadBtn);
-    btnGroup.appendChild(copyBtn);
-    btnGroup.appendChild(deleteBtn);
-
-    row.appendChild(info);
-    row.appendChild(btnGroup);
-    blueprintsPanelEl.appendChild(row);
   }
 }
 

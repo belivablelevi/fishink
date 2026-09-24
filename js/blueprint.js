@@ -4,15 +4,12 @@
 const blueprint = {
   selecting: false, // 'C' toggles — drag a rectangle to copy
   pasting: false,   // 'V' toggles — ghost follows the mouse, click to stamp
-  library: [],      // [{ id, name, w, h, tiles, createdAt }] — named, persistent multi-slot clipboard
-  activeId: null,   // id of the entry Paste/Rotate currently act on
-  pasteRotation: 0, // 0-3 — preview-only rotation steps applied on top of the active entry; resets after each stamp
+  current: null,    // { w, h, tiles } — the one copied layout; each Copy overwrites it
+  pasteRotation: 0, // 0-3 — preview-only rotation steps applied on top of the copy; resets after each stamp
 };
-let nextBlueprintId = 1;
-const BLUEPRINT_LIBRARY_MAX = 20;
 
 function activeBlueprint() {
-  return blueprint.library.find(b => b.id === blueprint.activeId) || null;
+  return blueprint.current;
 }
 
 let bpDragStart = null; // { c, r } — set on mousedown while blueprint.selecting
@@ -33,20 +30,19 @@ function toggleBlueprintPaste() {
 }
 
 // Advances the preview-only rotation by one 90° clockwise step. This never
-// touches the active library entry itself — only the ghost preview (and the
-// tiles actually stamped down) reflect the rotation; the clipboard always
-// goes back to its originally-copied orientation once you place it.
+// touches the copied layout itself — only the ghost preview (and the tiles
+// actually stamped down) reflect the rotation; the clipboard always goes
+// back to its originally-copied orientation once you place it.
 function rotateBlueprintClipboard() {
   if (!activeBlueprint()) return;
   blueprint.pasteRotation = (blueprint.pasteRotation + 1) % 4;
 }
 
-// Returns the active library entry rotated 90° clockwise
-// `blueprint.pasteRotation` times, without mutating the original. Each step
-// maps a tile's offset into a box with width/height swapped, and `dir`
-// advances one step through BELT_DIRS (same clockwise convention used
-// everywhere else dir is rotated, e.g. the build-mode R key and the Smart
-// Router's right turn).
+// Returns the copied layout rotated 90° clockwise `blueprint.pasteRotation`
+// times, without mutating the original. Each step maps a tile's offset into
+// a box with width/height swapped, and `dir` advances one step through
+// BELT_DIRS (same clockwise convention used everywhere else dir is rotated,
+// e.g. the build-mode R key and the Smart Router's right turn).
 function getRotatedClipboard() {
   const active = activeBlueprint();
   if (!active) return null;
@@ -80,20 +76,9 @@ function captureBlueprint(start, end) {
       });
     }
   }
-  if (blueprint.library.length >= BLUEPRINT_LIBRARY_MAX) {
-    queueToast('Blueprint library full (20 max)', '#e85d4a');
-    return;
-  }
-  const entry = {
-    id: nextBlueprintId++,
-    name: `Blueprint ${blueprint.library.length + 1}`,
-    w: c1 - c0 + 1, h: r1 - r0 + 1, tiles,
-    createdAt: Date.now(),
-  };
-  blueprint.library.push(entry);
-  blueprint.activeId = entry.id;
+  blueprint.current = { w: c1 - c0 + 1, h: r1 - r0 + 1, tiles };
   blueprint.pasteRotation = 0;
-  queueToast(`Copied ${tiles.length} tile(s) — saved as "${entry.name}"`, '#4dca7c');
+  queueToast(`Copied ${tiles.length} tile(s)`, '#4dca7c');
   saveGame();
 }
 
@@ -163,53 +148,3 @@ function pasteBlueprint(originC, originR) {
   blueprint.pasteRotation = 0; // back to the original orientation for the next stamp
 }
 
-function renameBlueprint(id, newName) {
-  const entry = blueprint.library.find(b => b.id === id);
-  if (!entry) return false;
-  const trimmed = (newName || '').trim().slice(0, 40);
-  if (!trimmed) return false;
-  entry.name = trimmed;
-  saveGame();
-  return true;
-}
-
-function deleteBlueprint(id) {
-  const idx = blueprint.library.findIndex(b => b.id === id);
-  if (idx === -1) return false;
-  blueprint.library.splice(idx, 1);
-  if (blueprint.activeId === id) { blueprint.activeId = null; blueprint.pasting = false; }
-  saveGame();
-  return true;
-}
-
-// Shareable plain-text codes — lets a player post a layout to Discord and
-// have someone else recreate it exactly. Reuses the A2-fixed `tiles` data
-// shape (captureBlueprintConfig already strips upgrade levels), so an
-// imported blueprint never carries free upgrades either.
-function exportBlueprintCode(id) {
-  const entry = blueprint.library.find(b => b.id === id);
-  if (!entry) return null;
-  const { id: _drop, createdAt: _drop2, ...portable } = entry;
-  return btoa(JSON.stringify(portable));
-}
-
-function importBlueprintCode(code) {
-  try {
-    const portable = JSON.parse(atob(code.trim()));
-    if (!portable.tiles || !portable.w || !portable.h) throw new Error('bad shape');
-    if (blueprint.library.length >= BLUEPRINT_LIBRARY_MAX) { queueToast('Blueprint library full (20 max)', '#e85d4a'); return false; }
-    const entry = { id: nextBlueprintId++, name: portable.name || 'Imported', w: portable.w, h: portable.h, tiles: portable.tiles, createdAt: Date.now() };
-    blueprint.library.push(entry);
-    blueprint.activeId = entry.id;
-    queueToast(`Imported blueprint "${entry.name}"`, '#4dca7c');
-    saveGame();
-    return true;
-  } catch (e) { queueToast('Invalid blueprint code', '#e85d4a'); return false; }
-}
-
-function selectBlueprint(id) {
-  if (!blueprint.library.some(b => b.id === id)) return false;
-  blueprint.activeId = id;
-  blueprint.pasteRotation = 0;
-  return true;
-}
