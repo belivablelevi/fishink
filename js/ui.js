@@ -834,6 +834,9 @@ function renderPrestigePanel() {
 // Leaderboard names can come from any client (open-write table, no auth) -
 // escape before interpolating into innerHTML so a hostile name can't inject markup.
 function escapeLeaderboardName(name) {
+  // Names are only filtered when they're entered, so anything that got in
+  // before a filter improvement is still in the table. Hide those on display.
+  if (typeof nameIsClean === 'function' && !nameIsClean(String(name))) name = '[name removed]';
   const div = document.createElement('div');
   div.textContent = name;
   return div.innerHTML;

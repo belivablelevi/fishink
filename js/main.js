@@ -1,6 +1,6 @@
 // Fish INK Factory - game loop
 
-const GAME_VERSION = '1.9.3';
+const GAME_VERSION = '1.9.4';
 
 let canvas, ctx;
 let lastTime = 0;
@@ -244,12 +244,6 @@ function init() {
     // remainder of the artificial minimum-duration wait.
     loadingAnim.setProgress(Math.min(loaded / total, 0.92));
   });
-
-  window._dbg = {
-    place: (id, c, r)  => placeBlock(id, c, r),
-    procBelt: (on = true) => { DEBUG_FORCE_PROC_BELT = on; },
-    resetLifetime: () => { game.lifetimeEarned = 0; saveGame(); submitLeaderboardScore(); console.log('lifetimeEarned reset and submitted'); },
-  };
 }
 
 function resizeCanvas() {
