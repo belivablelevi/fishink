@@ -35,6 +35,7 @@ function loadSfxBuffers() {
 // so repeated plays of the same clip (e.g. casting) don't sound identical.
 function playBuffer(key, vol = 1, fadeIn = 0, fadeOut = 0, pitchVariance = 0) {
   if (AUDIO.sfxMuted) return;
+  if (!_sfxGate(key)) return;
   const base = AUDIO.buffers[key];
   if (!base) return;
   const target = vol * 0.5;
@@ -193,6 +194,32 @@ function setMusicMuted(v) {
 function setSfxMuted(v)  { AUDIO.sfxMuted  = v; }
 function setSellMuted(v) { AUDIO.sellMuted = v; }
 
+// ─── SFX pacing ──────────────────────────────────────────────────────────────
+// A busy, well-automated factory can trigger the exact same sound many times
+// within the same second (four Washers finishing together, a dozen catches
+// during a fast auto-fisher tick, bulk-selling a stack of fish). Firing every
+// one of those at full volume just piles up into an unpleasant wall of noise
+// instead of readable feedback. Each sound key gets a short cooldown — a
+// repeat within SFX_MIN_INTERVAL_MS is dropped outright (dedupes things that
+// finish on the same frame), and only SFX_BURST_MAX triggers of the same key
+// are allowed within the rolling SFX_BURST_WINDOW_MS after that — older
+// triggers age out ("expire") of that window, so the sound naturally catches
+// up again once the burst passes instead of building up indefinitely.
+const SFX_MIN_INTERVAL_MS = 40;
+const SFX_BURST_WINDOW_MS = 600;
+const SFX_BURST_MAX = 4;
+const _sfxRecent = {}; // key -> trigger timestamps (ms) within the current window
+
+function _sfxGate(key) {
+  const now = performance.now();
+  const hist = _sfxRecent[key] || (_sfxRecent[key] = []);
+  if (hist.length && now - hist[hist.length - 1] < SFX_MIN_INTERVAL_MS) return false;
+  while (hist.length && now - hist[0] > SFX_BURST_WINDOW_MS) hist.shift();
+  if (hist.length >= SFX_BURST_MAX) return false;
+  hist.push(now);
+  return true;
+}
+
 // ─── SFX helpers ───────────────────────────────────────────────────────────────
 function playTone({ freq = 440, dur = 0.15, type = 'sine', vol = 0.2, slideTo = null, delay = 0 }) {
   if (!AUDIO.ctx || AUDIO.sfxMuted) return;
@@ -251,6 +278,11 @@ function sfxDrop() {
 // Smoker -> Icer -> Stamper), so a multi-stage setup processing top-to-bottom
 // sounds like an ascending scale.
 function machineDing(rootFreq, volMult = 1) {
+  // Gated once per ding (not per tone) under one shared key — a Washer,
+  // Smoker, Icer and Stamper all finishing together reads as one family of
+  // sound already, so their bursts should be paced together too, not
+  // separately (which would still let four dings overlap every tick).
+  if (!_sfxGate('machineDing')) return;
   playTone({ freq: rootFreq, dur: 0.12, type: 'triangle', vol: 0.18 * volMult });
   playTone({ freq: rootFreq * 4 / 3, dur: 0.14, type: 'triangle', vol: 0.16 * volMult, delay: 0.05 });
 }
@@ -285,6 +317,7 @@ function sfxTeleport(volMult = 1) {
 // level-up reads as distinct from a fish sale. Square wave to read distinct
 // from the triangle-wave machineDing family.
 function sfxUpgrade() {
+  if (!_sfxGate('upgrade')) return; // e.g. "Upgrade All" buying many levels at once
   playTone({ freq: 523.25, dur: 0.08, type: 'square', vol: 0.2 });
   playTone({ freq: 659.25, dur: 0.08, type: 'square', vol: 0.2, delay: 0.07 });
   playTone({ freq: 784.00, dur: 0.14, type: 'square', vol: 0.22, delay: 0.14 });
