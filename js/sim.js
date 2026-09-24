@@ -1,4 +1,4 @@
-// Fish INK Factory — simulation engine
+// Fish INK Factory - simulation engine
 
 const game = {
   cash: prestigeStartCash(),
@@ -9,7 +9,7 @@ const game = {
   maxMachineLevel: 0,
   time: 0,
   dayTime: 0,
-  fishIndex: new Set(), // species names ever caught — backs the Fish Index tab
+  fishIndex: new Set(), // species names ever caught - backs the Fish Index tab
   fishIndexBonuses: new Set(), // categories already paid out for full discovery
   unlockedAchievements: new Set(),
   tutorialDone: false,
@@ -50,7 +50,7 @@ function queueToast(msg, color) {
 }
 
 // Merges rapid repeats of the same event type into one updating toast instead
-// of stacking a new line per occurrence — a busy recycler or seller can fire
+// of stacking a new line per occurrence - a busy recycler or seller can fire
 // several times a second, which used to flood the toast stack off-screen.
 // Rarer one-off messages (combos, rare catches, errors) skip this and go
 // through queueToast directly so they stay visible as their own line.
@@ -66,7 +66,7 @@ function queueCoalescedToast(key, label, amount, color) {
   toasts.push({ key, count: 1, total: amount, msg: `${label}  ${amount >= 0 ? '+' : '-'}$${Math.abs(amount).toFixed(2)}`, color: color || '#4dca7c', life: 2.2 });
 }
 
-// Single place that actually pays the player — every cash reward (sales,
+// Single place that actually pays the player - every cash reward (sales,
 // recycling, Fish Index bonuses) routes through this so the bookkeeping
 // (cash, lifetimeEarned, toast, sfx) can't drift between call sites.
 function awardCash(amount, msg, color, volMult = 1) {
@@ -78,7 +78,7 @@ function awardCash(amount, msg, color, volMult = 1) {
 }
 
 // 1 right on top of the tile, fading linearly to 0 at `range` tiles-worth of
-// distance away — shared by machine chimes and sell sounds so both fade the
+// distance away - shared by machine chimes and sell sounds so both fade the
 // same way. c/r null (no tile, e.g. UI actions) always plays at full volume.
 function distanceVolMult(c, r, range) {
   if (c == null || r == null) return 1;
@@ -91,17 +91,17 @@ const BELT_SPEED = 2.2; // tiles per second; fish take ~0.45s per tile
 
 // individualSellToasts is on by default for early-game feedback, but auto-
 // stops once this many fish have been sold (matches the Drone Delivery
-// unlock threshold — by then sales are frequent enough to flood the stack).
+// unlock threshold - by then sales are frequent enough to flood the stack).
 const INDIVIDUAL_SELL_TOAST_LIMIT = 300;
 
 // Reward for routing a fish through several *different* machine types before
-// selling — each distinct step beyond the first adds this much multiplier, so
+// selling - each distinct step beyond the first adds this much multiplier, so
 // diversifying a line is always worth more than running everything through
 // one machine twice (duplicates collapse via the Set in comboMultFor).
 const COMBO_BONUS_PER_STEP = 0.3;
 
 function comboMultFor(fish) {
-  // mults is at most a handful of entries — a nested scan beats allocating a
+  // mults is at most a handful of entries - a nested scan beats allocating a
   // Set on every single sale.
   const m = fish.mults;
   let distinctSteps = 0;
@@ -121,7 +121,7 @@ const WORKER_FISH_TIME   = 18;              // seconds spent fishing per trip
 const WORKER_IDLE_TIME   = 10;             // seconds idle between trips
 const WORKER_MAX         = 5;
 
-// Non-persisted walk state per worker uid — cleared on departure, rebuilt on tick.
+// Non-persisted walk state per worker uid - cleared on departure, rebuilt on tick.
 const _workerWalkCache = new Map();
 
 function _randomIslandTile(isl) {
@@ -198,13 +198,13 @@ function simUpdateWorkers(dt) {
       const ws = _getWorkerWalk(w, isl);
       if (ws.walkTimer > 0) {
         ws.walkTimer -= dt;
-        // Standing still — keep walkPhase frozen so legs don't cycle
+        // Standing still - keep walkPhase frozen so legs don't cycle
       } else {
         const dx = ws.targetWx - w.wx;
         const dy = ws.targetWy - w.wy;
         const dist = Math.hypot(dx, dy);
         if (dist < 3) {
-          // Reached target — pick a new random island tile and pause briefly
+          // Reached target - pick a new random island tile and pause briefly
           const tile = _randomIslandTile(isl);
           if (tile) { ws.targetWx = tile.wx; ws.targetWy = tile.wy; }
           ws.walkTimer = 0.4 + Math.random() * 1.4;
@@ -219,7 +219,7 @@ function simUpdateWorkers(dt) {
 
       if (w.timer > 0) continue;
 
-      // Depart on a fishing trip — snap back to dock so the boat starts there
+      // Depart on a fishing trip - snap back to dock so the boat starts there
       const candidates = [];
       const islC = Math.floor(isl.cx), islR = Math.floor(isl.cy);
       for (let dc = -12; dc <= 12; dc++) {
@@ -253,7 +253,7 @@ function simUpdateWorkers(dt) {
           w.state = 'fishing';
           w.timer = WORKER_FISH_TIME;
         } else {
-          // Arrived at dock — deposit caught fish into the depot block
+          // Arrived at dock - deposit caught fish into the depot block
           const depotC = isl.depotC ?? Math.floor(isl.cx);
           const depotR = isl.depotR ?? Math.floor(isl.cy);
           const depotSt = stateAt(depotC, depotR);
@@ -324,7 +324,7 @@ function simUpdate(dt) {
   const cheated = saveAccum >= AUTOSAVE_INTERVAL ? cashGuard.check() : false;
   if (saveAccum >= AUTOSAVE_INTERVAL) {
     saveAccum = 0;
-    saveGameNow(); // autosave keeps its guaranteed cadence — no debounce
+    saveGameNow(); // autosave keeps its guaranteed cadence - no debounce
     if (!cheated) submitLeaderboardScore();
   }
 
@@ -413,7 +413,7 @@ function simUpdate(dt) {
 
 // ─── Belt movement (continuous, progress-based) ───────────────────────────────
 
-// Shared return object for nextCellFor — this runs per belt fish per frame in
+// Shared return object for nextCellFor - this runs per belt fish per frame in
 // both the sim sweep and the fish renderer, and every caller consumes the
 // result immediately, so one reusable object replaces thousands of tiny
 // allocations per second. Never hold a reference to it across calls.
@@ -423,7 +423,7 @@ function nextCellFor(c, r, id, st, fish) {
   let dirIdx = st.dir;
   if (id === B_SPLITTER) {
     // Outputs are the two sides perpendicular to the direction the fish
-    // actually arrived from (st.inDir, set in transferItem) — not st.dir,
+    // actually arrived from (st.inDir, set in transferItem) - not st.dir,
     // the block's placement rotation. Using st.dir here would only avoid
     // routing a fish straight back into whatever feeds the Splitter when
     // st.dir happens to be rotated to face directly away from that feed;
@@ -437,7 +437,7 @@ function nextCellFor(c, r, id, st, fish) {
     dirIdx = matches ? st.dir : (st.dir + 2) % 4;
   } else if (id === B_SMART_ROUTER) {
     // Decide the output side once, the instant this exact fish lands on the
-    // tile, and stick with it for the whole ride — re-checking every frame
+    // tile, and stick with it for the whole ride - re-checking every frame
     // would let the fish visibly flip-flop sides mid-transit if a downstream
     // jam clears (or reappears) while it's still riding across this cell.
     if (st.routeLockedFor !== fish) {
@@ -457,7 +457,7 @@ function nextCellFor(c, r, id, st, fish) {
   return _nextCell;
 }
 
-// Persistent scratch arrays for updateBeltFish — refilled each frame with
+// Persistent scratch arrays for updateBeltFish - refilled each frame with
 // packed ints instead of allocating two arrays + one object per moving fish.
 // Packing: bits 16+ hold the registry key (r<<7|c, so a plain numeric sort is
 // row-major), bits 8-15 hold nr+1 and bits 0-7 hold nc+1 (+1 so the -1 of an
@@ -468,7 +468,7 @@ const _beltMoversNeg = [];
 function updateBeltFish(dt) {
   // Two sweeps so fish already-at-edge don't stall for a frame. Cells are
   // bucketed by each fish's actual current exit direction (not the block's
-  // facing/st.dir) — Splitter and Sorter can send a fish out a side that
+  // facing/st.dir) - Splitter and Sorter can send a fish out a side that
   // differs from st.dir, and grouping by facing instead of actual movement
   // let a Splitter's perpendicular output land in the wrong sweep, racing
   // the belt it just fed into and visibly snapping the fish backward.
@@ -482,10 +482,10 @@ function updateBeltFish(dt) {
     const packed = (key << 16) | ((nr + 1) << 8) | (nc + 1);
     (nc < c || nr < r ? _beltMoversNeg : _beltMoversPos).push(packed);
   }
-  // Sweep A: right/down movers — scan from output end (bottom-right)
+  // Sweep A: right/down movers - scan from output end (bottom-right)
   _beltMoversPos.sort((a, b) => b - a);
   for (const p of _beltMoversPos) stepBeltCell(p, dt);
-  // Sweep B: left/up movers — scan from output end (top-left)
+  // Sweep B: left/up movers - scan from output end (top-left)
   _beltMoversNeg.sort((a, b) => a - b);
   for (const p of _beltMoversNeg) stepBeltCell(p, dt);
 }
@@ -503,7 +503,7 @@ function stepBeltCell(packed, dt) {
   if (fish.progress === undefined) fish.progress = 0;
 
   // Recycler: a fish whose rarity is selected gets salvaged the instant it
-  // lands here — it never continues onward to wherever the belt points.
+  // lands here - it never continues onward to wherever the belt points.
   if (id === B_RECYCLER && st.recycleRarities.includes(fish.category)) {
     recycleFish(fish, c, r);
     st.item = null;
@@ -511,21 +511,21 @@ function stepBeltCell(packed, dt) {
   }
 
   // Teleporter sender role: a fish that arrived here normally (not one that
-  // just hopped in from another Teleporter — see fish.viaTeleport below)
+  // just hopped in from another Teleporter - see fish.viaTeleport below)
   // instantly relays to the linked destination's *item slot*, the moment a
   // destination is set and free. The destination then exits it through the
   // normal belt-step logic below using its own `dir`, exactly like a plain
-  // Belt — the hop itself has no transit animation, only the final leg out
+  // Belt - the hop itself has no transit animation, only the final leg out
   // of the destination does.
   if (id === B_TELEPORTER && !fish.viaTeleport) {
     if (st.teleportTarget && blockAt(st.teleportTarget.c, st.teleportTarget.r) !== B_TELEPORTER) {
-      // Destination was sold/replaced since this was set — clear it so the
+      // Destination was sold/replaced since this was set - clear it so the
       // dimmed "no destination" indicator picks it up (see render.js).
       st.teleportTarget = null;
     }
     const destSt = st.teleportTarget ? stateAt(st.teleportTarget.c, st.teleportTarget.r) : null;
     if (!destSt || destSt.item) {
-      // No destination, or destination tile currently occupied — queue at
+      // No destination, or destination tile currently occupied - queue at
       // the edge like any other blocked belt until it clears.
       fish.progress = Math.min(fish.progress + dt * effectiveBeltSpeed(), 0.88);
       return;
@@ -546,7 +546,7 @@ function stepBeltCell(packed, dt) {
 
   const beltSpeed = effectiveBeltSpeed();
   if (blocked) {
-    // Queue up near the tile edge — shows backpressure visually
+    // Queue up near the tile edge - shows backpressure visually
     fish.progress = Math.min(fish.progress + dt * beltSpeed, 0.88);
   } else {
     fish.progress += dt * beltSpeed;
@@ -554,7 +554,7 @@ function stepBeltCell(packed, dt) {
 
   if (fish.progress >= 1.0) {
     fish.progress = 0;
-    // Clears the hop flag the instant a fish successfully leaves ANY tile —
+    // Clears the hop flag the instant a fish successfully leaves ANY tile -
     // this is what makes a Teleporter-to-Teleporter belt hand-off (the
     // destination's exit happens to feed straight into another Teleporter)
     // treat that next Teleporter as a fresh sender, not a second hop.
@@ -565,7 +565,7 @@ function stepBeltCell(packed, dt) {
 }
 
 function cellAcceptsItem(nc, nr, nb) {
-  // A belt with nothing past it has nowhere to put the item — queue it at the
+  // A belt with nothing past it has nowhere to put the item - queue it at the
   // edge like any other blocked hand-off, instead of silently destroying it.
   if (nb === B_NONE)           return false;
   if (nb === B_SELLER)         return true;
@@ -579,7 +579,7 @@ function cellAcceptsItem(nc, nr, nb) {
 
 function transferItem(c, r, st, nc, nr, nb) {
   if (nb === B_SELLER) {
-    // Clear the slot before selling — if sellFish ever throws partway through,
+    // Clear the slot before selling - if sellFish ever throws partway through,
     // the source slot must not be left pointing at a fish that gets sold again
     // on the next tick.
     const fish = st.item;
@@ -612,7 +612,7 @@ function transferItem(c, r, st, nc, nr, nb) {
     if (!nst.inputItem && !nst.processing && !nst.item) {
       const def = machineDef(nb);
       if (st.item.mults && st.item.mults.includes(def.label)) {
-        // Already processed by this machine type — pass through and flash red
+        // Already processed by this machine type - pass through and flash red
         nst.bypassFlash = 0.45;
         nst.item = st.item;
         st.item  = null;
@@ -697,7 +697,7 @@ function droneSellFish(fish, c, r) {
   spawnDeliveryFlight(c, r);
 }
 
-// ─── Delivery flights (purely cosmetic — payout already happened above) ───────
+// ─── Delivery flights (purely cosmetic - payout already happened above) ───────
 // A Drone Delivery sale is instant for gameplay purposes; this just launches a
 // little drone sprite from the station to the shipping boat so the sale reads
 // as "sent somewhere" instead of vanishing in place.
@@ -725,7 +725,7 @@ function tickDeliveryFlights(dt) {
 // ─── Machine output push ──────────────────────────────────────────────────────
 
 // A belt only counts as a real output path if it actually carries the item
-// away — otherwise a belt feeding straight into a crate/machine gets handed
+// away - otherwise a belt feeding straight into a crate/machine gets handed
 // the item right back the instant it empties, which just bounces the fish
 // between the two tiles forever (looked like the fish freezing/glitching).
 function transportLeadsAwayFrom(nc, nr, c, r) {
@@ -752,7 +752,7 @@ function tickMachineOutput() {
       const nb = blockAt(nc, nr);
       const isSell = nb === B_SELLER || nb === B_DRONE_DELIVERY;
       let pushed = false;
-      // For sales, clear the source slot BEFORE calling sellFish/droneSellFish —
+      // For sales, clear the source slot BEFORE calling sellFish/droneSellFish -
       // if the sell call ever threw partway through, leaving the slot filled
       // would let the same fish get pushed and sold again next tick.
       if (isSell) { if (IS_CRATE(id)) st.carrying.shift(); else st.item = null; }
@@ -812,7 +812,7 @@ function tryFisherProduce(c, r) {
 // ─── Fishing Drone ───────────────────────────────────────────────────────────
 // A placeable pad that flies out to the nearest water tile, hovers there to
 // fill a batch of fish, then flies home and drips the catch onto whatever
-// belt/machine is next to the pad — independent of pad placement, unlike the
+// belt/machine is next to the pad - independent of pad placement, unlike the
 // shore-only Fisher.
 
 function droneTripDuration(c, r, st) {
@@ -820,10 +820,10 @@ function droneTripDuration(c, r, st) {
   return dist / (DRONE_SPEED * effectiveDroneSpeedMult()) * machineSpeedMult(st.level || 0);
 }
 
-// Counts other Drone Fishers currently targeting the same water tile — backs
+// Counts other Drone Fishers currently targeting the same water tile - backs
 // the crowding penalty so stacking drones on one pond isn't free. Counts are
 // cached per water tile and rebuilt only when droneWaterDirty flips (drone
-// pad placed/removed/retargeted, world grown, save loaded) — the old version
+// pad placed/removed/retargeted, world grown, save loaded) - the old version
 // scanned the entire world per drone per frame.
 const _droneCrowd = new Map(); // regKey(waterC, waterR) → drone count
 
@@ -852,7 +852,7 @@ function tickDroneFisher(c, r, dt) {
 
   if (st.waterC === null) {
     const target = findNearestWaterTile(c, r);
-    if (!target) return; // no water anywhere on the map — pad sits idle
+    if (!target) return; // no water anywhere on the map - pad sits idle
     st.waterC = target.c;
     st.waterR = target.r;
     droneWaterDirty = true; // crowd counts must include the new target
@@ -909,7 +909,7 @@ function tickDroneFisher(c, r, dt) {
         }
       }
     }
-    // Nowhere to put the next fish yet — wait and retry next tick.
+    // Nowhere to put the next fish yet - wait and retry next tick.
   }
 }
 
@@ -921,7 +921,7 @@ function machineDef(id) {
   return null;
 }
 
-// Rate-limit machine dings per type — at most one ding per 800ms per machine
+// Rate-limit machine dings per type - at most one ding per 800ms per machine
 // type so a dense factory doesn't create overlapping noise from the same tone.
 const _machineDingCooldown = {};
 const MACHINE_DING_INTERVAL = 0.8; // seconds
@@ -1024,7 +1024,7 @@ function dropNearestBelt() {
 
 // ─── Build / demolish ─────────────────────────────────────────────────────────
 
-// Picks up a block for free (no refund, no charge) — used by the "Move" button
+// Picks up a block for free (no refund, no charge) - used by the "Move" button
 // in block popups. Stores a full state snapshot in buildMode.pendingMove so the
 // block can be re-placed with its level/config intact. If the player cancels the
 // move (exits build mode), exitBuildMode refunds the original purchase price.
@@ -1038,7 +1038,7 @@ function movePickUpBlock(c, r) {
     level:  st ? (st.level || 0) : 0,
     config: typeof captureConfig === 'function' ? (captureConfig(c, r) || {}) : {},
   };
-  // Remove silently — no cash change here; cost is recovered if move is cancelled
+  // Remove silently - no cash change here; cost is recovered if move is cancelled
   removeBlock(c, r);
   if (id === B_FISHER) delete fisherTimers[`${c},${r}`];
   notifyRemoved(id, c, r, buildMode.pendingMove.dir, 0, buildMode.pendingMove.config);
@@ -1052,7 +1052,7 @@ function movePickUpBlock(c, r) {
   buildMode.beltDir    = buildMode.pendingMove.dir;
   updateBuildHintUI();
   saveGame();
-  queueToast(`Moving ${BLOCK_NAMES[id]} — click to place`, '#7ec8e3');
+  queueToast(`Moving ${BLOCK_NAMES[id]}: click to place`, '#7ec8e3');
 }
 
 // Returns a specific human-readable reason why canPlaceBlock failed, replacing
@@ -1079,7 +1079,7 @@ function placementFailReason(id, c, r) {
     return 'Pond needs empty ground (dirt or concrete)';
   }
   // All other equipment requires a concrete floor
-  if (t !== T_CONCRETE) return 'Needs concrete floor — place Concrete here first';
+  if (t !== T_CONCRETE) return 'Needs concrete floor. Place Concrete here first';
   if (b !== B_NONE)     return 'Something is already here';
   if (!IS_TRANSPORT(id) && playerOccupiesTile(c, r)) return 'Move out of the way first';
   return 'Cannot place here';
@@ -1108,7 +1108,7 @@ function buyAndPlace(id, c, r, dir, silent = false) {
 
   const cost = BLOCK_COSTS[id];
   if (!isBlockUnlocked(id)) {
-    if (!silent) { queueToast(`Locked — reach ${BLOCK_UNLOCK_REQ[id].label}`, '#e85d4a'); sfxFail(); }
+    if (!silent) { queueToast(`Locked: reach ${BLOCK_UNLOCK_REQ[id].label}`, '#e85d4a'); sfxFail(); }
     return false;
   }
   if (game.cash < cost) { if (!silent) { queueToast('Not enough cash!', '#e85d4a'); sfxFail(); } return false; }
@@ -1122,7 +1122,7 @@ function buyAndPlace(id, c, r, dir, silent = false) {
   if (!silent) sfxPlace();
   notifyPlaced(id, c, r, dir, cost);
   // Tutorial Phase 2 steps are predicate-driven (fisher placed, floor laid, belt
-  // path actually connected) — just give it a chance to re-check.
+  // path actually connected) - just give it a chance to re-check.
   tutorialOnPlaced(id, c, r);
   saveGame();
   return true;

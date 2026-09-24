@@ -1,4 +1,4 @@
-# Mobile Touch Controls — Design
+# Mobile Touch Controls - Design
 
 ## Context
 
@@ -9,13 +9,13 @@ opening machine popups via E) goes through `initMouseHandlers` (`mousemove`,
 `mousedown`, `mouseup`, `wheel`) plus a continuously-updated `hoverTile`.
 There are zero touch event listeners anywhere in the codebase. The user asked
 to make the game playable on mobile, scoped explicitly to **movement + core
-actions only** (not full touch parity — no pinch-zoom, no touch-specific
+actions only** (not full touch parity - no pinch-zoom, no touch-specific
 rework of the existing DOM build menu, which already works fine with taps).
 
 ## Goal
 
-Add touch controls — a virtual joystick for movement plus two action
-buttons — without altering any existing mouse/keyboard behavior, by reusing
+Add touch controls - a virtual joystick for movement plus two action
+buttons - without altering any existing mouse/keyboard behavior, by reusing
 the existing targeting logic (cast-at-clicked-tile, hover-then-E-interact)
 through synthesized mouse events rather than building a parallel touch-aim
 system.
@@ -45,7 +45,7 @@ const IS_TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 All touch UI creation/wiring in `touch.js` is gated behind `if (IS_TOUCH)`.
 If false, `touch.js` does nothing at all.
 
-## Component 1 — Joystick (movement)
+## Component 1 - Joystick (movement)
 
 - Fixed-position circular base + draggable knob, bottom-left corner, ~110px
   diameter, semi-transparent styling consistent with the existing icon
@@ -68,9 +68,9 @@ If false, `touch.js` does nothing at all.
   `joystickVector` defaults to `{x: 0, y: 0}` in `touch.js`, declared with
   `var` (or attached to `window`) so it's safely readable even when
   `touch.js` hasn't run any touch logic yet (always defined, since the file
-  always loads — only the DOM/listeners are gated by `IS_TOUCH`).
+  always loads - only the DOM/listeners are gated by `IS_TOUCH`).
 
-## Component 2 — Canvas touch passthrough (aiming/casting/build)
+## Component 2 - Canvas touch passthrough (aiming/casting/build)
 
 On `canvas`, `touch.js` adds (only when `IS_TOUCH`):
 
@@ -80,7 +80,7 @@ On `canvas`, `touch.js` adds (only when `IS_TOUCH`):
   `e.touches[0]` (or the relevant `e.changedTouches[0]`), then call
   `handleMouseMove(synthetic)` followed by `handleClick(synthetic)`. Call
   `e.preventDefault()` on the real touch event to suppress scrolling.
-- `touchmove`: same synthesis, calling only `handleMouseMove(synthetic)` —
+- `touchmove`: same synthesis, calling only `handleMouseMove(synthetic)` -
   this is what makes build-mode drag-painting (`paintBuildTile`) work under
   touch, identical to a mouse drag.
 - `touchend`: synthesize and call `handleMouseUp(synthetic)`.
@@ -89,28 +89,28 @@ On `canvas`, `touch.js` adds (only when `IS_TOUCH`):
   gestures.
 
 No changes to `handleClick`, `handleMouseMove`, `handleMouseUp`, or
-`hoverTile` themselves — they already work off plain `{clientX, clientY,
+`hoverTile` themselves - they already work off plain `{clientX, clientY,
 button}`-shaped input.
 
-## Component 3 — Action buttons
+## Component 3 - Action buttons
 
 Two buttons, bottom-right, stacked above the existing corner icon buttons,
 styled like `.machines-toggle-btn`:
 
-- **Interact button** — calls `triggerInteract()`, a new function in
+- **Interact button** - calls `triggerInteract()`, a new function in
   `js/player.js` containing exactly the body currently inside
   `updatePlayer`'s `if (eDown && !player._eWas && !buildMode.active)` block
   (lines 277-289), so it operates on whatever `hoverTile` currently is
   (set by the most recent canvas tap from Component 2). The keydown-driven
   E logic in `updatePlayer` calls the same `triggerInteract()` instead of
   inlining the block.
-- **Build button** — calls `triggerBuildToggle()`, a new function in
+- **Build button** - calls `triggerBuildToggle()`, a new function in
   `js/player.js` containing exactly the body of `handleBuildKey`'s `'b'`/`'B'`
   branch (lines 123-134). The `'b'`/`'B'` branch in `handleBuildKey` calls
   this same function instead of inlining the logic.
 
 Both extractions are pure refactors (move code into a named function, call
-it from the original site) — behavior for keyboard users is unchanged.
+it from the original site) - behavior for keyboard users is unchanged.
 
 ## Data flow summary
 
@@ -124,48 +124,48 @@ Tap Build button       → triggerBuildToggle() → existing B-key build-mode-to
 ## Edge cases / out of scope
 
 - Multi-touch is handled only to the extent that the joystick claims one
-  `identifier` and ignores others — simultaneous joystick + canvas-tap is
+  `identifier` and ignores others - simultaneous joystick + canvas-tap is
   supported (e.g., walk while also tapping to interact), but no gestures
   beyond single-finger-per-control are implemented.
-- No pinch-zoom or two-finger pan — explicitly out of scope per the agreed
+- No pinch-zoom or two-finger pan - explicitly out of scope per the agreed
   "movement + core actions only" boundary. `wheel`-based zoom remains
   desktop-only.
-- No special tap hit-radius widening for small tiles — at the default zoom
+- No special tap hit-radius widening for small tiles - at the default zoom
   (2.0x) tiles should be tappable; revisit only if testing shows otherwise.
 - The existing DOM build menu (tabs, swatches, buttons) needs no touch-
-  specific work — taps on `<button>` elements already work natively.
+  specific work - taps on `<button>` elements already work natively.
 
 ## Files touched
 
-- **New:** `js/touch.js` — joystick, buttons, canvas touch passthrough, all
+- **New:** `js/touch.js` - joystick, buttons, canvas touch passthrough, all
   gated behind `IS_TOUCH`.
-- **Modify:** `js/player.js` — `updatePlayer`'s `dx`/`dy` joystick fallback;
+- **Modify:** `js/player.js` - `updatePlayer`'s `dx`/`dy` joystick fallback;
   extract `triggerInteract()` and `triggerBuildToggle()` from existing
   inline blocks in `updatePlayer` and `handleBuildKey` respectively (pure
   refactor, both original call sites updated to call the new functions).
-- **Modify:** `index.html` — add the script tag for `js/touch.js` (after
+- **Modify:** `index.html` - add the script tag for `js/touch.js` (after
   `player.js`/`ui.js`), and the joystick/button DOM markup (created by
-  `touch.js` at runtime is also acceptable — implementation plan decides
+  `touch.js` at runtime is also acceptable - implementation plan decides
   which, consistent with how other overlays like the sound/machines panels
   are currently declared statically in `index.html`).
-- **Modify:** `style.css` — joystick base/knob styles, action button styles
+- **Modify:** `style.css` - joystick base/knob styles, action button styles
   (reusing existing icon-button visual language), `touch-action: none` on
   `#canvas`.
 
-## Testing (manual, in-browser — no test harness in this codebase)
+## Testing (manual, in-browser - no test harness in this codebase)
 
 1. `node -c` every changed/new `.js` file.
 2. On a touch device (or Chrome DevTools device-mode touch emulation):
    joystick drag in each of the 8 directions moves the player correctly and
    updates `facing`; releasing the joystick stops movement.
-3. Tap a water tile within rod range while not in build mode — casts, same
-   as a mouse click; tap one out of range — "Too far to cast!" toast, same
+3. Tap a water tile within rod range while not in build mode - casts, same
+   as a mouse click; tap one out of range - "Too far to cast!" toast, same
    as desktop.
-4. Tap a belt tile while holding fish — drops fish on the belt.
-5. Enable build mode (Build button), tap-drag across several tiles — places
+4. Tap a belt tile while holding fish - drops fish on the belt.
+5. Enable build mode (Build button), tap-drag across several tiles - places
    the selected block on each (same as mouse drag-painting); tap the Build
-   button again — exits build mode (same as pressing B twice).
-6. Tap a machine, then tap the Interact button — opens its popup, same as
+   button again - exits build mode (same as pressing B twice).
+6. Tap a machine, then tap the Interact button - opens its popup, same as
    hover+E on desktop.
 7. Confirm desktop mouse/keyboard play is unaffected (no regressions) by
    testing the same flows with a mouse on a non-touch browser window.

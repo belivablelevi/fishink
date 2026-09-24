@@ -4,20 +4,20 @@
 
 **Goal:** Let players compare progress against everyone else playing FishInk Factory on a global leaderboard ranked by lifetime cash earned, with no login required.
 
-**Architecture:** A new Supabase project (Postgres + PostgREST) holds one table, `leaderboard_scores`, keyed by a random client-side UUID generated once per browser/device. The game talks to it with plain `fetch()` calls to Supabase's REST endpoint (the same raw-fetch-to-PostgREST pattern already used by the sibling Kei Property Services project's `contact.html` — no extra client library needed). A new `js/leaderboard.js` module owns all of that logic; `js/sim.js`'s existing 30-second autosave tick triggers submission; a new "Leaderboard" tab in the existing build-menu tab system displays the top 50 plus the player's own rank.
+**Architecture:** A new Supabase project (Postgres + PostgREST) holds one table, `leaderboard_scores`, keyed by a random client-side UUID generated once per browser/device. The game talks to it with plain `fetch()` calls to Supabase's REST endpoint (the same raw-fetch-to-PostgREST pattern already used by the sibling Kei Property Services project's `contact.html` - no extra client library needed). A new `js/leaderboard.js` module owns all of that logic; `js/sim.js`'s existing 30-second autosave tick triggers submission; a new "Leaderboard" tab in the existing build-menu tab system displays the top 50 plus the player's own rank.
 
 **Tech Stack:** Vanilla JS (no build step, no new dependencies), Supabase (Postgres + PostgREST + Row Level Security), plain `fetch()`.
 
 ## Global Constraints
 
-- No build step — plain `<script>` tags, global functions, fixed load order in `index.html`.
-- Ranking metric is `game.lifetimeEarned` (already exists, monotonically increasing) — not current cash, not a timestamp.
+- No build step - plain `<script>` tags, global functions, fixed load order in `index.html`.
+- Ranking metric is `game.lifetimeEarned` (already exists, monotonically increasing) - not current cash, not a timestamp.
 - Identity is a random `crypto.randomUUID()` stored in `localStorage` under `fishink_leaderboard_id`, independent of the display name stored under `fishink_leaderboard_name` (1–20 characters).
-- Submission happens automatically on the existing `AUTOSAVE_INTERVAL` (30s) tick in `js/sim.js` — never a new timer, never tied to every `saveGame()` call elsewhere (those fire far more often than once every 30s).
-- Leaderboard UI is a new tab in the existing build-menu tab system (`index.html`'s `data-tab`/`data-panel` pairs, `js/player.js`'s `MENU_TAB_ORDER`, `js/ui.js`'s per-tab `render*Panel()` functions) — same pattern as Build/Upgrades/Contracts/Research/Blueprints.
+- Submission happens automatically on the existing `AUTOSAVE_INTERVAL` (30s) tick in `js/sim.js` - never a new timer, never tied to every `saveGame()` call elsewhere (those fire far more often than once every 30s).
+- Leaderboard UI is a new tab in the existing build-menu tab system (`index.html`'s `data-tab`/`data-panel` pairs, `js/player.js`'s `MENU_TAB_ORDER`, `js/ui.js`'s per-tab `render*Panel()` functions) - same pattern as Build/Upgrades/Contracts/Research/Blueprints.
 - Shows top 50 by `lifetime_earned` descending, plus the player's own row (with their numeric rank) always visible separately, even when outside the top 50.
-- While `SUPABASE_URL`/`SUPABASE_ANON` are still placeholder strings, every leaderboard function no-ops and the UI shows a "not set up yet" hint — the game must work exactly as it does today out of the box.
-- Network failures on submit/fetch are swallowed silently (`.catch(() => {})`) — a flaky leaderboard call must never interrupt gameplay or surface an error that blocks play.
+- While `SUPABASE_URL`/`SUPABASE_ANON` are still placeholder strings, every leaderboard function no-ops and the UI shows a "not set up yet" hint - the game must work exactly as it does today out of the box.
+- Network failures on submit/fetch are swallowed silently (`.catch(() => {})`) - a flaky leaderboard call must never interrupt gameplay or surface an error that blocks play.
 - No test runner exists in this codebase. Verification is `node -c` per changed file (syntax gate) plus manual in-browser checks, matching every prior plan in this repo (see `docs/superpowers/plans/` history).
 
 ---
@@ -78,11 +78,11 @@ Takes about 5 minutes.
 
 ## Known limitation
 
-There is no login for this leaderboard — identity is just a random ID stored
+There is no login for this leaderboard - identity is just a random ID stored
 in your browser. That means the Row Level Security policies in `schema.sql`
 can't actually verify a request is updating *its own* row, only that some
 row is being read/written. Anyone with the public anon key (which is, by
-design, public — it ships in the page source) could write an arbitrary score
+design, public - it ships in the page source) could write an arbitrary score
 to an arbitrary row via the browser console. This is an accepted tradeoff
 for a casual feedback-gathering demo, not an oversight. Closing this gap
 later would mean adding real Supabase Auth accounts and scoping the
@@ -91,7 +91,7 @@ later would mean adding real Supabase Auth accounts and scoping the
 
 - [ ] **Step 3: Verify**
 
-No code to run yet — confirm both files exist and the SQL is syntactically plausible by reading it back:
+No code to run yet - confirm both files exist and the SQL is syntactically plausible by reading it back:
 
 ```bash
 cat leaderboard/schema.sql
@@ -109,7 +109,7 @@ git commit -m "Add Supabase schema and setup doc for leaderboard"
 
 ---
 
-### Task 2: `js/leaderboard.js` — identity, config, submit, fetch
+### Task 2: `js/leaderboard.js` - identity, config, submit, fetch
 
 **Files:**
 - Create: `js/leaderboard.js`
@@ -126,11 +126,11 @@ git commit -m "Add Supabase schema and setup doc for leaderboard"
 - [ ] **Step 1: Create the file**
 
 ```javascript
-// Fish INK Factory — global leaderboard (Supabase, no login)
+// Fish INK Factory - global leaderboard (Supabase, no login)
 //
 // Identity is a random UUID stored in localStorage, separate from the
 // display name, so renaming never splits a player into a second row.
-// All requests are plain fetch() calls to Supabase's PostgREST endpoint —
+// All requests are plain fetch() calls to Supabase's PostgREST endpoint -
 // same raw-REST approach the sibling Kei Property Services project uses
 // in its own contact.html, so no extra client library is needed.
 
@@ -175,7 +175,7 @@ function leaderboardHeaders(extra) {
 }
 
 // Upserts this player's row. Silent no-op while unconfigured or before a
-// name is chosen — there is nothing to submit yet in either case. Network
+// name is chosen - there is nothing to submit yet in either case. Network
 // failures are swallowed: a flaky leaderboard call must never interrupt
 // gameplay or surface an error to the player.
 function submitLeaderboardScore() {
@@ -198,7 +198,7 @@ function submitLeaderboardScore() {
 
 // Fetches the top 50 plus this player's own row and rank. Returns a plain
 // result object rather than throwing, so callers (the Leaderboard tab) can
-// render every outcome — unconfigured, network error, or success — without
+// render every outcome - unconfigured, network error, or success - without
 // a try/catch of their own.
 async function fetchLeaderboard() {
   if (!isLeaderboardConfigured()) return { configured: false };
@@ -293,7 +293,7 @@ git commit -m "Add leaderboard client module (identity, submit, fetch)"
 - Modify: `js/player.js:83` (`MENU_TAB_ORDER`)
 
 **Interfaces:**
-- Consumes: nothing new — this task only adds markup and a load-order entry.
+- Consumes: nothing new - this task only adds markup and a load-order entry.
 - Produces: a `data-tab="leaderboard"` button, a `data-panel="leaderboard" id="leaderboardPanel"` div, and `'leaderboard'` in `MENU_TAB_ORDER`, all of which Task 4 wires up with real content.
 
 - [ ] **Step 1: Add the tab button and panel div**
@@ -367,7 +367,7 @@ const MENU_TAB_ORDER = ['build', 'upgrades', 'contracts', 'fishIndex', 'stats', 
 node -c js/player.js
 ```
 
-Expected: no output. Then open `index.html` directly in a browser and confirm a "Leaderboard" tab button appears in the build menu and is clickable (it will show an empty panel — `renderLeaderboardPanel` doesn't exist until Task 4, so check the browser console for a `renderLeaderboardPanel is not defined` error only if `js/ui.js` already tries to call it; at this point in the plan it doesn't yet, so the panel will just stay blank with no error).
+Expected: no output. Then open `index.html` directly in a browser and confirm a "Leaderboard" tab button appears in the build menu and is clickable (it will show an empty panel - `renderLeaderboardPanel` doesn't exist until Task 4, so check the browser console for a `renderLeaderboardPanel is not defined` error only if `js/ui.js` already tries to call it; at this point in the plan it doesn't yet, so the panel will just stay blank with no error).
 
 - [ ] **Step 5: Commit**
 
@@ -390,7 +390,7 @@ git commit -m "Add Leaderboard tab shell to build menu"
 
 **Interfaces:**
 - Consumes: `isLeaderboardConfigured()`, `getLeaderboardName()`, `setLeaderboardName(name)`, `submitLeaderboardScore()`, `fetchLeaderboard()` (all from Task 2's `js/leaderboard.js`), `formatMoney(n)` (`js/data.js:73`, already exists).
-- Produces: `renderLeaderboardPanel()`, `renderLeaderboardNamePrompt()`, `renderLeaderboardList(result)` — `renderLeaderboardPanel` is the only one called from outside this file (by `initBuildMenu`/`setBuildMenuOpen`/`switchMenuTab`).
+- Produces: `renderLeaderboardPanel()`, `renderLeaderboardNamePrompt()`, `renderLeaderboardList(result)` - `renderLeaderboardPanel` is the only one called from outside this file (by `initBuildMenu`/`setBuildMenuOpen`/`switchMenuTab`).
 
 - [ ] **Step 1: Add the panel element variable**
 
@@ -448,7 +448,7 @@ function switchMenuTab(name) {
 
 - [ ] **Step 3: Refresh on tab switch and on menu open**
 
-The Leaderboard list should reflect current standings every time the player switches into the tab, not just once when the whole menu first opens — change `switchMenuTab`:
+The Leaderboard list should reflect current standings every time the player switches into the tab, not just once when the whole menu first opens - change `switchMenuTab`:
 
 ```javascript
 function switchMenuTab(name) {
@@ -490,7 +490,7 @@ function renderLeaderboardPanel() {
   if (!isLeaderboardConfigured()) {
     const hint = document.createElement('div');
     hint.className = 'panel-hint';
-    hint.textContent = 'Leaderboard not set up yet — see leaderboard/SETUP.md';
+    hint.textContent = 'Leaderboard not set up yet - see leaderboard/SETUP.md';
     leaderboardPanelEl.appendChild(hint);
     return;
   }
@@ -502,7 +502,7 @@ function renderLeaderboardPanel() {
 
   const hint = document.createElement('div');
   hint.className = 'panel-hint';
-  hint.innerHTML = `Playing as <strong>${getLeaderboardName()}</strong> — <a href="#" id="lbChangeName">change name</a>`;
+  hint.innerHTML = `Playing as <strong>${getLeaderboardName()}</strong> - <a href="#" id="lbChangeName">change name</a>`;
   leaderboardPanelEl.appendChild(hint);
   hint.querySelector('#lbChangeName').addEventListener('click', (e) => {
     e.preventDefault();
@@ -519,7 +519,7 @@ function renderLeaderboardPanel() {
     if (result.error) {
       const err = document.createElement('div');
       err.className = 'panel-hint';
-      err.textContent = 'Could not reach the leaderboard — check your connection.';
+      err.textContent = 'Could not reach the leaderboard - check your connection.';
       leaderboardPanelEl.appendChild(err);
       return;
     }
@@ -622,7 +622,7 @@ node -c js/ui.js
 
 Expected: no output.
 
-Then in a browser, open `index.html`, open the build menu, click the Leaderboard tab. With the placeholder Supabase values still in place, expect to see the "Leaderboard not set up yet — see leaderboard/SETUP.md" hint (not a blank panel, not a console error). Switch to another tab and back to Leaderboard to confirm it re-renders without errors.
+Then in a browser, open `index.html`, open the build menu, click the Leaderboard tab. With the placeholder Supabase values still in place, expect to see the "Leaderboard not set up yet - see leaderboard/SETUP.md" hint (not a blank panel, not a console error). Switch to another tab and back to Leaderboard to confirm it re-renders without errors.
 
 - [ ] **Step 7: Commit**
 
@@ -640,7 +640,7 @@ git commit -m "Render Leaderboard panel: name prompt, top 50, own rank"
 
 **Interfaces:**
 - Consumes: `submitLeaderboardScore()` (Task 2).
-- Produces: nothing new — this is the wiring that makes Task 2's submission function actually fire during gameplay.
+- Produces: nothing new - this is the wiring that makes Task 2's submission function actually fire during gameplay.
 
 - [ ] **Step 1: Hook into the autosave branch**
 
@@ -670,7 +670,7 @@ node -c js/sim.js
 
 Expected: no output.
 
-- [ ] **Step 3: Manual end-to-end test (requires a real Supabase project — follow `leaderboard/SETUP.md` first)**
+- [ ] **Step 3: Manual end-to-end test (requires a real Supabase project - follow `leaderboard/SETUP.md` first)**
 
 1. Fill in `SUPABASE_URL`/`SUPABASE_ANON` in `js/leaderboard.js` per the setup doc.
 2. Open the game fresh (clear `localStorage` for the page first, e.g. via devtools).
@@ -679,7 +679,7 @@ Expected: no output.
 5. In the browser devtools console, run `game.lifetimeEarned += 5000;` then wait just over 30 seconds (or temporarily set `AUTOSAVE_INTERVAL` to `2` in `js/sim.js` for a faster test, then revert it). Confirm the Supabase row's `lifetime_earned` updates to match, without any toast or visible interruption.
 6. Reopen the Leaderboard tab and confirm the player's own row appears in the list (or in the separate "your rank" row if outside the top 50) with the updated amount.
 7. Open a second browser (or an incognito window) pointed at the same `index.html`, join with a different name, and confirm both players now appear correctly ranked in either browser's leaderboard, with each browser's own "your rank" row matching only its own `client_id`.
-8. With devtools' Network tab set to "Offline", trigger another autosave tick and confirm the game keeps running normally — no error toast, no freeze.
+8. With devtools' Network tab set to "Offline", trigger another autosave tick and confirm the game keeps running normally - no error toast, no freeze.
 
 - [ ] **Step 4: Commit**
 
@@ -691,14 +691,14 @@ git commit -m "Submit leaderboard score on the existing autosave tick"
 ## Self-Review
 
 **Spec coverage:**
-- Global online leaderboard, lifetime-earned metric — Tasks 1, 2, 5. ✅
-- No-login client-UUID identity, name independent of identity — Task 2. ✅
-- Supabase backend, schema + RLS + documented no-auth tradeoff — Task 1. ✅
-- Automatic submission piggybacking on the 30s autosave tick (not every `saveGame()`) — Task 5. ✅
-- Build-menu tab UI — Tasks 3, 4. ✅
-- Top 50 + pinned own rank — Task 4 (`renderLeaderboardList`). ✅
-- Unconfigured guard (placeholder vars → no-op + "not set up" hint) — Task 2 (`isLeaderboardConfigured`) and Task 4 (`renderLeaderboardPanel`'s first branch). ✅
-- Raw `fetch()` to PostgREST instead of the Supabase JS CDN client — a deliberate implementation refinement made during planning (matches the sibling Kei project's actual pattern, found by reading `contact.html`, and avoids an unnecessary new script dependency); behavior is identical to what the spec described. Noted here since the spec's wording mentioned a CDN client.
+- Global online leaderboard, lifetime-earned metric - Tasks 1, 2, 5. ✅
+- No-login client-UUID identity, name independent of identity - Task 2. ✅
+- Supabase backend, schema + RLS + documented no-auth tradeoff - Task 1. ✅
+- Automatic submission piggybacking on the 30s autosave tick (not every `saveGame()`) - Task 5. ✅
+- Build-menu tab UI - Tasks 3, 4. ✅
+- Top 50 + pinned own rank - Task 4 (`renderLeaderboardList`). ✅
+- Unconfigured guard (placeholder vars → no-op + "not set up" hint) - Task 2 (`isLeaderboardConfigured`) and Task 4 (`renderLeaderboardPanel`'s first branch). ✅
+- Raw `fetch()` to PostgREST instead of the Supabase JS CDN client - a deliberate implementation refinement made during planning (matches the sibling Kei project's actual pattern, found by reading `contact.html`, and avoids an unnecessary new script dependency); behavior is identical to what the spec described. Noted here since the spec's wording mentioned a CDN client.
 
 **Placeholder scan:** no TBD/TODO; every step has runnable code or an exact command with expected output.
 

@@ -1,4 +1,4 @@
-// Fish INK Factory — Axolotl pets: gacha system + pond assignment
+// Fish INK Factory - Axolotl pets: gacha system + pond assignment
 
 const PET_PULL_COST = 500;    // single pull
 const PET_BULK_COST = 4500;   // 10-pull (10% off)
@@ -25,24 +25,24 @@ function velocityToRow(vx, vy) {
 }
 
 const PET_VARIANTS = [
-  // Common — 60 combined weight
+  // Common - 60 combined weight
   { id: 'pink',         name: 'Pink',         rarity: 'common',    weight: 14 },
   { id: 'albino',       name: 'Albino',       rarity: 'common',    weight: 12 },
   { id: 'brown',        name: 'Brown',        rarity: 'common',    weight: 12 },
   { id: 'tan',          name: 'Tan',          rarity: 'common',    weight: 12 },
   { id: 'yellow',       name: 'Yellow',       rarity: 'common',    weight: 10 },
-  // Uncommon — 28 combined weight
+  // Uncommon - 28 combined weight
   { id: 'blue00',       name: 'Blue',         rarity: 'uncommon',  weight: 8 },
   { id: 'blue01',       name: 'Cerulean',     rarity: 'uncommon',  weight: 6 },
   { id: 'red',          name: 'Red',          rarity: 'uncommon',  weight: 6 },
   { id: 'dark-orange',  name: 'Dark Orange',  rarity: 'uncommon',  weight: 5 },
   { id: 'yellow-green', name: 'Yellow-Green', rarity: 'uncommon',  weight: 3 },
-  // Rare — 9 combined weight
+  // Rare - 9 combined weight
   { id: 'black',        name: 'Black',        rarity: 'rare',      weight: 3 },
   { id: 'greyscale',    name: 'Greyscale',    rarity: 'rare',      weight: 2 },
   { id: 'swamp-green',  name: 'Swamp Green',  rarity: 'rare',      weight: 2 },
   { id: 'rose-pink',    name: 'Rose Pink',    rarity: 'rare',      weight: 2 },
-  // Legendary — 3 combined weight
+  // Legendary - 3 combined weight
   { id: 'dark-purple',  name: 'Dark Purple',  rarity: 'legendary', weight: 2 },
   { id: 'retrogreen',   name: 'Retro Green',  rarity: 'legendary', weight: 1 },
 ];
@@ -204,7 +204,7 @@ function listAvailablePonds() {
         const st = stateAt(c, r);
         ponds.push({ type: 'block', c, r, count: st.pondPets.length, capacity: effectivePondCapacity() });
       }
-  // Natural water bodies — deduplicate by anchor key, skip ocean (null anchor)
+  // Natural water bodies - deduplicate by anchor key, skip ocean (null anchor)
   const seenAnchors = new Set();
   for (let r = 0; r < WORLD_ROWS; r++)
     for (let c = 0; c < WORLD_COLS; c++)
@@ -267,7 +267,7 @@ function _getSwimState(uid, pc, pr) {
     } else {
       const t     = _randWaterTarget(key, m, sw);
       const start = _randWaterTarget(key, m, sw);
-      if (!t || !start) return null;  // tile cache not ready yet — skip this frame
+      if (!t || !start) return null;  // tile cache not ready yet - skip this frame
       const initRowW = Math.floor(Math.random() * AXO_ROWS);
       pool[uid] = {
         type: 'water',
@@ -287,7 +287,7 @@ function _getSwimState(uid, pc, pr) {
   return pool[uid];
 }
 
-// "c,r" → [c, r], memoized — tickSwimStates runs per frame and the parse is
+// "c,r" → [c, r], memoized - tickSwimStates runs per frame and the parse is
 // a pure function of the key string, so it never needs to happen twice.
 const _swimKeyCoordCache = new Map();
 function _swimKeyCoords(key) {
@@ -329,7 +329,7 @@ function tickSwimStates(dt) {
         const dist = Math.hypot(dx, dy);
 
         if (dist < 3) {
-          // Reached waypoint — maybe rest, then pick new one
+          // Reached waypoint - maybe rest, then pick new one
           if (Math.random() < 0.35) s.restTimer = 0.4 + Math.random() * 0.8;
           const t = _randBlockTarget(S, sw, m);
           s.tpx = t.x; s.tpy = t.y;
@@ -347,7 +347,7 @@ function tickSwimStates(dt) {
         }
 
       } else {
-        // Water body — world-space steering
+        // Water body - world-space steering
         const anchor = waterBodyAnchor(keyC, keyR);
         const dx  = s.twx - s.wx;
         const dy  = s.twy - s.wy;
@@ -379,7 +379,7 @@ function tickSwimStates(dt) {
             if (t) s.twx = t.x;
           }
 
-          // Validate y step — use prevWx (before X-step may have mutated s.wx)
+          // Validate y step - use prevWx (before X-step may have mutated s.wx)
           const txY = Math.floor((prevWx + sw / 2) / S);
           const tyY = Math.floor((ny + (s.vy >= 0 ? sw : 0)) / S);
           if (anchor && tileAt(txY, tyY) === T_WATER && waterBodyAnchor(txY, tyY) === anchor) {
@@ -408,7 +408,7 @@ function tickSwimStates(dt) {
 
 // Advance animation frame at a rate proportional to how fast the pet is moving.
 function _advanceFrame(s, speed, topSpeed, maxFps, dt, isIdle) {
-  if (isIdle) return; // freeze on last swim frame during rest — idle rows are incomplete
+  if (isIdle) return; // freeze on last swim frame during rest - idle rows are incomplete
   const frac = Math.min(1, speed / (topSpeed * 0.5));
   const fps  = 1.5 + frac * (maxFps - 1.5);
   s.frameAccum += dt * fps;
@@ -536,7 +536,7 @@ function tickFrogStates(dt) {
     if (!isFrogPlaced(frog.uid)) continue;
     const s = _getFrogState(frog.uid, frog.wx, frog.wy);
 
-    // SHOCK — plays in place, overrides everything
+    // SHOCK - plays in place, overrides everything
     if (s.shockTimer > 0) {
       s.shockTimer -= dt;
       s.frameAccum += dt * SHOCK_FPS;
@@ -545,7 +545,7 @@ function tickFrogStates(dt) {
       continue;
     }
 
-    // CROAK — plays croak anim then returns to wait
+    // CROAK - plays croak anim then returns to wait
     if (s.phase === 'croak') {
       s.crOakTimer -= dt;
       s.frameAccum += dt * CROAK_FPS;
@@ -554,7 +554,7 @@ function tickFrogStates(dt) {
       continue;
     }
 
-    // WAIT — idle anim, countdown to next hop, maybe croak
+    // WAIT - idle anim, countdown to next hop, maybe croak
     if (s.phase === 'wait') {
       s.frameAccum += dt * IDLE_FPS;
       while (s.frameAccum >= 1) { s.frameAccum -= 1; s.frame = (s.frame + 1) % FROG_ANIM.idle.frames; }
@@ -583,7 +583,7 @@ function tickFrogStates(dt) {
       continue;
     }
 
-    // HOP — lerp with ease-out from start to end, play hop anim
+    // HOP - lerp with ease-out from start to end, play hop anim
     if (s.phase === 'hop') {
       s.hopProgress = Math.min(1, s.hopProgress + dt / s.hopDuration);
       const ease = 1 - (1 - s.hopProgress) * (1 - s.hopProgress); // ease-out quad

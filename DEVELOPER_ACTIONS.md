@@ -1,4 +1,4 @@
-# Fish Ink — Developer Actions Required
+# Fish Ink - Developer Actions Required
 
 These are things the code alone cannot fix. Each one needs artwork, a design decision, or manual work from you.
 
@@ -46,7 +46,7 @@ These are things the code alone cannot fix. Each one needs artwork, a design dec
 
 Recommended style: simple, clean line icons matching the dark UI aesthetic. The existing color scheme uses `#6a7a8a` for inactive and `#e0e8f0` for active.
 
-**Why it matters:** First impressions — the top bar buttons look low quality on modern screens.
+**Why it matters:** First impressions - the top bar buttons look low quality on modern screens.
 
 **Priority:** High
 
@@ -54,11 +54,11 @@ Recommended style: simple, clean line icons matching the dark UI aesthetic. The 
 
 ### Create proper achievement artwork or badges
 
-**Where:** Achievement cards in the Stats panel (`js/ui.js` — `renderStatsPanel()`)
+**Where:** Achievement cards in the Stats panel (`js/ui.js` - `renderStatsPanel()`)
 
 **What's wrong:** Achievements display as text-only rows with colored bullets. There are no icons or badge graphics.
 
-**What to do:** Create 14 small icon images (32×32 or 48×48 px) — one per achievement. Suggested categories: fishing rod (catch), fish pile (sell), rare fish (rare catch), factory gears (automation), microscope (research), star (prestige). These would be displayed beside each achievement card.
+**What to do:** Create 14 small icon images (32×32 or 48×48 px) - one per achievement. Suggested categories: fishing rod (catch), fish pile (sell), rare fish (rare catch), factory gears (automation), microscope (research), star (prestige). These would be displayed beside each achievement card.
 
 **Why it matters:** Achievements are a main progression pillar and currently feel flat.
 
@@ -74,10 +74,10 @@ Recommended style: simple, clean line icons matching the dark UI aesthetic. The 
 
 **Where:** Several actions fire with no sound. Code has no SFX for:
 
-- **Blueprint paste** — placing an entire factory layout should have a satisfying thunk or burst
-- **Undo/redo** — no feedback sound when reversing a placement
-- **Frog hop** — frogs hop silently; a small wet bounce sound would add life
-- **Treasure chest open** — currently uses `sfxCoin()` which is too subtle for a chest opening
+- **Blueprint paste** - placing an entire factory layout should have a satisfying thunk or burst
+- **Undo/redo** - no feedback sound when reversing a placement
+- **Frog hop** - frogs hop silently; a small wet bounce sound would add life
+- **Treasure chest open** - currently uses `sfxCoin()` which is too subtle for a chest opening
 
 **What to do:** Record or source short WAV or MP3 files for each. Place in `audio/` and add them to the `SFX_FILES` table in `audio.js`. Suggested names: `sfx-paste.wav`, `sfx-undo.wav`, `sfx-frog-hop.wav`, `sfx-chest.wav`.
 
@@ -89,11 +89,11 @@ Recommended style: simple, clean line icons matching the dark UI aesthetic. The 
 
 ### The water animation is very subtle
 
-**Where:** `js/render.js` — `drawWaterTile()`
+**Where:** `js/render.js` - `drawWaterTile()`
 
 **What's wrong:** Water only sparkles on ~0.3% of tiles per frame with a 1-in-4 chance. Most of the time, water looks completely static.
 
-**What to do:** Consider adding a slow animated wave pattern — either a tiling sine-wave shader approach on the canvas, or a simple frame-by-frame tile animation. Even adding 3–4 animated water tile frames to the sprite sheet and cycling through them at ~4 FPS would be a huge visual improvement.
+**What to do:** Consider adding a slow animated wave pattern - either a tiling sine-wave shader approach on the canvas, or a simple frame-by-frame tile animation. Even adding 3–4 animated water tile frames to the sprite sheet and cycling through them at ~4 FPS would be a huge visual improvement.
 
 **Why it matters:** Water is a dominant visual element in the game. Static water makes the world feel lifeless.
 
@@ -103,7 +103,7 @@ Recommended style: simple, clean line icons matching the dark UI aesthetic. The 
 
 ### Add a proper loading/title screen
 
-**Where:** `index.html` — the loading bar is the first thing players see
+**Where:** `index.html` - the loading bar is the first thing players see
 
 **What's wrong:** The loading screen is a plain dark background with a green progress bar and "Fish Ink Factory" text. There's no artwork, logo, or visual identity.
 
@@ -120,11 +120,11 @@ Recommended style: simple, clean line icons matching the dark UI aesthetic. The 
 
 ### The fish sprite sheet needs more variety
 
-**Where:** `img/fishes.png` — 144 fish species all drawn from the same small cell size
+**Where:** `img/fishes.png` - 144 fish species all drawn from the same small cell size
 
 **What's wrong:** Many fish species use very similar or hard-to-distinguish sprites because of the limited resolution. Rare and Legendary fish don't look noticeably more impressive than Commons.
 
-**What to do:** Consider making Rare, Epic, and Legendary fish sprites slightly larger or visually more distinct — glowing outlines, more detailed art, or a different color treatment on the cell itself in the HUD.
+**What to do:** Consider making Rare, Epic, and Legendary fish sprites slightly larger or visually more distinct - glowing outlines, more detailed art, or a different color treatment on the cell itself in the HUD.
 
 **Why it matters:** Visual distinction between rarities makes rare catches feel exciting.
 
@@ -144,7 +144,7 @@ Both descriptions now list the 6 affected upgrades by name.
 
 ### The day/night cycle is invisible to new players
 
-**Where:** `js/render.js` — `drawDayNightOverlay()`
+**Where:** `js/render.js` - `drawDayNightOverlay()`
 
 **What's wrong:** The day/night transition changes the screen overlay gradually, but there's no clock, sun/moon indicator, or other feedback that tells players a 10-minute day cycle exists.
 
@@ -170,7 +170,7 @@ Frog slides now show a "Sell $X" button for any unplaced frog, matching axolotl 
 
 ### Camera and zoom position are not saved
 
-**Where:** `js/save.js` — `serializeGame()`
+**Where:** `js/save.js` - `serializeGame()`
 
 **What's wrong:** `cam.x`, `cam.y`, and `ZOOM` are never saved. Every time players reload they start with the camera at the default position and zoom level, which can be disorienting in a large factory layout.
 

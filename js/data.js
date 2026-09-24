@@ -1,4 +1,4 @@
-// Fish INK Factory — static data
+// Fish INK Factory - static data
 
 // sprite: column/row in fishes.png (32×32 per cell, 12×12 grid)
 // sx = (species_number - 1) % 12,  sy = floor((species_number - 1) / 12)
@@ -143,7 +143,7 @@ const FISH = [
   { species: 'Blue Sea Dragon', category: 'Legendary', value: 1500.0, rarityWeight: 0.05, color: '#3070e0', sx:  9, sy: 10 },
 ];
 
-// Display preferences — kept in their own localStorage key, separate from
+// Display preferences - kept in their own localStorage key, separate from
 // the save-game data in js/save.js, since these are UI settings rather than
 // gameplay state and shouldn't be wiped by Restart.
 const SETTINGS_KEY = 'fishink_settings';
@@ -169,7 +169,7 @@ function toggleIndividualSellToasts() {
   saveSettings();
 }
 
-// Compact cash formatting — plain comma-separated digits below a million,
+// Compact cash formatting - plain comma-separated digits below a million,
 // then short-scale suffixes (M/B/T/Qd/Qn/...) so totals that run for hours
 // (top-bar cash, lifetime earnings) don't render as a wall of digits.
 // settings.fullNumbers lets the player opt out and always see plain digits.
@@ -197,7 +197,7 @@ const SIZES = [
   { name: 'Huge',   mult: 2.5, weight: 4  },
 ];
 
-// Each machine is only really good at certain fish categories (goodMult) —
+// Each machine is only really good at certain fish categories (goodMult) -
 // run the wrong category through it and it still works, just barely (badMult).
 const MACHINE_DEFS = {
   WASHER:  { label: 'Washer',  processTime: 2.0, cost: 400,
@@ -225,7 +225,7 @@ function weightedRandom(pool, weightKey) {
 }
 
 // luckMult > 1 boosts the weight of every non-Common species (a leveled-up
-// Fisher's effect — see fisherLuckMult in upgrades.js), leaving Common's odds
+// Fisher's effect - see fisherLuckMult in upgrades.js), leaving Common's odds
 // as the fixed baseline so the bias is purely "rarer fish come up more often"
 // rather than uniformly rescaling the whole pool.
 function randomFish(luckMult = 1) {
@@ -235,7 +235,7 @@ function randomFish(luckMult = 1) {
   const spec = weightedRandom(pool, 'rarityWeight');
   const size  = weightedRandom(SIZES, 'weight');
   const value = Math.round(spec.value * size.mult * 10) / 10;
-  // first catch of a species unlocks it in the Fish Index tab — only species
+  // first catch of a species unlocks it in the Fish Index tab - only species
   // discoveries can ever complete a category, so only bother checking then,
   // instead of re-scanning the whole category on every single catch.
   const wasNew = !game.fishIndex.has(spec.species);
@@ -247,7 +247,7 @@ function randomFish(luckMult = 1) {
 }
 
 // Pays out once, the moment every species in a category has been caught at
-// least once — only ever called right after a NEW species is added to fishIndex.
+// least once - only ever called right after a NEW species is added to fishIndex.
 function maybeAwardFishIndexCategoryBonus(category) {
   if (game.fishIndexBonuses.has(category)) return;
   const catSpecies = FISH.filter(f => f.category === category);
@@ -257,7 +257,7 @@ function maybeAwardFishIndexCategoryBonus(category) {
   awardCash(bonus, `Fish Index complete: ${category}! +$${bonus}`, CATEGORY_COLOR[category]);
 }
 
-// Quality Sorter's routing rule — fish at or above `threshold` (a SIZES index,
+// Quality Sorter's routing rule - fish at or above `threshold` (a SIZES index,
 // player-configurable per-instance via the Sorter's E-key settings menu) count
 // as "big" and exit toward st.dir; smaller fish exit the opposite side.
 function isBigFish(fish, threshold = 2) {

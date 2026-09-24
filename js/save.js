@@ -1,4 +1,4 @@
-// Fish INK Factory — save/load (localStorage), separate from device audio prefs
+// Fish INK Factory - save/load (localStorage), separate from device audio prefs
 
 const SAVE_KEY = 'fishink_save';
 const SAVE_VERSION = 3;
@@ -84,7 +84,7 @@ function deserializeGame(data) {
   // blueprintCurrent is the current single-slot format; blueprintLibrary/
   // blueprintActiveId is a save from before the multi-slot "library" (whose
   // management UI was never actually reachable in-game) got collapsed back
-  // down to one clipboard slot — pull whatever was active out of it.
+  // down to one clipboard slot - pull whatever was active out of it.
   blueprint.current = data.blueprintCurrent
     || (data.blueprintLibrary || []).find(b => b.id === data.blueprintActiveId)
     || null;
@@ -116,7 +116,7 @@ function deserializeGame(data) {
     for (let c = 0; c < WORLD_COLS; c++) {
       if (IS_AUTO_FISHER(blocks[r][c])) autoFisherCount++;
       // fisherTimers only gets seeded when a Fisher is freshly placed
-      // (buyAndPlace) — a loaded save needs it rebuilt here, or every
+      // (buyAndPlace) - a loaded save needs it rebuilt here, or every
       // restored Fisher sits dead forever since simUpdate only iterates
       // keys already present in fisherTimers.
       if (blocks[r][c] === B_FISHER) fisherTimers[`${c},${r}`] = effectiveFisherInterval();
@@ -142,13 +142,13 @@ function deserializeGame(data) {
   game.islandLevel      = data.islandLevel      || 0;
   ensureWorkerIslandDepot(); // backfills B_FISH_DEPOT for saves that predate the depot block
 
-  // The world just got replaced wholesale — rebuild the active-block registry
+  // The world just got replaced wholesale - rebuild the active-block registry
   // and repaint the cached terrain layer from the loaded arrays.
   rebuildBlockIndex();
   if (typeof invalidateTerrainCache === 'function') invalidateTerrainCache();
 }
 
-// serializeGame deep-copies the whole world and JSON.stringifies it — heavy
+// serializeGame deep-copies the whole world and JSON.stringifies it - heavy
 // enough that firing it synchronously on EVERY place/remove/upgrade caused
 // visible hitches while rapid-building (blueprint stamping was the worst).
 // saveGame() now coalesces bursts: the actual write lands once things have
@@ -186,7 +186,7 @@ function loadGame() {
     const data = JSON.parse(raw);
     if (data.version > SAVE_VERSION) {
       localStorage.removeItem(SAVE_KEY);
-      queueToast('Save was from a newer version — starting fresh', '#e8a030');
+      queueToast('Save was from a newer version, starting fresh', '#e8a030');
       return false;
     }
     for (let v = data.version; v < SAVE_VERSION; v++) SAVE_MIGRATIONS[v]?.(data);
@@ -195,14 +195,14 @@ function loadGame() {
   } catch (e) {
     console.warn('Load failed', e);
     localStorage.removeItem(SAVE_KEY);
-    queueToast('Save was corrupted — starting fresh', '#e85d4a');
+    queueToast('Save was corrupted, starting fresh', '#e85d4a');
     return false;
   }
 }
 
 let restarting = false;
 
-// Full wipe — clears the run save AND prestige data. Used by the Restart Game
+// Full wipe - clears the run save AND prestige data. Used by the Restart Game
 // button so the player gets a completely clean slate.
 async function restartGame() {
   restarting = true;
@@ -211,7 +211,7 @@ async function restartGame() {
   localStorage.removeItem(SAVE_KEY);
   localStorage.setItem('fishink_skip_cloud', '1');
   localStorage.removeItem(PRESTIGE_KEY); // prestige.js declares this constant
-  // Awaited — cloudPushSaveImmediate() now defaults to keepalive:false (see
+  // Awaited - cloudPushSaveImmediate() now defaults to keepalive:false (see
   // its own comment in cloud.js), so an un-awaited call here would just get
   // cut off by the reload on the very next line, same failure mode as the
   // sign-out bug this was originally fixed for.
@@ -219,7 +219,7 @@ async function restartGame() {
   location.reload();
 }
 
-// Soft run-reset — clears only the run save, leaving prestige tokens/upgrades
+// Soft run-reset - clears only the run save, leaving prestige tokens/upgrades
 // intact. Used exclusively by doPrestige() so the tokens it just banked
 // aren't immediately wiped by the reload.
 function resetRun() {
@@ -238,8 +238,8 @@ function resetRun() {
 // undoing restartGame()'s removeItem before the page actually unloads.
 window.addEventListener('beforeunload', () => {
   if (restarting) return;
-  saveGameNow(); // flush immediately — a debounced save would never fire
-  // keepalive:true here specifically — this IS a real page unload, the one
+  saveGameNow(); // flush immediately - a debounced save would never fire
+  // keepalive:true here specifically - this IS a real page unload, the one
   // case a normal fetch would get aborted outright. Every other call site
   // now defaults to keepalive:false (see cloudPushSaveImmediate's comment).
   if (typeof cloudPushSaveImmediate === 'function') cloudPushSaveImmediate(true);

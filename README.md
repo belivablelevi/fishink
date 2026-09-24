@@ -2,7 +2,7 @@
 
 **[Play Fish INK now →](https://belivablelevi.github.io/fishink/)**
 
-A free, no-download browser idle game. Start as a lone fisherman on a tiny dock and grow into an automated fish-processing factory empire — conveyor belts, washers, smokers, sorters, drones, and a whole ocean to expand into.
+A free, no-download browser idle game. Start as a lone fisherman on a tiny dock and grow into an automated fish-processing factory empire - conveyor belts, washers, smokers, sorters, drones, and a whole ocean to expand into.
 
 ## Features
 
@@ -21,15 +21,15 @@ No build step needed.
 
 ## Structure
 
-Vanilla HTML5/Canvas/JS — no framework, no bundler:
+Vanilla HTML5/Canvas/JS - no framework, no bundler:
 
-- `index.html`, `style.css` — page shell and UI chrome
-- `js/data.js`, `js/grid.js` — fish species, machines, world/terrain data
-- `js/sim.js` — tick loop: spawning, fishing, belt movement, machines, selling
-- `js/render.js` — canvas drawing
-- `js/ui.js`, `js/startscreen.js` — build/upgrade menus, account screens
-- `js/save.js`, `js/cloud.js`, `js/leaderboard.js` — local save, cloud sync, leaderboard (Supabase backend — see `leaderboard/SETUP.md`)
-- `js/main.js` — bootstraps the game and the render/sim loop
+- `index.html`, `style.css` - page shell and UI chrome
+- `js/data.js`, `js/grid.js` - fish species, machines, world/terrain data
+- `js/sim.js` - tick loop: spawning, fishing, belt movement, machines, selling
+- `js/render.js` - canvas drawing
+- `js/ui.js`, `js/startscreen.js` - build/upgrade menus, account screens
+- `js/save.js`, `js/cloud.js`, `js/leaderboard.js` - local save, cloud sync, leaderboard (Supabase backend - see `leaderboard/SETUP.md`)
+- `js/main.js` - bootstraps the game and the render/sim loop
 
 ## Backend setup (optional)
 

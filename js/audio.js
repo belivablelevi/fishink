@@ -1,4 +1,4 @@
-// Fish INK Factory — procedural audio (Web Audio API, no asset files)
+// Fish INK Factory - procedural audio (Web Audio API, no asset files)
 
 const AUDIO = {
   ctx: null, master: null, ambientStarted: false,
@@ -18,7 +18,7 @@ const SFX_FILES = {
   teleport:  'audio/sfx-teleport.wav',
 };
 
-// Plain <audio> elements, not fetch()+decodeAudioData — fetch() of local
+// Plain <audio> elements, not fetch()+decodeAudioData - fetch() of local
 // files is blocked by Chromium's file:// CORS policy, so this needs to load
 // the same way the birds-song music does to work without a local server.
 function loadSfxBuffers() {
@@ -30,7 +30,7 @@ function loadSfxBuffers() {
 }
 
 // fadeIn/fadeOut (seconds) ease the volume in/out instead of snapping
-// straight to it — used for sfxCast so the cast doesn't pop in/out abruptly.
+// straight to it - used for sfxCast so the cast doesn't pop in/out abruptly.
 // pitchVariance randomizes playbackRate by up to ±that fraction each call,
 // so repeated plays of the same clip (e.g. casting) don't sound identical.
 function playBuffer(key, vol = 1, fadeIn = 0, fadeOut = 0, pitchVariance = 0) {
@@ -39,7 +39,7 @@ function playBuffer(key, vol = 1, fadeIn = 0, fadeOut = 0, pitchVariance = 0) {
   const base = AUDIO.buffers[key];
   if (!base) return;
   const target = vol * 0.5;
-  // <audio>.volume tops out at 1.0 — once a request wants louder than that
+  // <audio>.volume tops out at 1.0 - once a request wants louder than that
   // (e.g. the doubled-up placeholder SFX), stack extra overlapping copies of
   // the clip instead of silently clamping. A Web Audio gain boost would be
   // cleaner, but routing a file:// <audio> element through
@@ -84,18 +84,18 @@ function audioInit() {
   AUDIO.master.gain.value = 0.5;
   AUDIO.master.connect(AUDIO.ctx.destination);
   // Some browsers (Firefox/Safari) still hand back a 'suspended' context
-  // even when created inside a user-gesture handler — resume it explicitly.
+  // even when created inside a user-gesture handler - resume it explicitly.
   if (AUDIO.ctx.state !== 'running') AUDIO.ctx.resume();
   loadSfxBuffers();
   startAmbient();
 }
 
-// Browsers block audio until a user gesture — unlock/resume on first input.
+// Browsers block audio until a user gesture - unlock/resume on first input.
 function audioUnlock() {
   if (!AUDIO.ctx) { audioInit(); return; }
   if (AUDIO.ctx.state !== 'running') AUDIO.ctx.resume();
   if (AUDIO.music && AUDIO.music.paused) AUDIO.music.play().catch(() => {});
-  // If startAmbient ran before the AudioContext existed, the synth was never started — retry now.
+  // If startAmbient ran before the AudioContext existed, the synth was never started - retry now.
   if (!AUDIO.nightSynthGain) _startNightSynth();
 }
 window.addEventListener('pointerdown', audioUnlock);
@@ -103,7 +103,7 @@ window.addEventListener('keydown', audioUnlock);
 
 // ─── Ambient bed: looping background track ──────────────────────────────────
 // Plays directly through the <audio> element's own volume rather than via
-// createMediaElementSource into the Web Audio graph — routing a file:// media
+// createMediaElementSource into the Web Audio graph - routing a file:// media
 // element through Web Audio can end up silently muted (opaque-origin
 // tainting), so this keeps playback independent of AUDIO.ctx entirely.
 function startAmbient() {
@@ -118,7 +118,7 @@ function startAmbient() {
   AUDIO.music = music;
   music.play().catch(() => {}); // resumed by audioUnlock if this is blocked
 
-  // Night ambient — synthesized drone using Web Audio so no file is needed.
+  // Night ambient - synthesized drone using Web Audio so no file is needed.
   // A pair of detuned oscillators (fundamental + fifth) at very low volume
   // create a soft, atmospheric hum. A slow LFO drifts the gain for gentle
   // movement. The "nightMusic" volume property is repurposed as a gain target
@@ -149,7 +149,7 @@ function _startNightSynth() {
   lfoGain.connect(masterGain.gain);
   lfo.start();
 
-  // Two detuned oscillators — fundamental (55 Hz, A1) + fifth (82.5 Hz)
+  // Two detuned oscillators - fundamental (55 Hz, A1) + fifth (82.5 Hz)
   const freqs = [55, 82.5, 110];
   const vols  = [0.08, 0.05, 0.03];
   for (let i = 0; i < freqs.length; i++) {
@@ -164,7 +164,7 @@ function _startNightSynth() {
   }
 }
 
-// Called each sim frame — crossfades between day/night tracks based on dayTime
+// Called each sim frame - crossfades between day/night tracks based on dayTime
 // fraction p (0–1). Night range: p < 0.18 (pre-dawn) or p > 0.65 (dusk onward).
 function updateMusicForTimeOfDay(p, dt) {
   if (AUDIO.musicMuted) return;
@@ -199,10 +199,10 @@ function setSellMuted(v) { AUDIO.sellMuted = v; }
 // within the same second (four Washers finishing together, a dozen catches
 // during a fast auto-fisher tick, bulk-selling a stack of fish). Firing every
 // one of those at full volume just piles up into an unpleasant wall of noise
-// instead of readable feedback. Each sound key gets a short cooldown — a
+// instead of readable feedback. Each sound key gets a short cooldown - a
 // repeat within SFX_MIN_INTERVAL_MS is dropped outright (dedupes things that
 // finish on the same frame), and only SFX_BURST_MAX triggers of the same key
-// are allowed within the rolling SFX_BURST_WINDOW_MS after that — older
+// are allowed within the rolling SFX_BURST_WINDOW_MS after that - older
 // triggers age out ("expire") of that window, so the sound naturally catches
 // up again once the burst passes instead of building up indefinitely.
 const SFX_MIN_INTERVAL_MS = 40;
@@ -251,13 +251,13 @@ function sfxFail() {
 }
 
 // force=true bypasses both the Selling Sound mute and the auto-fisher
-// quieting — used for manually caught fish placed on a belt, which should
+// quieting - used for manually caught fish placed on a belt, which should
 // always confirm with the sell sound regardless of that setting.
 function sfxCoin(volMult = 1, force = false) {
   if (!force) {
     if (AUDIO.sellMuted) return;
     // Past 3 auto-fishers, sales happen too fast for a per-sale coin sound to
-    // be pleasant — automation has taken over, so let it sell quietly.
+    // be pleasant - automation has taken over, so let it sell quietly.
     if (countAutoFishers() >= 3) return;
   }
   playBuffer('coin', volMult);
@@ -272,13 +272,13 @@ function sfxDrop() {
 }
 
 // ─── Per-machine "processing done" SFX ──────────────────────────────────────
-// All four share one shape — root note + perfect fourth, triangle wave — so
+// All four share one shape - root note + perfect fourth, triangle wave - so
 // they read as one family rather than four unrelated chimes. The root pitch
 // climbs in the same order fish actually flow through a full line (Washer ->
 // Smoker -> Icer -> Stamper), so a multi-stage setup processing top-to-bottom
 // sounds like an ascending scale.
 function machineDing(rootFreq, volMult = 1) {
-  // Gated once per ding (not per tone) under one shared key — a Washer,
+  // Gated once per ding (not per tone) under one shared key - a Washer,
   // Smoker, Icer and Stamper all finishing together reads as one family of
   // sound already, so their bursts should be paced together too, not
   // separately (which would still let four dings overlap every tick).
@@ -312,7 +312,7 @@ function sfxTeleport(volMult = 1) {
   playBuffer('teleport', volMult);
 }
 
-// Soft two-note rising chime for finishing a tutorial step — gentler than the
+// Soft two-note rising chime for finishing a tutorial step - gentler than the
 // upgrade fanfare so a whole tutorial's worth of them doesn't grate.
 function sfxTutorialStep() {
   if (!_sfxGate('tutorialStep')) return;
@@ -320,7 +320,7 @@ function sfxTutorialStep() {
   playTone({ freq: 987.77, dur: 0.18, type: 'triangle', vol: 0.15, delay: 0.08 });
 }
 
-// Permanent level-up confirmation — global upgrades, per-instance machine
+// Permanent level-up confirmation - global upgrades, per-instance machine
 // upgrades, and Research nodes all play this instead of sfxCoin, so a
 // level-up reads as distinct from a fish sale. Square wave to read distinct
 // from the triangle-wave machineDing family.

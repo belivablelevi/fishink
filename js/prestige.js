@@ -1,4 +1,4 @@
-// Fish INK Factory — prestige: permanent meta-progression that survives a reset
+// Fish INK Factory - prestige: permanent meta-progression that survives a reset
 
 const PRESTIGE_KEY = 'fishink_prestige';
 const PRESTIGE_TOKEN_DIVISOR = 50000; // $50k lifetime earned ≈ 1 Fish Token
@@ -15,7 +15,7 @@ const PRESTIGE_UPGRADES = [
 const prestigeTokens = { total: 0 };
 const prestigeLevels = { startCash: 0, globalSell: 0, fasterStart: 0, unlockGate: 0, islandStart: 0 };
 
-// Separate localStorage key from the run save — must survive restartGame()'s
+// Separate localStorage key from the run save - must survive restartGame()'s
 // removeItem(SAVE_KEY) wipe, so prestige progress isn't lost on reset.
 (function loadPrestige() {
   try {
@@ -72,7 +72,7 @@ let _prestigeInProgress = false;
 
 function doPrestige() {
   if (_prestigeInProgress) {
-    // Was a fully silent no-op before — if this ever fires (see the reset
+    // Was a fully silent no-op before - if this ever fires (see the reset
     // below for why it shouldn't anymore), the player should at least see
     // SOMETHING instead of a click that appears to do nothing.
     queueToast('Prestige already in progress…', '#9aa0a8');
@@ -90,16 +90,16 @@ function doPrestige() {
   requestAnimationFrame(() => { veil.style.opacity = '1'; });
   setTimeout(() => {
     try {
-      resetRun(); // soft reset — keeps the tokens just banked; PRESTIGE_KEY is untouched
+      resetRun(); // soft reset - keeps the tokens just banked; PRESTIGE_KEY is untouched
     } catch (e) {
       console.warn('Prestige reset failed', e);
     }
     // Safety net: resetRun() ends in location.reload(), which normally wipes
-    // this flag as a side effect of the fresh page load — but if that reload
+    // this flag as a side effect of the fresh page load - but if that reload
     // is ever blocked or silently ignored (a sandboxed embed, a
     // beforeunload veto, the try above throwing) with no exception to catch,
     // this flag would otherwise stay stuck true forever, permanently and
-    // silently blocking every future click — exactly the reported "prestige
+    // silently blocking every future click - exactly the reported "prestige
     // button doesn't always work" bug. Clearing it here is a harmless no-op
     // in the normal case, since the page has already reloaded by the time
     // this line would matter.

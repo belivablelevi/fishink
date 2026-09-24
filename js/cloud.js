@@ -1,9 +1,9 @@
-// Fish INK Factory — cloud save + dev commands
+// Fish INK Factory - cloud save + dev commands
 //
 // Depends on leaderboard.js (loaded first) for:
 //   SUPABASE_URL, SUPABASE_ANON, LEADERBOARD_ID_KEY, LEADERBOARD_NAME_KEY
 // Depends on the supabase-js UMD bundle (loaded between leaderboard.js and
-// this file) for Google OAuth only — everything else still uses the existing
+// this file) for Google OAuth only - everything else still uses the existing
 // raw fetch()/PostgREST calls below, unchanged.
 
 const CLOUD_TABLE        = 'players';
@@ -92,13 +92,13 @@ async function cloudUsernameAvailable(username) {
 
 // ── Google sign-in ─────────────────────────────────────────────────────────────
 //
-// Additive alongside the username + recovery-code flow above — this never
+// Additive alongside the username + recovery-code flow above - this never
 // replaces it. A Google-authenticated player still gets a `players` row keyed
 // by client_id like everyone else, just with `auth_user_id` set so RLS can
 // scope it to `auth.uid()` instead of relying on the open anon-key policies
 // the recovery-code path uses.
 
-// Kicks off the OAuth redirect. Resolves once Google sends the browser away —
+// Kicks off the OAuth redirect. Resolves once Google sends the browser away -
 // the actual sign-in result is picked up after the redirect back, in
 // cloudGetGoogleSession().
 function cloudSignInWithGoogle() {
@@ -108,9 +108,9 @@ function cloudSignInWithGoogle() {
   // Google's own sign-in page sends X-Frame-Options: DENY, so it refuses to
   // render inside an iframe. If this game is embedded (e.g. on a Google
   // Sites page), redirecting in place would just show players a blank or
-  // blocked frame — the OAuth step has to happen on the top-level window
+  // blocked frame - the OAuth step has to happen on the top-level window
   // instead. Note this means, once embedded, finishing sign-in lands the
-  // player on the bare game URL rather than back inside the embedding page —
+  // player on the bare game URL rather than back inside the embedding page -
   // an unavoidable side effect of Google refusing to be framed at all.
   if (window.top !== window.self) {
     return _sb.auth.signInWithOAuth({
@@ -128,7 +128,7 @@ function cloudSignInWithGoogle() {
 
 // Cached in-memory so synchronous call sites (e.g. the beforeunload-triggered
 // _doCloudPush below) can attach the right auth header without awaiting a
-// fresh lookup — refreshed every time cloudGetGoogleSession() is called.
+// fresh lookup - refreshed every time cloudGetGoogleSession() is called.
 let _googleSession = null;
 
 // Returns the current Supabase Auth session (or null) without redirecting.
@@ -143,7 +143,7 @@ async function cloudGetGoogleSession() {
 
 // Looks up an existing players row already linked to this Google identity.
 // `session` must be passed and its access_token sent as the Authorization
-// bearer — the "google players can select own row" RLS policy only permits
+// bearer - the "google players can select own row" RLS policy only permits
 // authenticated requests matching auth.uid(), so a plain anon-key query (the
 // _cloudFetch default) sees nothing for a Google-linked row, even one that
 // genuinely belongs to the caller.
@@ -160,13 +160,13 @@ async function cloudFindPlayerByAuthId(userId, session) {
 }
 
 // Creates a players row for a first-time Google sign-in. Google-created
-// accounts don't use the recovery-code system at all — Google *is* the
-// credential — so the code is generated only to satisfy the column (in case
+// accounts don't use the recovery-code system at all - Google *is* the
+// credential - so the code is generated only to satisfy the column (in case
 // it's non-nullable) and is deliberately never cached to localStorage or
 // shown to the player; the recovery-code sign-in path stays exclusive to
 // pre-existing accounts made before this feature.
 //
-// `session` is the Supabase Auth session from cloudGetGoogleSession() — we
+// `session` is the Supabase Auth session from cloudGetGoogleSession() - we
 // send its access_token as the request's Authorization bearer (instead of
 // the plain anon key) so the insert runs as an authenticated user and can be
 // matched by the auth.uid()-scoped RLS policy on `players`.
@@ -191,7 +191,7 @@ async function cloudCreatePlayerWithGoogle(username, session) {
     console.warn('cloudCreatePlayerWithGoogle failed', res.status, detail);
     // `Prefer: resolution=ignore-duplicates` already silently absorbs a
     // client_id conflict (the intended idempotent-retry case) by targeting
-    // the primary key — so any 409 that actually reaches here can only be
+    // the primary key - so any 409 that actually reaches here can only be
     // the auth_user_id unique constraint, meaning this Google identity
     // already has an EXISTING row under a different client_id. That's not a
     // fresh signup at all; the caller must adopt the existing row instead of
@@ -204,11 +204,11 @@ async function cloudCreatePlayerWithGoogle(username, session) {
 // Links an ALREADY-active Google session to the current device's EXISTING
 // recovery-code account, rather than creating a separate new one. Proof of
 // ownership is the recovery code already cached locally from when this
-// device originally signed into that account — no re-typing needed, since a
+// device originally signed into that account - no re-typing needed, since a
 // device that has it cached already demonstrated it once. The actual check
 // happens server-side in the link_google_account() Postgres function
 // (leaderboard/link_google_account_rpc.sql), which atomically verifies
-// client_id + recovery_code match before setting auth_user_id — this can't
+// client_id + recovery_code match before setting auth_user_id - this can't
 // be done as a plain RLS policy (see that file's comments for why).
 async function cloudLinkGoogleAccount(session) {
   const code = localStorage.getItem(CLOUD_RECOVERY_KEY);
@@ -258,20 +258,20 @@ async function cloudLogin(username, code) {
 async function cloudSignOut() {
   if (typeof restarting !== 'undefined') restarting = true; // prevent beforeunload from re-saving locally
   // The `restarting` guard above stops beforeunload's saveGameNow() from
-  // resurrecting the local save we're about to delete — but beforeunload
+  // resurrecting the local save we're about to delete - but beforeunload
   // ALSO does the final cloudPushSaveImmediate() flush, so that guard was
   // silently skipping it too. Without an explicit push here, any progress
   // made since the last debounced cloud save (up to a few seconds' worth)
-  // was discarded on sign-out instead of reaching the server — confirmed
+  // was discarded on sign-out instead of reaching the server - confirmed
   // live: cash looked reverted after a sign-out/sign-in cycle while the map
   // (which changes far less often) looked consistent.
   //
   // Awaited, not fire-and-forget with keepalive: this isn't a real page
   // unload (we control the reload ourselves below), and keepalive fetches
-  // are capped around 64KB — this payload's full terrain/block grids
+  // are capped around 64KB - this payload's full terrain/block grids
   // routinely exceed that, so a keepalive push here would silently drop.
   if (typeof cloudPushSaveImmediate === 'function') await cloudPushSaveImmediate();
-  // Must be awaited BEFORE reload — Supabase persists its session under its
+  // Must be awaited BEFORE reload - Supabase persists its session under its
   // own localStorage key (separate from the four we clear below). If reload()
   // fired before this finished, that session could survive sign-out and get
   // picked up fresh on the next boot as if the player never signed out.
@@ -327,7 +327,7 @@ function _doCloudPush(keepalive) {
     .catch(() => setCloudStatus(CLOUD_STATUS.ERROR));
 }
 
-// Debounced version for in-game saves — batches rapid save calls.
+// Debounced version for in-game saves - batches rapid save calls.
 function cloudPushSave() {
   clearTimeout(_pushTimer);
   _pushTimer = setTimeout(() => _doCloudPush(false), 3000);
@@ -335,12 +335,12 @@ function cloudPushSave() {
 
 // Immediate version for manual sync, sign-out, restart, etc. Defaults to NOT
 // keepalive: browsers cap keepalive request bodies around 64KB, and this
-// save payload (full terrain/block grids) routinely exceeds that — verified
+// save payload (full terrain/block grids) routinely exceeds that - verified
 // live, a keepalive PATCH with this payload throws "Failed to fetch"
 // immediately, before the request even leaves the browser. The ONLY caller
 // that should pass `keepalive: true` is the actual beforeunload handler,
 // where the page is genuinely disappearing and a normal fetch would be
-// aborted outright — everywhere else (sign-out, restart, the Save/Sync
+// aborted outright - everywhere else (sign-out, restart, the Save/Sync
 // buttons) controls its own timing and should just let this resolve
 // normally, awaiting it where that's possible (see cloudSignOut()).
 function cloudPushSaveImmediate(keepalive = false) {
@@ -350,13 +350,13 @@ function cloudPushSaveImmediate(keepalive = false) {
 
 // ── Dev console ────────────────────────────────────────────────────────────────
 // Usage:
-//   dev.auth('your_password')              — unlock dev mode
-//   dev.view('username')                   — print a player's save to console
-//   dev.load('username')                   — load a player's save into your current session
-//   dev.wipe('username')                   — zero out a player's save data
-//   dev.rename('oldName', 'newName')       — change a player's username
-//   dev.give('username', 5000)             — add cash to a player's save
-//   dev.migrateLeaderboard()               — seed players table from leaderboard_scores
+//   dev.auth('your_password')              - unlock dev mode
+//   dev.view('username')                   - print a player's save to console
+//   dev.load('username')                   - load a player's save into your current session
+//   dev.wipe('username')                   - zero out a player's save data
+//   dev.rename('oldName', 'newName')       - change a player's username
+//   dev.give('username', 5000)             - add cash to a player's save
+//   dev.migrateLeaderboard()               - seed players table from leaderboard_scores
 
 const _DEV_PASSWORD = 'fishink_dev'; // ← change this before shipping
 
@@ -472,7 +472,7 @@ window.dev = {
       });
       if (!res.ok) { console.error('Fetch leaderboard failed', res.status); return; }
       const rows = await res.json();
-      console.log(`Found ${rows.length} leaderboard entries — seeding players table...`);
+      console.log(`Found ${rows.length} leaderboard entries - seeding players table...`);
 
       const seen = new Set();
       const unique = rows.filter(r => {

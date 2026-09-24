@@ -1,4 +1,4 @@
-// Fish INK Factory — build/upgrades menu (DOM overlay, tabbed Godot-style)
+// Fish INK Factory - build/upgrades menu (DOM overlay, tabbed Godot-style)
 
 let buildMenuEl, buildPanelEl, upgradesPanelEl, fishIndexPanelEl, statsPanelEl, controlsPanelEl, researchPanelEl, prestigePanelEl, menuCashEl;
 let leaderboardPanelEl;
@@ -209,7 +209,7 @@ function initMachinesMenu() {
 
   // renderMachinesPanel() wipes/rebuilds panel.innerHTML on every Upgrade
   // click, detaching the clicked button before the click bubbles to the
-  // document listener below — stopping propagation here keeps the outside
+  // document listener below - stopping propagation here keeps the outside
   // -click check from ever seeing that detached target.
   panel.addEventListener('click', e => e.stopPropagation());
 
@@ -369,7 +369,7 @@ function calcBulkUpgrade(id, instances) {
   return { count, total };
 }
 
-// Called every frame — patches button states without rebuilding DOM. The
+// Called every frame - patches button states without rebuilding DOM. The
 // button nodes are cached per rebuild (see _machinesLiveCache invalidation in
 // renderMachinesPanel/_renderMachinesDetail) so this doesn't re-run
 // querySelectorAll 60×/second, and text writes only land on change.
@@ -393,7 +393,7 @@ function updateMachinesPanelLive() {
     if (btn.disabled !== dis) btn.disabled = dis;
   }
 
-  // Upgrade All button — update count/cost text live
+  // Upgrade All button - update count/cost text live
   const allBtn = _machinesLiveCache.allBtn;
   if (allBtn) {
     const id = Number(allBtn.dataset.blockId);
@@ -445,7 +445,7 @@ function setBuildMenuOpen(open) {
   if (!buildMenuEl) return;
   buildMenuEl.classList.toggle('hidden', !open);
   // The full-screen build menu's bottom corners sit right where the touch
-  // joystick/Interact button float on a phone — hide them while the menu
+  // joystick/Interact button float on a phone - hide them while the menu
   // covers them so they don't block taps on the menu underneath. Build
   // stays visible/reachable (see style.css) since it's the only way to
   // close the panel while staying in placement mode.
@@ -465,7 +465,7 @@ function setBuildMenuOpen(open) {
   if (typeof updateBuildHintUI === 'function') updateBuildHintUI();
 }
 
-// ─── Leaderboard — standalone top-left icon button + dropdown panel ────────
+// ─── Leaderboard - standalone top-left icon button + dropdown panel ────────
 function initLeaderboardMenu() {
   const btn   = document.getElementById('leaderboardToggleBtn');
   const panel = document.getElementById('leaderboardPanel');
@@ -635,7 +635,7 @@ function refreshBuildPanel() {
   const descEl = document.getElementById('actionDesc');
   const costEl = document.getElementById('actionCost');
   if (previewEl) {
-    // Only rebuild the preview canvas when the selection actually changed —
+    // Only rebuild the preview canvas when the selection actually changed -
     // this runs every frame via updateBuildMenuLive, no need to reallocate a
     // canvas+2D context 60x/second for an unchanged selection.
     if (previewEl.dataset.id !== String(id)) {
@@ -817,7 +817,7 @@ function renderPrestigePanel() {
       if (buyPrestigeUpgrade(def.id)) {
         renderPrestigePanel();
         // Industry Contacts changes the Research tab's unlock-threshold hint,
-        // but that panel only re-renders on tab switch — refresh it here too
+        // but that panel only re-renders on tab switch - refresh it here too
         // so the discount is visible immediately, matching Seed Capital's
         // instant-effect fix.
         if (def.id === 'unlockGate') renderResearchPanel();
@@ -831,7 +831,7 @@ function renderPrestigePanel() {
 }
 
 // ─── Leaderboard tab ───────────────────────────────────────────────────────
-// Leaderboard names can come from any client (open-write table, no auth) —
+// Leaderboard names can come from any client (open-write table, no auth) -
 // escape before interpolating into innerHTML so a hostile name can't inject markup.
 function escapeLeaderboardName(name) {
   const div = document.createElement('div');
@@ -870,7 +870,7 @@ function renderLeaderboardPanel() {
     if (result.error) {
       const err = document.createElement('div');
       err.className = 'panel-hint';
-      err.textContent = 'Leaderboard is temporarily unavailable — the server may be down. Try again in a moment.';
+      err.textContent = 'Leaderboard is temporarily unavailable. The server may be down. Try again in a moment.';
       leaderboardPanelEl.appendChild(err);
       const retryBtn = document.createElement('button');
       retryBtn.className = 'upgrade-buy';
@@ -937,7 +937,7 @@ function renderLeaderboardList(result) {
   if (!top.length) {
     const empty = document.createElement('div');
     empty.className = 'panel-hint';
-    empty.textContent = 'No scores yet — be the first!';
+    empty.textContent = 'No scores yet. Be the first!';
     leaderboardPanelEl.appendChild(empty);
   }
 
@@ -972,7 +972,7 @@ function renderLeaderboardList(result) {
 
 // ─── Fish Index tab ──────────────────────────────────────────────────────────
 // A species unlocks the moment it's caught (randomFish() in data.js adds it
-// to game.fishIndex) — selling isn't required, so this reads as "fish you've
+// to game.fishIndex) - selling isn't required, so this reads as "fish you've
 // seen" rather than "fish you've sold".
 function makeFishPreview(spec) {
   const cnv = document.createElement('canvas');
@@ -1108,11 +1108,11 @@ function renderStatsPanel() {
 }
 
 
-// ─── Controls tab — full keybind cheat-sheet ───────────────────────────────
-// Static reference content (rendered once at init, see initBuildMenu) — none
+// ─── Controls tab - full keybind cheat-sheet ───────────────────────────────
+// Static reference content (rendered once at init, see initBuildMenu) - none
 // of this depends on live game state, unlike the other tabs.
 // Each row's `combo` is a list of chords; keys within a chord are pressed
-// together ("+"), separate chords are alternatives ("or") — e.g.
+// together ("+"), separate chords are alternatives ("or") - e.g.
 // [['Ctrl','Shift','Z']] renders "Ctrl + Shift + Z", while [['Q'],['E']]
 // renders "Q  or  E".
 const CONTROL_GROUPS = [
@@ -1280,7 +1280,7 @@ function openBlockPopup(kind, c, r, screenX, screenY) {
 }
 
 // The popup is centered horizontally and anchored above (screenX, screenY)
-// purely via CSS transform, with no awareness of viewport edges — tapping a
+// purely via CSS transform, with no awareness of viewport edges - tapping a
 // machine near a screen edge (common on a small phone viewport, but also
 // reachable on desktop with a narrow window) can render it partly or fully
 // off-screen. Nudges it back on-screen using its actual rendered size,
@@ -1305,7 +1305,7 @@ function closeBlockPopup() {
   if (blockPopupEl) blockPopupEl.classList.add('hidden');
 }
 
-// E-key entry point while hovering a tile — toggles closed if already open
+// E-key entry point while hovering a tile - toggles closed if already open
 // on the same tile/kind, otherwise opens anchored at the cursor.
 function toggleBlockPopupAtMouse(kind, c, r) {
   if (blockPopup.open && blockPopup.kind === kind && blockPopup.c === c && blockPopup.r === r) {
@@ -1390,7 +1390,7 @@ function upgradeSectionHTML(id, level, cost) {
   `;
 }
 
-// Wires the `.mp-buy` button rendered by upgradeSectionHTML — call after
+// Wires the `.mp-buy` button rendered by upgradeSectionHTML - call after
 // setting innerHTML so the listener attaches to the fresh DOM node.
 function wireUpgradeSection(c, r, cost) {
   const buyBtn = blockPopupEl.querySelector('.mp-buy');
@@ -1401,7 +1401,7 @@ function wireUpgradeSection(c, r, cost) {
   });
 }
 
-// Static per-machine processing stats — replaces the old per-fish "Washer +$x"
+// Static per-machine processing stats - replaces the old per-fish "Washer +$x"
 // toast spam with a fixed reference baked into the popup instead.
 function machineStatsHTML(id, level) {
   const def = machineDef(id);
@@ -1544,7 +1544,7 @@ function renderRecyclerPopupContent(c, r) {
 }
 
 // Teleporter settings: pick which other Teleporter on the map this one sends
-// fish to. The list is rebuilt fresh every render (cheap — the map is small
+// fish to. The list is rebuilt fresh every render (cheap - the map is small
 // and this only runs when the popup is opened or a button inside it is
 // clicked, never per-frame; see updateBlockPopupLive for the per-frame path).
 // Compass direction + distance from (fc,fr) to (tc,tr).
@@ -1654,7 +1654,7 @@ function renderCratePopupContent(c, r) {
 
 // Closes itself if the underlying block got sold/removed/changed out from
 // under it, and otherwise patches live bits *in place* rather than calling
-// renderBlockPopup() every frame — a full innerHTML rebuild on every tick
+// renderBlockPopup() every frame - a full innerHTML rebuild on every tick
 // would tear the close/buy/size buttons out of the DOM mid-click, which is
 // why none of them registered clicks before.
 function updateBlockPopupLive() {
@@ -1746,8 +1746,8 @@ function initBuildHud() {
 }
 
 // Called every frame from the game loop, independent of whether the big
-// build menu modal is open — this is the whole point of the HUD. Style writes
-// only land when the cash pill actually moved (text width change / resize) —
+// build menu modal is open - this is the whole point of the HUD. Style writes
+// only land when the cash pill actually moved (text width change / resize) -
 // unconditional per-frame left/top writes kept the style dirty every frame.
 let _machBtnLastRight = -1;
 let _machBtnLastMid   = -1;
@@ -2138,7 +2138,7 @@ function _buildFrogSlide(variantId, frogs) {
     acts.appendChild(h);
   }
 
-  // Sell button for unplaced frogs — mirrors axolotl sell so you don't have
+  // Sell button for unplaced frogs - mirrors axolotl sell so you don't have
   // to find the frog in the world just to sell it.
   if (unplaced.length) {
     const sellUid = unplaced[0].uid;

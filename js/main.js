@@ -1,6 +1,6 @@
-// Fish INK Factory — game loop
+// Fish INK Factory - game loop
 
-const GAME_VERSION = '1.9.1';
+const GAME_VERSION = '1.9.2';
 
 let canvas, ctx;
 let lastTime = 0;
@@ -88,7 +88,7 @@ function startLoadingAnimation() {
   };
 }
 
-// Real asset loading finishes almost instantly off disk — hold the screen
+// Real asset loading finishes almost instantly off disk - hold the screen
 // open just long enough to avoid a jarring instant flash.
 const MIN_LOADING_MS = 350;
 
@@ -126,7 +126,7 @@ function init() {
 
     // If this device just came back from an OAuth redirect that was started
     // by an EXISTING recovery-code player linking their account (rather than
-    // a fresh sign-up/sign-in), handle that first — it must not fall into the
+    // a fresh sign-up/sign-in), handle that first - it must not fall into the
     // fresh-signup lookup below, which would treat it as a brand-new identity.
     let existingAccountAuthLinked = false;
     const linkPending = localStorage.getItem(GOOGLE_LINK_PENDING_KEY);
@@ -147,7 +147,7 @@ function init() {
           }
         } catch (e) { console.warn('Google link resolution failed', e); }
       }
-      // Falls through to the normal cloud pull below — this is still the
+      // Falls through to the normal cloud pull below - this is still the
       // same existing account, its save still needs loading as usual.
     }
 
@@ -156,7 +156,7 @@ function init() {
     // pull below, and before runStartScreens decides which start screen to show.
     //
     // This must run on EVERY boot where a session might exist, not just when
-    // getLeaderboardName() is empty — cloudGetGoogleSession() is also what
+    // getLeaderboardName() is empty - cloudGetGoogleSession() is also what
     // populates the module-level _googleSession cache that cloudLoadSave()
     // needs below to authenticate as this player. Without it, a returning
     // Google-linked player's row is invisible to the plain anon-key query
@@ -181,12 +181,12 @@ function init() {
             }
             resolvedViaGoogle = true;
           } else {
-            // First time this Google identity has signed in — the googleName
+            // First time this Google identity has signed in - the googleName
             // start screen (startscreen.js) will pick this up and create the row.
             _pendingGoogleSession = session;
           }
         }
-      } catch (e) { /* offline — fall through to the normal account-setup screen */ }
+      } catch (e) { /* offline - fall through to the normal account-setup screen */ }
     }
 
     if (!resolvedViaGoogle && !skipCloud && typeof cloudLoadSave === 'function' && cloudUsername() && isLeaderboardConfigured()) {
@@ -205,10 +205,10 @@ function init() {
               deserializeGame(data);
               localStorage.setItem(SAVE_KEY, JSON.stringify(data));
             }
-            // Local is newer or equal — cloud will catch up on next push
+            // Local is newer or equal - cloud will catch up on next push
           } catch (e) { console.warn('Cloud save apply failed', e); }
         }
-      } catch (e) { /* offline — local save already loaded */ }
+      } catch (e) { /* offline - local save already loaded */ }
     }
 
     // Read by the linkGooglePrompt start screen (startscreen.js) to decide
@@ -232,7 +232,7 @@ function init() {
   };
 
   // Build menu's swatches snapshot drawBlock() into <canvas> previews, so it
-  // must init after images load — otherwise the washer/smoker previews would
+  // must init after images load - otherwise the washer/smoker previews would
   // freeze on the procedural fallback drawn before the sprites were ready.
   loadImages(() => {
     const elapsed = performance.now() - loadStart;
@@ -258,7 +258,7 @@ function resizeCanvas() {
   CANVAS_W = canvas.width;
   CANVAS_H = canvas.height;
   // A bigger window raises the minimum zoom needed to keep the view inside
-  // the map — re-clamp immediately so a resize while already zoomed out
+  // the map - re-clamp immediately so a resize while already zoomed out
   // doesn't leave you past the new, stricter limit until the next scroll.
   ZOOM = Math.min(ZOOM_MAX, Math.max(minZoomForViewport(), ZOOM));
 }
@@ -268,7 +268,7 @@ function loop(ts) {
   const dt = Math.min((ts - lastTime) / 1000, 0.1);
   lastTime = ts;
 
-  // A thrown error inside any one frame must not kill the rAF chain — that
+  // A thrown error inside any one frame must not kill the rAF chain - that
   // would permanently freeze updatePlayer/simUpdate too (e.g. stuck mid-cast
   // with movement locked out), not just stop rendering.
   try {
@@ -304,12 +304,12 @@ async function checkForUpdate() {
     const { version } = await res.json();
     if (version && version !== GAME_VERSION) {
       saveGame();
-      // Awaited — same keepalive:false-vs-immediate-reload race as
+      // Awaited - same keepalive:false-vs-immediate-reload race as
       // restartGame() in save.js; this function is already async.
       if (typeof cloudPushSaveImmediate === 'function') await cloudPushSaveImmediate();
       location.reload(true);
     }
-  } catch (e) { /* offline — skip silently */ }
+  } catch (e) { /* offline - skip silently */ }
 }
 
 window.addEventListener('load', init);

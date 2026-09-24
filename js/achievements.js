@@ -1,4 +1,4 @@
-// Fish INK Factory — achievements/milestones
+// Fish INK Factory - achievements/milestones
 
 const ACHIEVEMENTS = [
   { id: 'catch1',      name: 'First Catch',     desc: 'Catch your first fish',        reward: 50,    check: () => game.fishIndex.size >= 1 },

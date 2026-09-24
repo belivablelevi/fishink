@@ -1,4 +1,4 @@
-// Fish INK Factory — start-of-game screen queue
+// Fish INK Factory - start-of-game screen queue
 //
 // A generic, extensible sequence of one-time screens shown before gameplay
 // begins (after assets load, before the loading screen fades). To add your
@@ -17,7 +17,7 @@
 // start, and only screens that return true are shown, one at a time.
 
 // Set by main.js during boot, before runStartScreens(), when a Google OAuth
-// session exists but has no players row linked to it yet — i.e. this is the
+// session exists but has no players row linked to it yet - i.e. this is the
 // first time this Google identity has signed in. Consumed by the googleName
 // screen below, then cleared.
 let _pendingGoogleSession = null;
@@ -27,7 +27,7 @@ let _pendingGoogleSession = null;
 // linkGooglePrompt screen below.
 let _existingAccountAuthLinked = false;
 
-// Set when a player picks "Sign Up Without Leaderboard" — local-only play, no
+// Set when a player picks "Sign Up Without Leaderboard" - local-only play, no
 // name, no cloud row. Cleared on sign-out (cloud.js).
 const GUEST_KEY = 'fishink_guest';
 
@@ -52,12 +52,12 @@ const START_SCREENS = [
   },
   {
     id: 'linkGooglePrompt',
-    // Only meaningful for a recovery-code account (that's the whole point —
+    // Only meaningful for a recovery-code account (that's the whole point -
     // adding Google as an alternate way in). A Google-created account never
     // has a recovery code by design, so without this check, any transient
     // hiccup that left _existingAccountAuthLinked incorrectly false (e.g. a
     // slow/failed session resolution on this boot) would show this prompt
-    // for an account that can never satisfy it — "Continue with Google"
+    // for an account that can never satisfy it - "Continue with Google"
     // would then fail every time with a guaranteed no-recovery-code error.
     shouldShow: () => !!getLeaderboardName() && isLeaderboardConfigured()
       && !!localStorage.getItem(CLOUD_RECOVERY_KEY)
@@ -76,13 +76,13 @@ function showAccountChoice(card, done) {
     <div class="start-screen-sub">Create an account to save your progress across devices.</div>
     <button id="ssBtnSignUp" class="start-screen-btn">Sign Up</button>
     <div class="start-screen-divider"></div>
-    <button id="ssBtnSignIn" class="start-screen-btn-ghost">Sign In — Returning Player</button>
+    <button id="ssBtnSignIn" class="start-screen-btn-ghost">Sign In (Returning Player)</button>
   `;
   card.querySelector('#ssBtnSignUp').addEventListener('click', () => showSignUp(card, done));
   card.querySelector('#ssBtnSignIn').addEventListener('click', () => showSignIn(card, done));
 }
 
-// Wires a "Continue with Google" button already present in `card` — shared by
+// Wires a "Continue with Google" button already present in `card` - shared by
 // showSignUp and showSignIn since cloudSignInWithGoogle() behaves identically
 // either way (the boot-time resolution in main.js figures out whether this is
 // a new or returning Google identity once the redirect comes back).
@@ -92,12 +92,12 @@ function _wireGoogleButton(card, selector) {
   btn.addEventListener('click', async () => {
     btn.disabled = true;
     btn.textContent = 'Redirecting…';
-    // Normally this navigates away and the line below never really matters —
+    // Normally this navigates away and the line below never really matters -
     // but if it DIDN'T (supabase-js blocked/failed to load, OAuth rejected),
     // the button would otherwise stay stuck on "Redirecting…" forever with
     // no way to retry short of a full page refresh. Since Sign Up requires
     // Google when the backend is configured, that's a dead end for a new
-    // player — recover instead.
+    // player - recover instead.
     const result = await cloudSignInWithGoogle();
     if (result?.error) {
       btn.disabled = false;
@@ -108,12 +108,12 @@ function _wireGoogleButton(card, selector) {
         err.className = 'start-screen-error';
         btn.before(err);
       }
-      err.textContent = "Couldn't reach Google — check your connection and try again.";
+      err.textContent = "Couldn't reach Google. Check your connection and try again.";
     }
   });
 }
 
-// Google is the only way to create a NEW account — recovery codes are being
+// Google is the only way to create a NEW account - recovery codes are being
 // phased out for new sign-ups (existing recovery-code accounts keep working
 // unchanged via Sign In). If there's no backend configured at all, cloud
 // accounts of any kind are impossible, so fall back to local-only play
@@ -129,7 +129,7 @@ function showSignUp(card, done) {
     <div class="start-screen-sub">Sign up with Google to save your progress across devices.</div>
     <button id="ssBtnGoogle" class="start-screen-btn">Continue with Google</button>
     <button id="ssBtnGuest" class="start-screen-btn-ghost start-screen-btn-small">Sign Up Without Leaderboard</button>
-    <div class="start-screen-hint">No account: progress saves on this device only — no cloud backup and no leaderboard.</div>
+    <div class="start-screen-hint">No account: progress saves on this device only, with no cloud backup and no leaderboard.</div>
   `;
   card.querySelector('#ssBtnBack').addEventListener('click', () => showAccountChoice(card, done));
   _wireGoogleButton(card, '#ssBtnGoogle');
@@ -166,7 +166,7 @@ function showLinkGooglePrompt(card, done) {
   });
 }
 
-// First-time Google sign-in with no players row yet — same name validation as
+// First-time Google sign-in with no players row yet - same name validation as
 // showPickName, but creates the row via cloudCreatePlayerWithGoogle and skips
 // the recovery-code screen (Google is the credential now; a code is still
 // generated as a fallback and surfaced later in the Cloud menu).
@@ -210,14 +210,14 @@ function showPickNameForGoogle(card, done, session) {
       if (available === false) {
         localStorage.removeItem(LEADERBOARD_NAME_KEY);
         btn.disabled = false; btn.textContent = "Let's go"; input.disabled = false;
-        setErr('That name is already taken — try another!');
+        setErr('That name is already taken. Try another!');
         return;
       }
 
       const createResult = await cloudCreatePlayerWithGoogle(input.value.trim(), session);
       if (createResult.alreadyLinked) {
         // This Google identity already has an existing row under a
-        // different client_id/username — not actually a fresh signup.
+        // different client_id/username - not actually a fresh signup.
         // Adopt that existing account instead of pretending this name pick
         // created a new one (it didn't; the insert was rejected).
         const existing = await cloudFindPlayerByAuthId(session.user.id, session);
@@ -239,18 +239,18 @@ function showPickNameForGoogle(card, done, session) {
         }
         localStorage.removeItem(LEADERBOARD_NAME_KEY);
         btn.disabled = false; btn.textContent = "Let's go"; input.disabled = false;
-        setErr('This Google account is already linked to another player, but it could not be loaded — try again.');
+        setErr('This Google account is already linked to another player, but it could not be loaded. Try again.');
         return;
       }
       if (!createResult.ok) {
         // Don't silently proceed into a broken local-only state that looks
-        // signed up but has no matching row — surface it and let them retry.
+        // signed up but has no matching row - surface it and let them retry.
         localStorage.removeItem(LEADERBOARD_NAME_KEY);
         btn.disabled = false; btn.textContent = "Let's go"; input.disabled = false;
-        setErr(`Couldn't create your account (${createResult.error || 'unknown error'}) — try again.`);
+        setErr(`Couldn't create your account (${createResult.error || 'unknown error'}). Try again.`);
         return;
       }
-      // This account is created WITH auth_user_id already set — without this,
+      // This account is created WITH auth_user_id already set - without this,
       // linkGooglePrompt's shouldShow() (which defaults to false) would think
       // a brand-new Google account still needs linking and re-show itself
       // immediately after signup.
@@ -268,7 +268,7 @@ function showPickNameForGoogle(card, done, session) {
 }
 
 // Local-only fallback used exclusively when no backend is configured at all
-// (see showSignUp) — no cloud account, no recovery code, just a display name.
+// (see showSignUp) - no cloud account, no recovery code, just a display name.
 function showPickName(card, done) {
   const render = (errMsg) => {
     card.innerHTML = `
@@ -340,7 +340,7 @@ function showSignIn(card, done) {
       btn.textContent = 'Signing in…';
 
       const res = await cloudLogin(username, code);
-      if (res.error === 'network') { render("Couldn't reach the server — check your connection."); return; }
+      if (res.error === 'network') { render("Couldn't reach the server. Check your connection."); return; }
       if (res.error === 'invalid')  { render('Wrong username or recovery code.'); return; }
 
       // Sync the signed-in username as the leaderboard display name.
@@ -381,7 +381,7 @@ function runStartScreens(onAllDone) {
   const card    = document.getElementById('startScreenCard');
 
   // Re-checks shouldShow() fresh each time, rather than freezing a list up
-  // front — a screen like linkGooglePrompt only becomes eligible as a side
+  // front - a screen like linkGooglePrompt only becomes eligible as a side
   // effect of an earlier screen (Sign In setting the player's name), so it
   // must be picked up on the next round, not decided before that happened.
   const showNext = () => {

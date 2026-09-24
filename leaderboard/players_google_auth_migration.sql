@@ -4,7 +4,7 @@
 -- AFTER enabling the Google provider in Authentication > Providers.
 --
 -- This adds Google-linked identity to the existing `players` table used by
--- js/cloud.js. It does NOT touch the existing username + recovery-code flow —
+-- js/cloud.js. It does NOT touch the existing username + recovery-code flow -
 -- that keeps working exactly as it does today.
 
 -- ── Step 1: add the linking column ──────────────────────────────────────────
@@ -20,13 +20,13 @@ alter table players
 --   from pg_policies
 --   where tablename = 'players';
 --
--- IMPORTANT — read this before Step 3:
--- Postgres RLS policies are *permissive* — if ANY policy on a table allows an
+-- IMPORTANT - read this before Step 3:
+-- Postgres RLS policies are *permissive* - if ANY policy on a table allows an
 -- action, it's allowed, regardless of how many other, stricter policies also
 -- exist. So if `players` currently has blanket policies along the lines of
 -- `using (true)` / `with check (true)` (matching the "anyone can ..." pattern
 -- leaderboard_scores uses, documented in schema.sql), then simply adding the
--- auth.uid()-scoped policies in Step 3 below changes nothing — the old
+-- auth.uid()-scoped policies in Step 3 below changes nothing - the old
 -- permissive policies still let anyone with the anon key read/write ANY row,
 -- Google-linked or not.
 --
@@ -35,7 +35,7 @@ alter table players
 -- access only applies to legacy recovery-code rows that were never
 -- Google-linked"). That is a real behavior change to policies that are
 -- already live in production, so it's written here as an explicit,
--- copy-adjust-run step rather than something this migration does blindly —
+-- copy-adjust-run step rather than something this migration does blindly -
 -- confirm the actual policy names from the query above and adapt the
 -- `drop policy` statements in Step 4 to match before running them.
 
@@ -60,8 +60,8 @@ create policy "google players can insert own row"
 -- ── Step 4 (optional but recommended): close the gap for Google-linked rows ─
 --
 -- Only run this after confirming the actual existing policy names from the
--- Step 2 query — the names below are guesses based on the leaderboard_scores
--- pattern and will error (harmlessly — `drop policy` fails if the name
+-- Step 2 query - the names below are guesses based on the leaderboard_scores
+-- pattern and will error (harmlessly - `drop policy` fails if the name
 -- doesn't match) if your `players` table used different names.
 --
 -- drop policy if exists "anyone can select" on players;
@@ -84,6 +84,6 @@ create policy "google players can insert own row"
 --   with check (auth_user_id is null);
 --
 -- After Step 4, a row only becomes truly scoped to auth.uid() once
--- auth_user_id is set on it — exactly the accounts created via
+-- auth_user_id is set on it - exactly the accounts created via
 -- cloudCreatePlayerWithGoogle() in js/cloud.js. Existing recovery-code rows
 -- (auth_user_id is null) keep behaving exactly as before Step 4.

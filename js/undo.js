@@ -1,4 +1,4 @@
-// Fish INK Factory — undo/redo for build actions (placement grid + static config only)
+// Fish INK Factory - undo/redo for build actions (placement grid + static config only)
 
 const UNDO_MAX = 50;
 const undoStack = [];
@@ -27,7 +27,7 @@ function pushUndoEntry(entry) {
   redoStack.length = 0;
 }
 
-// The subset of cellState that undo/redo cares about — live sim state
+// The subset of cellState that undo/redo cares about - live sim state
 // (item, carrying, processing, timer, dronePhase...) is intentionally excluded.
 function captureConfig(c, r) {
   const st = stateAt(c, r);
@@ -51,10 +51,10 @@ function notifyPlaced(id, c, r, dir, cost) {
 }
 
 // Blueprint paste applies its captured config *after* buyAndPlace (and thus
-// after notifyPlaced) has already pushed the 'place' entry — patch that
+// after notifyPlaced) has already pushed the 'place' entry - patch that
 // entry in place so undo/redo of a pasted tile doesn't drop its
 // settings/upgrades back to defaults. Always targets the entry buyAndPlace
-// just pushed (top of whichever list — batch or top-level — is active).
+// just pushed (top of whichever list - batch or top-level - is active).
 function attachConfigToLastPlaced(config) {
   const list = undoBatchActive ? undoBatchActions : undoStack;
   const entry = list[list.length - 1];

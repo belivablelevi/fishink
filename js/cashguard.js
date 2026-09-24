@@ -1,4 +1,4 @@
-// Cash integrity guard — hidden closure so it can't be found or overridden
+// Cash integrity guard - hidden closure so it can't be found or overridden
 // from the browser console. Tracks every legitimate cash grant this session;
 // if game.cash ever exceeds that running total, the gap is external injection
 // (DevTools console, mods, etc.) and gets silently reverted.

@@ -1,18 +1,18 @@
-// Fish INK Factory — blueprint copy/paste (every block is single-tile, so
+// Fish INK Factory - blueprint copy/paste (every block is single-tile, so
 // the copied region is just a flat list of {dc, dr, id, dir, config} cells)
 
 const blueprint = {
-  selecting: false, // 'C' toggles — drag a rectangle to copy
-  pasting: false,   // 'V' toggles — ghost follows the mouse, click to stamp
-  current: null,    // { w, h, tiles } — the one copied layout; each Copy overwrites it
-  pasteRotation: 0, // 0-3 — preview-only rotation steps applied on top of the copy; resets after each stamp
+  selecting: false, // 'C' toggles - drag a rectangle to copy
+  pasting: false,   // 'V' toggles - ghost follows the mouse, click to stamp
+  current: null,    // { w, h, tiles } - the one copied layout; each Copy overwrites it
+  pasteRotation: 0, // 0-3 - preview-only rotation steps applied on top of the copy; resets after each stamp
 };
 
 function activeBlueprint() {
   return blueprint.current;
 }
 
-let bpDragStart = null; // { c, r } — set on mousedown while blueprint.selecting
+let bpDragStart = null; // { c, r } - set on mousedown while blueprint.selecting
 
 function toggleBlueprintSelect() {
   blueprint.pasting = false;
@@ -30,7 +30,7 @@ function toggleBlueprintPaste() {
 }
 
 // Advances the preview-only rotation by one 90° clockwise step. This never
-// touches the copied layout itself — only the ghost preview (and the tiles
+// touches the copied layout itself - only the ghost preview (and the tiles
 // actually stamped down) reflect the rotation; the clipboard always goes
 // back to its originally-copied orientation once you place it.
 function rotateBlueprintClipboard() {
@@ -82,7 +82,7 @@ function captureBlueprint(start, end) {
   saveGame();
 }
 
-// Pasting a leveled-up machine must cost the same as leveling it up by hand —
+// Pasting a leveled-up machine must cost the same as leveling it up by hand -
 // applies levels one at a time via machineUpgradeCost, stopping (silently,
 // like the rest of pasteBlueprint's best-effort placement) at whatever level
 // the player can currently afford. Returns the level actually paid for.
@@ -101,7 +101,7 @@ function chargeForPastedLevel(c, r, id, targetLevel) {
 }
 
 // Best-effort: tiles whose destination fails canPlaceBlock (terrain mismatch,
-// unlock gate, etc.) are silently skipped and never charged — see plan D13.
+// unlock gate, etc.) are silently skipped and never charged - see plan D13.
 function pasteBlueprint(originC, originR) {
   if (!activeBlueprint()) return;
   const clip = getRotatedClipboard();
@@ -122,7 +122,7 @@ function pasteBlueprint(originC, originR) {
       if (buyAndPlace(B_CONCRETE, c, r, 0)) placed++;
       continue;
     }
-    // Most equipment needs a paved floor underneath — lay it first if missing
+    // Most equipment needs a paved floor underneath - lay it first if missing
     // (Fisher/Concrete themselves don't, per canPlaceBlock's own rules).
     if (t.id !== B_FISHER && t.id !== B_CONCRETE && tileAt(c, r) !== T_CONCRETE) {
       if (!canPlaceBlock(B_CONCRETE, c, r, 0)) continue;
@@ -133,7 +133,7 @@ function pasteBlueprint(originC, originR) {
     if (game.cash < BLOCK_COSTS[t.id]) continue;
     if (buyAndPlace(t.id, c, r, t.dir)) {
       const targetLevel = (t.config && t.config.level) || 0;
-      // t.config.dir is the pre-rotation direction captured at copy time —
+      // t.config.dir is the pre-rotation direction captured at copy time -
       // t.dir (already rotated by getRotatedClipboard) is the source of
       // truth here, so it must override config.dir or this Object.assign
       // would clobber the just-placed correct orientation right back to it.

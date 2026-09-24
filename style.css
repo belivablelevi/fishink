@@ -35,7 +35,7 @@ html, body {
   touch-action: none;
 }
 
-/* ─── Build / upgrades menu — Godot-style left-aligned top tabs ───────────── */
+/* ─── Build / upgrades menu - Godot-style left-aligned top tabs ───────────── */
 
 .build-menu {
   position: fixed;
@@ -188,7 +188,7 @@ html, body {
 }
 .cat-nav-btn:hover { background: rgba(255,255,255,0.16); }
 
-/* Build tab — category-grouped item grid */
+/* Build tab - category-grouped item grid */
 .item-grid { display: flex; flex-direction: column; gap: 4px; padding-bottom: 84px; }
 
 .cat-divider {
@@ -275,7 +275,7 @@ html, body {
 .item-card.locked .cost { color: var(--c-muted); font-size: 9px; }
 .fish-card.disabled .swatch { filter: grayscale(1) brightness(0.6); }
 
-/* Build tab — bottom status bar showing the currently selected item, sticky
+/* Build tab - bottom status bar showing the currently selected item, sticky
    within the scrolling panel so it stays visible while the grid scrolls */
 .action-bar {
   position: sticky;
@@ -302,7 +302,7 @@ html, body {
 }
 .action-cost.afford { color: var(--c-mint); }
 
-/* ─── Bottom-right build HUD — live state while the big menu is closed ───── */
+/* ─── Bottom-right build HUD - live state while the big menu is closed ───── */
 .build-hud {
   position: fixed;
   right: 18px;
@@ -321,13 +321,13 @@ html, body {
 }
 .build-hud.hidden { display: none; }
 /* The build HUD and the touch action buttons both anchor to the bottom-right
-   corner — on touch devices the buttons (stacked up to 160px tall) would sit
+   corner - on touch devices the buttons (stacked up to 160px tall) would sit
    directly on top of the HUD's button rows, including Exit. Lift the HUD
    clear of them instead. */
 body.touch-active .build-hud { bottom: 170px; }
 
 /* The full-screen build menu (92vw x 90vh, ~5vh margin) leaves only a thin
-   strip clear at the bottom corners on a phone — the joystick and Interact
+   strip clear at the bottom corners on a phone - the joystick and Interact
    button would otherwise float on top of it and steal taps meant for the
    menu's bottom-most content. Build stays visible/in place: it's the only
    way to close the menu panel while remaining in placement mode (mobile's
@@ -373,7 +373,7 @@ body.touch-active .machines-panel { bottom: 144px; }
 
 .hud-bp-status { font-size: 10px; color: var(--c-muted); }
 
-/* Controls tab — keybind cheat-sheet */
+/* Controls tab - keybind cheat-sheet */
 .control-row {
   display: flex;
   align-items: center;
@@ -416,7 +416,7 @@ body.touch-active .machines-panel { bottom: 144px; }
   line-height: 1.4;
 }
 
-/* Upgrades tab — stat rows */
+/* Upgrades tab - stat rows */
 .upgrade-row {
   display: flex;
   align-items: center;
@@ -497,7 +497,7 @@ body.touch-active .machines-panel { bottom: 144px; }
   outline: 1px solid var(--c-accent);
 }
 
-/* ─── Per-block popup — pinned at the clicked tile/player's screen pos ─────── */
+/* ─── Per-block popup - pinned at the clicked tile/player's screen pos ─────── */
 .block-popup {
   position: fixed;
   z-index: 30;
@@ -516,7 +516,7 @@ body.touch-active .machines-panel { bottom: 144px; }
   scale: 1;
   /* The popup stays open (and thus keeps this fixed-position box on screen)
      until explicitly dismissed, but the player can walk/scroll the camera
-     anywhere in the meantime — so its footprint frequently ends up sitting
+     anywhere in the meantime - so its footprint frequently ends up sitting
      over a completely unrelated belt/Seller tile. Every real control inside
      is a <button>; the rest (padding, labels, dividers) is inert, so letting
      clicks on the inert parts fall through to the canvas beneath fixes
@@ -596,7 +596,7 @@ body.touch-active .machines-panel { bottom: 144px; }
   cursor: not-allowed;
 }
 
-/* Cash HUD — DOM pill so it sits above the tutorial overlay (z-index 30 > 25) */
+/* Cash HUD - DOM pill so it sits above the tutorial overlay (z-index 30 > 25) */
 .cash-hud {
   position: fixed;
   bottom: 6px;
@@ -619,7 +619,7 @@ body.touch-active .machines-panel { bottom: 144px; }
 .cash-hud-icon { width: 36px; height: 36px; image-rendering: pixelated; flex-shrink: 0; }
 body.touch-active .cash-hud { bottom: 20px; left: 90px; }
 
-/* Move button — appears at the bottom of every block popup */
+/* Move button - appears at the bottom of every block popup */
 .block-popup .mp-move {
   display: block;
   width: 100%;
@@ -637,7 +637,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
 }
 .block-popup .mp-move:hover { background: rgba(126,200,227,0.22); }
 
-/* Sorter settings — size threshold pills */
+/* Sorter settings - size threshold pills */
 .block-popup .mp-size-row {
   display: flex;
   gap: 4px;
@@ -663,7 +663,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   color: var(--c-accent);
 }
 
-/* Crate contents — grouped fish list */
+/* Crate contents - grouped fish list */
 .block-popup .mp-crate-list {
   display: flex;
   flex-direction: column;
@@ -696,7 +696,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
 .block-popup .mp-crate-count { color: var(--c-muted); }
 .block-popup .mp-crate-value { color: var(--c-mint); font-weight: 700; }
 
-/* Teleporter settings — destination picker list */
+/* Teleporter settings - destination picker list */
 .block-popup .mp-target-list {
   display: flex;
   flex-direction: column;
@@ -732,7 +732,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   padding: 6px 2px;
 }
 
-/* ─── Sound settings menu — fixed speaker icon, top-right ──────────────────── */
+/* ─── Sound settings menu - fixed speaker icon, top-right ──────────────────── */
 .sound-toggle-btn,
 .game-menu-toggle-btn {
   display: flex;
@@ -789,7 +789,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
 }
 .sound-panel .sound-row input { cursor: pointer; }
 
-/* ─── Game menu — save/restart, fixed gear icon next to the sound button ──── */
+/* ─── Game menu - save/restart, fixed gear icon next to the sound button ──── */
 .game-menu-toggle-btn {
   position: fixed;
   top: 14px;
@@ -868,7 +868,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   margin: 12px 0;
 }
 
-/* ─── Machines overview — icon button docked beside the cash pill HUD ──────── */
+/* ─── Machines overview - icon button docked beside the cash pill HUD ──────── */
 /* top/left here are just an initial fallback before the first frame's JS
    positioning (updateMachinesBtnPos in ui.js) docks it beside the cash pill. */
 .machines-toggle-btn {
@@ -946,7 +946,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
 .machines-dropdown:focus { border-color: rgba(255,255,255,0.3); }
 .machines-dropdown option { background: #0e1a18; color: #e8e8e8; }
 
-/* ─── Leaderboard — fixed icon button, top-left (machines button moves away
+/* ─── Leaderboard - fixed icon button, top-left (machines button moves away
    from this initial 106px slot every frame, so it's free for permanent use) */
 .leaderboard-toggle-btn {
   position: fixed;
@@ -990,7 +990,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   padding: 22px;
 }
 
-/* ─── First-time tutorial overlay — bottom-center, clear of other UI ───────── */
+/* ─── First-time tutorial overlay - bottom-center, clear of other UI ───────── */
 .tutorial-overlay {
   position: fixed;
   bottom: 24px;
@@ -1040,7 +1040,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
 }
 .tutorial-badge.done { background: var(--c-mint); box-shadow: 0 0 0 3px rgba(77,202,124,0.25); }
 /* The joystick (110px tall) and action buttons (60px tall, stacked) sit in
-   the same bottom corners on touch devices — lift the tutorial box clear of
+   the same bottom corners on touch devices - lift the tutorial box clear of
    both instead of letting it sit underneath them. */
 body.touch-active .tutorial-overlay { bottom: 180px; }
 /* Phone landscape is only ~360-400px tall. The taller tutorial card (why-line,
@@ -1177,7 +1177,7 @@ body.touch-active .tutorial-step-hint  { font-size: 10.5px; margin: 0 0 5px; }
 .tutorial-ui-arrow.hidden { display: none; }
 @keyframes tutUiBob { from { margin-top: 0; } to { margin-top: 6px; } }
 
-/* Inline key badge — used inside tutorial step text for hotkey callouts */
+/* Inline key badge - used inside tutorial step text for hotkey callouts */
 .tutorial-key {
   display: inline-block;
   min-width: 20px;
@@ -1197,7 +1197,7 @@ body.touch-active .tutorial-step-hint  { font-size: 10.5px; margin: 0 0 5px; }
 }
 
 /* ─── Build hint button ─────────────────────────────────────────────────────── */
-/* Persistent "B — Build" shortcut shown in the lower-right when not in
+/* Persistent "B - Build" shortcut shown in the lower-right when not in
    build mode. Pulses during the tutorial's build_open step. */
 .bottom-right-group {
   position: fixed;
@@ -1529,7 +1529,7 @@ body.touch-active .bottom-right-group { right: 90px; bottom: 20px; }
 .bs-btn-apply:hover { filter: brightness(1.1); }
 .bs-btn-apply:active { transform: scale(0.98); }
 
-/* ─── Loading screen — covers the blank canvas while images/world load ──────── */
+/* ─── Loading screen - covers the blank canvas while images/world load ──────── */
 .loading-screen {
   position: fixed;
   inset: 0;
@@ -1569,7 +1569,7 @@ body.touch-active .bottom-right-group { right: 90px; bottom: 20px; }
   transition: width 0.25s ease-out;
 }
 
-/* ─── Start-screen queue — one-time screens shown before gameplay begins ──── */
+/* ─── Start-screen queue - one-time screens shown before gameplay begins ──── */
 .start-screen-overlay {
   position: fixed;
   inset: 0;
@@ -1582,7 +1582,7 @@ body.touch-active .bottom-right-group { right: 90px; bottom: 20px; }
 .start-screen-overlay.hidden { display: none; }
 .start-screen-card {
   max-height: 96vh;
-  overflow-y: auto; /* phone landscape is ~360px tall — the taller cards (Sign In) must scroll instead of clipping */
+  overflow-y: auto; /* phone landscape is ~360px tall - the taller cards (Sign In) must scroll instead of clipping */
   width: 320px;
   display: flex;
   flex-direction: column;
@@ -1949,7 +1949,7 @@ body.touch-active .bottom-right-group { right: 90px; bottom: 20px; }
 }
 .pets-autosell-price { color: var(--c-muted); font-size: 10px; }
 
-/* Sell button — muted red-toned style */
+/* Sell button - muted red-toned style */
 .pet-sell-btn { background: rgba(220,60,60,0.18) !important; color: #e87070 !important; }
 .pet-sell-btn:hover { background: rgba(220,60,60,0.32) !important; }
 
@@ -1987,13 +1987,13 @@ body.touch-active .bottom-right-group { right: 90px; bottom: 20px; }
   transition-duration: 0.06s;
 }
 
-/* Tab press — squish down toward the panel */
+/* Tab press - squish down toward the panel */
 .tab:active:not(.active) {
   transform: translateY(2px);
   transition-duration: 0.06s;
 }
 
-/* ─── Block popup upgrade button — add transform to existing transition ────── */
+/* ─── Block popup upgrade button - add transform to existing transition ────── */
 .block-popup .upgrade-buy {
   transition-property: background, color, border-color, transform;
 }

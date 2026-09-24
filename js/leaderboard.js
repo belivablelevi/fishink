@@ -1,8 +1,8 @@
-// Fish INK Factory — global leaderboard (Supabase, no login)
+// Fish INK Factory - global leaderboard (Supabase, no login)
 //
 // Identity is a random UUID stored in localStorage, separate from the
 // display name, so renaming never splits a player into a second row.
-// All requests are plain fetch() calls to Supabase's PostgREST endpoint —
+// All requests are plain fetch() calls to Supabase's PostgREST endpoint -
 // same raw-REST approach the sibling Kei Property Services project uses
 // in its own contact.html, so no extra client library is needed.
 
@@ -126,7 +126,7 @@ function normaliseName(s) {
   n = n.replace(/ck/g, 'k');   // fvck → fvk
   n = n.replace(/qu/g, 'k');
 
-  // 5. Strip everything non-alpha — removes separators like f.u.c.k, f-u-c-k,
+  // 5. Strip everything non-alpha - removes separators like f.u.c.k, f-u-c-k,
   //    dollar signs, and any remaining symbols
   n = n.replace(/[^a-z]/g, '');
 
@@ -159,7 +159,7 @@ function getLeaderboardName() {
 // (𝓁𝒾𝓀𝑒 𝓽𝒽𝒾𝓈) can't slip past the profanity filter via lookalike codepoints.
 const NAME_ALLOWED_RX = /^[\x20-\x7E]+$/;
 
-// Internal — called by the UI name-prompt form. No auth required.
+// Internal - called by the UI name-prompt form. No auth required.
 function _setLeaderboardNameInternal(name) {
   const trimmed = (name || '').trim().slice(0, 20);
   if (!trimmed) return false;
@@ -169,7 +169,7 @@ function _setLeaderboardNameInternal(name) {
   return true;
 }
 
-// Console-facing — requires dev.auth() first so players can't rename themselves
+// Console-facing - requires dev.auth() first so players can't rename themselves
 // from DevTools without the admin password.
 function setLeaderboardName(name) {
   if (typeof _devAuth !== 'function' || !_devAuth()) return false;
@@ -187,18 +187,18 @@ function leaderboardHeaders(extra) {
 let _lastSubmittedEarned = 0;
 let _lastSubmitGameTime  = 0; // game.time (seconds) as of the last successful submission
 
-// $/min ceiling for the anti-cheat check below — far above any realistic
+// $/min ceiling for the anti-cheat check below - far above any realistic
 // late-game burst (many machines/deliveries completing in the same tick),
 // far below the jump a stat-editing cheat produces.
 const LEADERBOARD_RATE_CEILING = 50000000;
 
-// Called every sim frame — submits whenever lifetime earnings jump by $10k.
+// Called every sim frame - submits whenever lifetime earnings jump by $10k.
 function checkLeaderboardEarnThreshold() {
   if (game.lifetimeEarned - _lastSubmittedEarned >= 10000) submitLeaderboardScore();
 }
 
 // Upserts this player's row. Silent no-op while unconfigured or before a
-// name is chosen — there is nothing to submit yet in either case. Network
+// name is chosen - there is nothing to submit yet in either case. Network
 // failures are swallowed: a flaky leaderboard call must never interrupt
 // gameplay or surface an error to the player.
 function submitLeaderboardScore() {
@@ -207,7 +207,7 @@ function submitLeaderboardScore() {
   if (!name) return Promise.resolve();
 
   // Sanity check: reject a submission whose earnings grew implausibly fast
-  // since the LAST successful submission — not since the game began. The
+  // since the LAST successful submission - not since the game began. The
   // original version compared the lifetime average rate (earned / total
   // playtime) against a flat ceiling, which becomes a one-way ratchet in
   // this game's exponential economy: a well-progressed player's average
@@ -217,7 +217,7 @@ function submitLeaderboardScore() {
   // actual vs. 30M frozen on the board).
   //
   // The denominator is floored rather than the whole check being skipped
-  // for a short window — an earlier version skipped evaluating when
+  // for a short window - an earlier version skipped evaluating when
   // deltaMins was tiny to avoid false positives from back-to-back
   // $10k-threshold-triggered calls, but that let the most blatant cheats
   // (a huge jump applied in near-zero time) sail through unrejected, since
@@ -251,7 +251,7 @@ function submitLeaderboardScore() {
 
 // Fetches the top 50 plus this player's own row and rank. Returns a plain
 // result object rather than throwing, so callers (the Leaderboard tab) can
-// render every outcome — unconfigured, network error, or success — without
+// render every outcome - unconfigured, network error, or success - without
 // a try/catch of their own.
 async function fetchLeaderboard() {
   if (!isLeaderboardConfigured()) return { configured: false };

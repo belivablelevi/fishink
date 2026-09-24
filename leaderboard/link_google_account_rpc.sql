@@ -12,11 +12,11 @@
 -- inside a single atomic server-side function instead.
 
 -- players.client_id is `text` in the live schema (confirmed against the
--- actual database — it's not a uuid column despite holding UUID-shaped
+-- actual database - it's not a uuid column despite holding UUID-shaped
 -- strings), so p_client_id must match that type or the comparison inside
 -- the function fails at runtime with "operator does not exist: text = uuid".
 --
--- Drop the old uuid-typed version FIRST — `create or replace` can't change a
+-- Drop the old uuid-typed version FIRST - `create or replace` can't change a
 -- function's parameter types, so without this you'd end up with two
 -- overloads of the same name and PostgREST would refuse to pick one.
 drop function if exists link_google_account(uuid, text);
@@ -42,11 +42,11 @@ $$;
 
 -- security definer means this function runs with the privileges of whoever
 -- created it (bypassing players' RLS entirely for this one controlled
--- update) — so the only gate on who can call it at all is this grant.
+-- update) - so the only gate on who can call it at all is this grant.
 --
 -- Supabase projects configure a default-privilege rule that auto-grants
 -- EXECUTE on every new function directly to both `anon` and `authenticated`
--- (separate from — and not removed by revoking from — the `public`
+-- (separate from - and not removed by revoking from - the `public`
 -- pseudo-role), so `anon` must be revoked explicitly or it stays callable
 -- without any real Google session at all.
 revoke all on function link_google_account(text, text) from public;

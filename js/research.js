@@ -1,4 +1,4 @@
-// Fish INK Factory — Research tree: one-shot late-game cash sink, unlocked
+// Fish INK Factory - Research tree: one-shot late-game cash sink, unlocked
 // once a player has earned enough lifetime cash to have maxed everything else.
 
 const RESEARCH_UNLOCK_LIFETIME = 50000;

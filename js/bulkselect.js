@@ -1,4 +1,4 @@
-// Fish INK Factory — bulk config editor
+// Fish INK Factory - bulk config editor
 
 const bulkSelect = {
   active:      false,
