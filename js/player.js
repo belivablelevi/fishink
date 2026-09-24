@@ -452,8 +452,14 @@ function triggerInteract(fromKey = false) {
   } else if (hoverTile && hoverTerrain === T_WATER && waterBodyAnchor(hoverTile.c, hoverTile.r)) {
     toggleBlockPopupAtMouse('water_pond', hoverTile.c, hoverTile.r);
   } else if (inReach && IS_TRANSPORT(hoveredId) && heldFish.length > 0) {
+    // A leftover popup from some earlier, unrelated interaction is a
+    // fixed-position DOM element that can still be sitting over this belt
+    // tile's screen position — close it so the drop isn't silently eaten.
+    // See the matching fix in handleClick() for the full explanation.
+    closeBlockPopup();
     dropHeldFishOnBelt(hoverTile.c, hoverTile.r);
   } else if (heldFish.length > 0) {
+    closeBlockPopup();
     dropNearestBelt();
   }
 }
@@ -706,14 +712,23 @@ function handleClick(e) {
 
   if (!buildMode.active) {
     if (e.button === 0) {
+      // Machines/sorter/crate/etc. now open via hover + E, not a direct
+      // click — clicking elsewhere just dismisses an open popup, same as
+      // Escape. Must run before the fish-drop branch below (not just in the
+      // fallback path) — a leftover popup is a fixed-position DOM element
+      // that sits on top of the canvas and silently swallows clicks landing
+      // in its footprint, including on the very belt/Seller tile a player
+      // is trying to click to sell. Previously this only ran on clicks that
+      // fell through to the cast/dismiss branch, so a stale popup left open
+      // over a belt tile made selling by click look intermittently broken
+      // until something else (e.g. entering bulk-select mode, which closes
+      // it unconditionally) happened to clear it.
+      closeBlockPopup();
       // Drop held fish on clicked belt
       if (heldFish.length > 0 && IS_TRANSPORT(blockAt(c, r))) {
         dropHeldFishOnBelt(c, r);
         return;
       }
-      // Machines/sorter/crate/etc. now open via hover + E, not a direct
-      // click — clicking elsewhere just dismisses an open popup, same as Escape
-      closeBlockPopup();
       // Cast at water only (not shore), within rod range, not while boating
       const t = tileAt(c, r);
       if (t === T_WATER && !manualCast.active && !player.inBoat && heldFish.length < effectiveMaxHeld()) {

@@ -524,6 +524,18 @@ body.touch-active .machines-panel { bottom: 144px; }
   margin-top: -14px;
   transition: opacity 0.1s ease, scale 0.1s ease;
   scale: 1;
+  /* The popup stays open (and thus keeps this fixed-position box on screen)
+     until explicitly dismissed, but the player can walk/scroll the camera
+     anywhere in the meantime — so its footprint frequently ends up sitting
+     over a completely unrelated belt/Seller tile. Every real control inside
+     is a <button>; the rest (padding, labels, dividers) is inert, so letting
+     clicks on the inert parts fall through to the canvas beneath fixes
+     "can't sell" clicks silently swallowed by a leftover popup, without
+     touching the buttons themselves (re-enabled below). */
+  pointer-events: none;
+}
+.block-popup button {
+  pointer-events: auto;
 }
 .block-popup.hidden {
   display: none;
