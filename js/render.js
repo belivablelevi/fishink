@@ -740,47 +740,48 @@ function _paintFieldTile(ctx, sx, sy, c, r, pick) {
   }
 }
 
-// Soft shoreline: on this tile, cells near a neighbouring tile of `matchType`
-// take on that neighbour's ground: a dither of its colour (with half-way tones
-// around it) that is densest at the border and thins out with distance, so the
-// grass runs into the sand over about a tile and a half; the sand side adds a
-// shorter, lighter run of its own. Corners are handled by measuring distance to
-// all 8 neighbours. Pure function of the 3x3
-// neighbourhood, which is exactly what repaintTerrainTile redraws.
-function _blendInto(ctx, sx, sy, S, c, r, matchType, ownPick, otherPick, depth, peak) {
+// One shared grass/sand shoreline. Every cell near the border gets a "grassiness"
+// from its signed distance to the border (grass side positive, sand side
+// negative), bent by low-frequency noise so the edge wanders instead of running
+// ruler straight, then is painted grass or sand by comparing that against a
+// noisy threshold. Both tile types evaluate the same formula on the same world
+// cells, so the transition is one smooth scatter centred on the border (no
+// doubled rings), and it never reads a tile outside the 3x3 that repaints.
+const SHORE_W = 10; // px each side of the border the mix reaches
+function _shoreBlend(ctx, sx, sy, S, c, r, selfType) {
+  const oppType = selfType === T_EMPTY ? T_SHORE : T_EMPTY;
   const m = [];
   for (let dr = -1; dr <= 1; dr++)
     for (let dc = -1; dc <= 1; dc++)
-      if ((dc || dr) && tileAt(c + dc, r + dr) === matchType) m.push(dc, dr);
+      if ((dc || dr) && tileAt(c + dc, r + dr) === oppType) m.push(dc, dr);
   if (!m.length) return;
   const n = S / CELL;
+  const selfGrass = selfType === T_EMPTY;
   for (let j = 0; j < n; j++) {
     for (let i = 0; i < n; i++) {
       const x = (i + 0.5) * CELL, y = (j + 0.5) * CELL;
-      let best = depth;
+      let best = SHORE_W;
       for (let k = 0; k < m.length; k += 2) {
         const x0 = m[k] * S, y0 = m[k + 1] * S;
         const dx = Math.max(0, x0 - x, x - (x0 + S)), dy = Math.max(0, y0 - y, y - (y0 + S));
         const d = Math.hypot(dx, dy);
         if (d < best) best = d;
       }
-      const s = 1 - best / depth;
-      if (s <= 0) continue;
+      if (best >= SHORE_W) continue;
       const cx = c * n + i, cy = r * n + j;
-      // Coverage by the neighbour's ground peaks at `peak` right on the border,
-      // fading to none `depth` px away.
-      const p = peak * s * s * (3 - 2 * s);
-      const thr = _bayer(cx, cy) + (_ih(cx, cy, 555) - 0.5) * 0.14;
       const wx = sx + i * CELL + 1, wy = sy + j * CELL + 1;
-      if (p > thr) ctx.fillStyle = otherPick(wx, wy, cx, cy);
-      else if (p * 1.7 > thr) ctx.fillStyle = _mixHex(ownPick(wx, wy, cx, cy), otherPick(wx, wy, cx, cy), 0.4);
-      else continue;
+      const sd = (selfGrass ? best : -best) + (valueNoise(wx / 22, wy / 22, 40) - 0.5) * 8;
+      const t = _clamp01((sd + SHORE_W) / (2 * SHORE_W));
+      const grassy = t * t * (3 - 2 * t);
+      const raw = 0.5 * _ih(cx, cy, 555) + 0.5 * valueNoise(wx / 5, wy / 5, 41);
+      const thr = _clamp01((raw - 0.5) * 1.5 + 0.5);
+      const isGrass = grassy > thr;
+      if (isGrass === selfGrass) continue; // already painted with this tile's own ground
+      ctx.fillStyle = isGrass ? _grassColor(wx, wy, cx, cy) : _sandColor(wx, wy, cx, cy);
       ctx.fillRect(sx + i * CELL, sy + j * CELL, CELL, CELL);
     }
   }
 }
-
-const SHORE_BLEND_DEPTH = 22; // px each side of the grass/sand border
 
 // Hand-drawn sand tile: a smooth noise-driven ramp plus a little grain, melting
 // into neighbouring grass.
@@ -795,16 +796,15 @@ function drawSandTile(ctx, sx, sy, S, c, r) {
     ctx.fillRect(gx, gy, 1, 1);
   }
 
-  // The grass tile does most of the dithering; the sand meets it part of the way
-  // with a shorter, lighter run of grass cells, then a few loose grass specks.
-  _blendInto(ctx, sx, sy, S, c, r, T_EMPTY, _sandColor, _grassColor, 14, 0.55);
+  // Shared shoreline with the grass, then a few loose grass specks further out.
+  _shoreBlend(ctx, sx, sy, S, c, r, T_SHORE);
   _grassSpecks(ctx, sx, sy, S, c, r);
 }
 
 // Tiny grass specks and sprigs scattered over the sand near grass. Density falls
 // off with distance from the nearest grass tile and clumps in patches driven by
 // world-space noise, so it reads as the meadow seeding itself onto the beach.
-// Only looks at the 3x3 neighbourhood (like _blendInto), so repaints match.
+// Only looks at the 3x3 neighbourhood (like _shoreBlend), so repaints match.
 function _grassSpecks(ctx, sx, sy, S, c, r) {
   const m = [];
   for (let dr = -1; dr <= 1; dr++)
@@ -817,7 +817,7 @@ function _grassSpecks(ctx, sx, sy, S, c, r) {
     for (let i = 0; i < n; i++) {
       const cx = c * n + i, cy = r * n + j;
       const h = _ih(cx, cy, 601);
-      if (h > 0.12) continue; // cheap early-out: no cell ever exceeds this chance
+      if (h > 0.05) continue; // cheap early-out: no cell ever exceeds this chance
       const x = (i + 0.5) * CELL, y = (j + 0.5) * CELL;
       let best = reach;
       for (let k = 0; k < m.length; k += 2) {
@@ -829,14 +829,13 @@ function _grassSpecks(ctx, sx, sy, S, c, r) {
       if (best >= reach) continue;
       const wx = sx + i * CELL + 1, wy = sy + j * CELL + 1;
       const patch = _clamp01((valueNoise(wx / 70, wy / 70, 31) - 0.3) / 0.4);
-      const chance = 0.12 * (1 - best / reach) * patch;
+      const chance = 0.05 * (1 - best / reach) * patch;
       if (h > chance) continue;
       const ox = sx + i * CELL + (_ih(cx, cy, 602) < 0.5 ? 0 : 1);
       const oy = sy + j * CELL + (_ih(cx, cy, 603) < 0.5 ? 0 : 1);
       const roll = _ih(cx, cy, 604);
       ctx.fillStyle = roll < 0.4 ? '#3e6529' : roll < 0.8 ? '#4d7531' : '#66923d';
       ctx.fillRect(ox, oy, 1, 1);
-      if (roll > 0.55 && oy > sy) ctx.fillRect(ox, oy - 1, 1, 1); // small sprig (kept inside the tile)
     }
   }
 }
@@ -899,7 +898,7 @@ function drawGrassTile(ctx, sx, sy, S, c, r) {
     }
   }
 
-  _blendInto(ctx, sx, sy, S, c, r, T_SHORE, _grassColor, _sandColor, SHORE_BLEND_DEPTH, 1);
+  _shoreBlend(ctx, sx, sy, S, c, r, T_EMPTY);
 }
 
 // Hand-drawn water tile: flat shade (no gradient - avoids per-tile seams).
