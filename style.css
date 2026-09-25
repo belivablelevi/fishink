@@ -291,8 +291,8 @@ html, body {
 }
 .action-preview .swatch { width: 40px; height: 40px; border-radius: 6px; }
 .action-info { flex: 1; min-width: 0; }
-.action-name { font-size: 13px; font-weight: 700; }
-.action-desc { font-size: 11px; color: var(--c-muted); margin-top: 2px; }
+.action-name { font-size: 14px; font-weight: 700; }
+.action-desc { font-size: 12.5px; line-height: 1.45; color: #d3ddd8; margin-top: 3px; max-width: 640px; }
 .action-cost {
   font-family: var(--font-mono);
   font-size: 14px;
@@ -2079,3 +2079,73 @@ body.touch-active .bottom-right-group { right: 90px; bottom: 20px; }
 .cash-hud-pulse {
   animation: cashPulse 0.5s ease-out forwards !important;
 }
+
+
+/* ─── Build item hover card (replaces the native single-line title tooltip) ─── */
+.item-tip {
+  position: fixed;
+  z-index: 60;
+  width: 260px;
+  padding: 13px 15px 14px;
+  font-family: var(--font-ui);
+  background: linear-gradient(180deg, rgba(18,30,26,0.98), rgba(9,16,14,0.98));
+  border: 1px solid rgba(240,208,96,0.4);
+  border-radius: 10px;
+  box-shadow: 0 14px 30px rgba(0,0,0,0.55);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.12s, transform 0.12s;
+}
+.item-tip.show { opacity: 1; transform: none; }
+.item-tip .it-name { font-size: 15px; font-weight: 700; color: #f0d060; }
+.item-tip .it-cost { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--c-mint); margin-top: 2px; }
+.item-tip .it-cost.locked { color: #e8a030; }
+.item-tip .it-desc { font-size: 13px; line-height: 1.5; color: #e6efe9; margin-top: 8px; }
+.item-tip .it-stat { font-size: 12px; font-weight: 700; color: #9fdcc0; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); }
+
+/* ─── Upgrades / Research / Prestige: vertical cards in a grid ───────────────
+   Wide horizontal strips with small grey text read poorly; each entry is now a
+   card (name, wrapped description, effect, full-width buy button). :not(.hidden)
+   keeps the tab panels' own show/hide rule working. */
+#upgradesPanel:not(.hidden),
+#researchPanel:not(.hidden),
+#prestigePanel:not(.hidden) {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+#upgradesPanel > .panel-hint,
+#researchPanel > .panel-hint,
+#prestigePanel > .panel-hint { grid-column: 1 / -1; margin-bottom: 0; }
+#upgradesPanel .upgrade-row,
+#researchPanel .upgrade-row,
+#prestigePanel .upgrade-row {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 0;
+  padding: 16px 18px 16px;
+  border: 1px solid rgba(255,255,255,0.07);
+}
+#upgradesPanel .upgrade-info .name,
+#researchPanel .upgrade-info .name,
+#prestigePanel .upgrade-info .name { font-size: 14.5px; }
+#upgradesPanel .upgrade-info .desc,
+#researchPanel .upgrade-info .desc,
+#prestigePanel .upgrade-info .desc { font-size: 12.5px; line-height: 1.5; color: #d3ddd8; margin-top: 6px; }
+#upgradesPanel .upgrade-buy,
+#researchPanel .upgrade-buy,
+#prestigePanel .upgrade-buy { width: 100%; padding: 9px 12px; }
+
+#upgradesPanel .upgrade-info .effect,
+#researchPanel .upgrade-info .effect,
+#prestigePanel .upgrade-info .effect { font-size: 11.5px; margin-top: 8px; }
+#upgradesPanel .upgrade-info .fx-current,
+#researchPanel .upgrade-info .fx-current,
+#prestigePanel .upgrade-info .fx-current { color: #b8c8c0; }
+#upgradesPanel .upgrade-buy,
+#researchPanel .upgrade-buy,
+#prestigePanel .upgrade-buy { font-size: 12.5px; }

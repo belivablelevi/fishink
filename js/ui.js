@@ -444,6 +444,7 @@ function switchMenuTab(name) {
 function setBuildMenuOpen(open) {
   if (!buildMenuEl) return;
   buildMenuEl.classList.toggle('hidden', !open);
+  if (!open) hideItemTip();
   // The full-screen build menu's bottom corners sit right where the touch
   // joystick/Interact button float on a phone - hide them while the menu
   // covers them so they don't block taps on the menu underneath. Build
@@ -487,6 +488,35 @@ function initLeaderboardMenu() {
 }
 
 // ─── Build tab ─────────────────────────────────────────────────────────────
+// A narrow vertical card that appears beside a hovered build item: name, cost
+// (or what unlocks it), the full description wrapped to a readable width, and
+// its headline stat. Replaces the native title tooltip.
+let _itemTipEl = null;
+function showItemTip(card, id) {
+  if (!_itemTipEl) {
+    _itemTipEl = document.createElement('div');
+    _itemTipEl.className = 'item-tip';
+    document.body.appendChild(_itemTipEl);
+  }
+  const unlocked = isBlockUnlocked(id);
+  const statFn = BLOCK_QUICK_STAT[id];
+  const stat = statFn ? statFn() : '';
+  _itemTipEl.innerHTML =
+    `<div class="it-name">${BLOCK_NAMES[id]}</div>` +
+    `<div class="it-cost${unlocked ? '' : ' locked'}">${unlocked ? '$' + BLOCK_COSTS[id].toLocaleString() : 'Locked: ' + BLOCK_UNLOCK_REQ[id].label}</div>` +
+    `<div class="it-desc">${BLOCK_DESCS[id] || ''}</div>` +
+    (stat ? `<div class="it-stat">${stat}</div>` : '');
+  _itemTipEl.classList.add('show');
+  const r = card.getBoundingClientRect();
+  const tw = _itemTipEl.offsetWidth, th = _itemTipEl.offsetHeight;
+  let left = r.right + 10;
+  if (left + tw > window.innerWidth - 8) left = Math.max(8, r.left - tw - 10);
+  const top = Math.max(8, Math.min(r.top, window.innerHeight - th - 8));
+  _itemTipEl.style.left = left + 'px';
+  _itemTipEl.style.top = top + 'px';
+}
+function hideItemTip() { if (_itemTipEl) _itemTipEl.classList.remove('show'); }
+
 function renderBuildPanel() {
   buildPanelEl.innerHTML = '';
   _buildCards = null; // node cache is stale the moment the DOM rebuilds
@@ -534,7 +564,10 @@ function renderBuildPanel() {
       card.className = 'item-card';
       card.dataset.id = id;
       card.style.setProperty('--cat-color', cat.color);
-      card.title = BLOCK_DESCS[id];
+      // Custom vertical hover card (showItemTip) instead of the browser's
+      // native single-line title tooltip.
+      card.addEventListener('mouseenter', () => showItemTip(card, id));
+      card.addEventListener('mouseleave', hideItemTip);
 
       const swatch = makeBlockPreview(id);
 
@@ -575,6 +608,7 @@ function renderBuildPanel() {
       card.appendChild(stat);
       card.appendChild(lock);
       card.addEventListener('click', () => {
+        hideItemTip();
         buildMode.selectedId = id;
         buildMode.menuOpen = false;
         setBuildMenuOpen(false);
@@ -670,7 +704,6 @@ function renderUpgradesPanel() {
 
     const row = document.createElement('div');
     row.className = 'upgrade-row';
-    row.title = def.desc;
 
     const info = document.createElement('div');
     info.className = 'upgrade-info';
@@ -726,7 +759,6 @@ function renderResearchPanel() {
 
     const row = document.createElement('div');
     row.className = 'upgrade-row';
-    row.title = def.desc;
 
     const info = document.createElement('div');
     info.className = 'upgrade-info';
@@ -793,7 +825,6 @@ function renderPrestigePanel() {
 
     const row = document.createElement('div');
     row.className = 'upgrade-row';
-    row.title = def.desc;
 
     const info = document.createElement('div');
     info.className = 'upgrade-info';

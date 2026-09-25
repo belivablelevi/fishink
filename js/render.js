@@ -466,27 +466,42 @@ function drawContextChips(ctx, canvas) {
 // ─── Hover tooltips ──────────────────────────────────────────────────────────
 const HOVER_TOOLTIP_DELAY = 300; // ms - avoids flashing tooltips while panning the mouse across tiles
 
-function tooltipLinesFor(id, c, r) {
-  const lines = [BLOCK_NAMES[id]];
-  if (BLOCK_DESCS[id]) lines.push(BLOCK_DESCS[id]);
+// What the hover tooltip shows for a block: a title, a description (wrapped
+// when drawn), short stat lines, and the upgrade line (a cost, 'Max level', or
+// undefined when the block can't be upgraded).
+function tooltipModel(id, c, r) {
+  const m = { title: BLOCK_NAMES[id], desc: BLOCK_DESCS[id] || '', stats: [], upgrade: undefined };
   const st = stateAt(c, r);
-  if (!st) return lines;
+  if (!st) return m;
   if (IS_UPGRADABLE(id)) {
     const cost = machineUpgradeCost(id, st.level || 0);
-    if (st.level > 0) lines.push(`Level ${st.level}`);
-    lines.push(cost == null ? 'Max level' : `Press E to upgrade ($${cost})`);
+    if (st.level > 0) m.stats.push(`Level ${st.level}`);
+    m.upgrade = cost == null ? 'Max level' : cost;
   }
   if (id === B_SORTER) {
-    lines.push(st.sortMode === 'size'
+    m.stats.push(st.sortMode === 'size'
       ? `Mode: by size (${SIZES[st.sortThreshold].name})`
       : `Mode: by rarity (${st.sortCategory})`);
   }
-  if (IS_CRATE(id)) lines.push(`Holding ${st.carrying.length}/20`);
-  if (IS_PACKER(id)) lines.push(`Packing ${st.carrying.length}/${st.packTarget}`);
+  if (IS_CRATE(id)) m.stats.push(`Holding ${st.carrying.length}/20`);
+  if (IS_PACKER(id)) m.stats.push(`Packing ${st.carrying.length}/${st.packTarget}`);
   if (id === B_RECYCLER && st.recycleRarities.length > 0) {
-    lines.push(`Salvaging: ${st.recycleRarities.join(', ')}`);
+    m.stats.push(`Salvaging: ${st.recycleRarities.join(', ')}`);
   }
-  return lines;
+  return m;
+}
+
+// Greedy word wrap for canvas text (ctx.font must already be set).
+function wrapCanvasText(ctx, text, maxW) {
+  const out = [];
+  let line = '';
+  for (const word of String(text).split(' ')) {
+    const t = line ? line + ' ' + word : word;
+    if (line && ctx.measureText(t).width > maxW) { out.push(line); line = word; }
+    else line = t;
+  }
+  if (line) out.push(line);
+  return out;
 }
 
 // Tooltip lines for things in the world that aren't blocks: the offshore
@@ -526,30 +541,72 @@ function drawHoverTooltip(ctx, canvas) {
   const id = blockAt(c, r);
   const worldLines = worldTooltipLines(c, r);
   if (id === B_NONE && !worldLines) return;
-  const lines = worldLines || tooltipLinesFor(id, c, r);
+  const touch = typeof IS_TOUCH !== 'undefined' && IS_TOUCH;
+  const model = worldLines
+    ? { title: worldLines[0], desc: worldLines.slice(1).join(' '), stats: [], upgrade: undefined }
+    : tooltipModel(id, c, r);
 
-  ctx.font = 'bold 12px "Segoe UI", system-ui, sans-serif';
+  // A narrow card in the game's own UI font: the description wraps into a few
+  // short lines instead of one very wide strip.
+  const MAXW = 240, padX = 14, padY = 11, descH = 18, statH = 17;
+  const F = '"Chakra Petch", sans-serif';
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.font = `500 13px ${F}`;
+  const descLines = model.desc ? wrapCanvasText(ctx, model.desc, MAXW) : [];
+  ctx.font = `700 12px ${F}`;
+  const statLines = model.stats.slice();
+  let upgradeText = null;
+  if (model.upgrade !== undefined) {
+    upgradeText = model.upgrade === 'Max level' ? 'Max level' : (touch ? `Interact: Upgrade $${model.upgrade}` : `Upgrade $${model.upgrade}`);
+  }
   let w = 0;
-  for (const line of lines) w = Math.max(w, ctx.measureText(line).width);
-  const lineH = 16, padX = 10, padY = 8;
-  const boxW = w + padX * 2, boxH = lines.length * lineH + padY * 2;
+  ctx.font = `700 15px ${F}`; w = Math.max(w, ctx.measureText(model.title).width);
+  ctx.font = `500 13px ${F}`; for (const l of descLines) w = Math.max(w, ctx.measureText(l).width);
+  ctx.font = `700 12px ${F}`; for (const l of statLines) w = Math.max(w, ctx.measureText(l).width);
+  if (upgradeText) w = Math.max(w, ctx.measureText(upgradeText).width + (touch || model.upgrade === 'Max level' ? 0 : 26));
+  const boxW = Math.min(MAXW, w) + padX * 2;
+  const boxH = padY * 2 + 20 + descLines.length * descH + (descLines.length ? 4 : 0)
+             + statLines.length * statH + (upgradeText ? statH + 6 : 0);
 
   let x = mouseCanvas.x + 18, y = mouseCanvas.y + 4;
   x = Math.min(x, canvas.width - boxW - 8);
   y = Math.min(y, canvas.height - boxH - 8);
 
-  ctx.fillStyle = 'rgba(8,16,8,0.88)';
-  roundRect(ctx, x, y, boxW, boxH, 6); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-  ctx.lineWidth = 1;
-  roundRect(ctx, x, y, boxW, boxH, 6); ctx.stroke();
+  ctx.fillStyle = 'rgba(10,18,16,0.96)';
+  roundRect(ctx, x, y, boxW, boxH, 8); ctx.fill();
+  ctx.strokeStyle = 'rgba(240,208,96,0.4)';
+  ctx.lineWidth = 1.5;
+  roundRect(ctx, x, y, boxW, boxH, 8); ctx.stroke();
 
-  lines.forEach((line, i) => {
-    ctx.fillStyle = i === 0 ? '#e8c43f' : '#cfe0cf';
-    ctx.font = i === 0 ? 'bold 12px "Segoe UI", system-ui, sans-serif' : '11px "Segoe UI", system-ui, sans-serif';
-    ctx.fillText(line, x + padX, y + padY + i * lineH);
-  });
+  let ty = y + padY;
+  ctx.fillStyle = '#f0d060';
+  ctx.font = `700 15px ${F}`;
+  ctx.fillText(model.title, x + padX, ty);
+  ty += 20 + (descLines.length ? 4 : 0);
+  ctx.fillStyle = '#e6efe9';
+  ctx.font = `500 13px ${F}`;
+  for (const l of descLines) { ctx.fillText(l, x + padX, ty); ty += descH; }
+  ctx.fillStyle = '#9fdcc0';
+  ctx.font = `700 12px ${F}`;
+  for (const l of statLines) { ctx.fillText(l, x + padX, ty); ty += statH; }
+  if (upgradeText) {
+    ty += 6;
+    let tx = x + padX;
+    if (!touch && model.upgrade !== 'Max level') {
+      // "E" keycap, matching the tutorial's key badges
+      ctx.fillStyle = '#e8a030';
+      roundRect(ctx, tx, ty - 1, 20, 18, 4); ctx.fill();
+      ctx.fillStyle = '#1a1208';
+      ctx.font = `800 12px ${F}`;
+      ctx.textAlign = 'center';
+      ctx.fillText('E', tx + 10, ty + 1);
+      ctx.textAlign = 'left';
+      tx += 26;
+    }
+    ctx.fillStyle = model.upgrade === 'Max level' ? '#b8c8c0' : '#6ee7a0';
+    ctx.font = `700 12px ${F}`;
+    ctx.fillText(upgradeText, tx, ty + 1);
+  }
 }
 
 // ─── Day/night lighting ──────────────────────────────────────────────────────
