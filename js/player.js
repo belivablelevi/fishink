@@ -431,6 +431,17 @@ function triggerInteract(fromKey = false) {
             const pct = Math.round(game.chestIncomeBonus * 100);
             queueToast(`Income bonus now +${pct}%!`, '#f0c030');
           }
+          // First time this chest is opened it also holds a keepsake from its
+          // island's waters: that region's Rare species, added to the Fish Index.
+          if (!chest) {
+            const treasure = FISH.find(f => f.region === i && f.category === 'Rare');
+            if (treasure && !game.fishIndex.has(treasure.species)) {
+              game.fishIndex.add(treasure.species);
+              queueToast(`Treasure find: ${treasure.species}! Added to your Fish Index.`, '#f0c419');
+              maybeAwardFishIndexCategoryBonus(treasure.category);
+              if (typeof renderFishIndexPanel === 'function') renderFishIndexPanel();
+            }
+          }
           game.islandChests[key] = { nextOpen: game.time + CHEST_COOLDOWN };
         } else {
           const secs = Math.ceil(chest.nextOpen - game.time);

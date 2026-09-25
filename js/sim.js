@@ -287,7 +287,7 @@ function simUpdateWorkers(dt) {
         const count = 1 + Math.floor(Math.random() * 3);
         w.fish = [];
         for (let i = 0; i < count; i++) {
-          const f = randomFish(effectiveGlobalLuckMult());
+          const f = randomFish(effectiveGlobalLuckMult(), { c: Math.floor(w.wx / TILE_SIZE), r: Math.floor(w.wy / TILE_SIZE) });
           if (f.category === 'Rare' || f.category === 'Epic' || f.category === 'Legendary') game.rareCatches++;
           w.fish.push(f);
         }
@@ -790,7 +790,7 @@ function tryFisherProduce(c, r) {
     if (IS_TRANSPORT(nb)) {
       const nst = stateAt(nc, nr);
       if (!nst.item) {
-        const fish = randomFish(luck);
+        const fish = randomFish(luck, { c, r });
         if (fish.category === 'Rare' || fish.category === 'Epic' || fish.category === 'Legendary') game.rareCatches++;
         fish.progress = 0;
         nst.item = fish;
@@ -800,7 +800,7 @@ function tryFisherProduce(c, r) {
     } else if (IS_MACHINE(nb)) {
       const nst = stateAt(nc, nr);
       if (!nst.inputItem && !nst.processing && !nst.item) {
-        const mFish = randomFish(luck);
+        const mFish = randomFish(luck, { c, r });
         if (mFish.category === 'Rare' || mFish.category === 'Epic' || mFish.category === 'Legendary') game.rareCatches++;
         nst.inputItem = mFish;
         const def = machineDef(nb);
@@ -872,7 +872,7 @@ function tickDroneFisher(c, r, dt) {
     st.droneT += dt / (DRONE_FISH_TIME * (1 + crowd * 0.15) / effectiveDroneSpeedMult() * machineSpeedMult(st.level || 0));
     if (st.droneT >= 1) {
       for (let i = 0; i < DRONE_BATCH; i++) {
-        const fish = randomFish(droneLuckMult(st.level || 0) * effectiveGlobalLuckMult());
+        const fish = randomFish(droneLuckMult(st.level || 0) * effectiveGlobalLuckMult(), { c: st.waterC, r: st.waterR });
         if (fish.category === 'Rare' || fish.category === 'Epic' || fish.category === 'Legendary') game.rareCatches++;
         st.carrying.push(fish);
       }
@@ -968,13 +968,14 @@ function completeCast() {
     sfxFail();
     return;
   }
-  const fish = randomFish(effectiveGlobalLuckMult());
+  const fish = randomFish(effectiveGlobalLuckMult(), { c: Math.floor(manualCast.wx / TILE_SIZE), r: Math.floor(manualCast.wy / TILE_SIZE) });
   fish.progress = 0;
   heldFish.push(fish);
   const rare = fish.category === 'Rare' || fish.category === 'Epic' || fish.category === 'Legendary';
   const catchColor = rare ? '#e8c43f' : '#4dca7c';
   queueToast(
-    rare ? `★ ${fish.size} ${fish.species}!` : `${fish.size} ${fish.species}`,
+    (rare ? `★ ${fish.size} ${fish.species}!` : `${fish.size} ${fish.species}`) +
+      (fish.region !== undefined ? ` (${REGION_NAMES[fish.region]})` : ''),
     catchColor
   );
   // Floating label above the player (not the water tile) so it's always visible

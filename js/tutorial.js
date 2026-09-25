@@ -210,7 +210,7 @@ function liveFlatIndex() { return (TUT.phase === 2 ? TUTORIAL_PHASE1_STEPS.lengt
 
 // Average sale value of one home-waters catch, from the real fish tables.
 function _avgFishValue() {
-  const pool = FISH.filter(f => !f.region);
+  const pool = FISH.filter(f => f.region === undefined);
   const w = pool.reduce((sum, f) => sum + f.rarityWeight, 0) || 1;
   const v = pool.reduce((sum, f) => sum + f.value * f.rarityWeight, 0) / w;
   const sw = SIZES.reduce((sum, z) => sum + z.weight, 0) || 1;

@@ -488,6 +488,18 @@ function buildWorld() {
   rebuildBlockIndex();
 }
 
+// Which offshore island's waters a tile belongs to (its index in
+// offshoreIslands), or -1 for home waters. Used to pick regional fish.
+function regionAt(c, r) {
+  let best = -1, bestD = REGION_RADIUS;
+  for (let i = 0; i < offshoreIslands.length && i < REGION_NAMES.length; i++) {
+    const isl = offshoreIslands[i];
+    const d = Math.hypot(c - isl.cx, r - isl.cy);
+    if (d <= bestD) { bestD = d; best = i; }
+  }
+  return best;
+}
+
 // The tile an offshore island's treasure chest sits on. Nominally the island's
 // centre, but the starter dock is placed on whichever dry patch is nearest the
 // map centre - which can be an offshore island - leaving the chest under the

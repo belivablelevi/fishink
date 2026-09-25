@@ -989,6 +989,17 @@ function makeFishPreview(spec) {
   return cnv;
 }
 
+// "north-west island" style hint for where a region's island sits on the map.
+function regionCompassHint(region) {
+  const isl = offshoreIslands && offshoreIslands[region];
+  const name = REGION_NAMES[region];
+  if (!isl) return name || 'Another island';
+  const ns = isl.cy < WORLD_ROWS * 0.4 ? 'north' : isl.cy > WORLD_ROWS * 0.6 ? 'south' : '';
+  const ew = isl.cx < WORLD_COLS * 0.4 ? 'west' : isl.cx > WORLD_COLS * 0.6 ? 'east' : '';
+  const dir = [ns, ew].filter(Boolean).join('-') || 'central';
+  return `${name}: ${dir}`;
+}
+
 function renderFishIndexPanel() {
   if (!fishIndexPanelEl) return;
   fishIndexPanelEl.innerHTML = '';
@@ -996,7 +1007,7 @@ function renderFishIndexPanel() {
   const caughtCount = FISH.filter(f => game.fishIndex.has(f.species)).length;
   const hint = document.createElement('div');
   hint.className = 'panel-hint';
-  hint.textContent = `${caughtCount} / ${FISH.length} species discovered. Catch one to reveal it.`;
+  hint.textContent = `${caughtCount} / ${FISH.length} species discovered. Catch one to reveal it. Some only live in the waters around the other islands.`;
   fishIndexPanelEl.appendChild(hint);
 
   const grid = document.createElement('div');
@@ -1037,7 +1048,7 @@ function renderFishIndexPanel() {
 
       const value = document.createElement('div');
       value.className = 'cost' + (caught ? ' afford' : '');
-      value.textContent = caught ? `$${spec.value.toFixed(1)} base` : 'Not yet caught';
+      value.textContent = caught ? `$${spec.value.toFixed(1)} base` : (spec.region !== undefined ? 'Found near an island' : 'Not yet caught');
 
       const lock = document.createElement('div');
       lock.className = 'lock-badge';
@@ -1047,6 +1058,12 @@ function renderFishIndexPanel() {
       card.appendChild(swatch);
       card.appendChild(name);
       card.appendChild(value);
+      if (spec.region !== undefined) {
+        const tag = document.createElement('div');
+        tag.className = 'stat';
+        tag.textContent = caught ? REGION_NAMES[spec.region] : regionCompassHint(spec.region);
+        card.appendChild(tag);
+      }
       row.appendChild(card);
     }
     grid.appendChild(row);

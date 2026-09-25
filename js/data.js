@@ -141,7 +141,31 @@ const FISH = [
   { species: 'Atlantic Giant Squid', category: 'Legendary', value: 1000.0, rarityWeight: 0.08, color: '#7020a0', sx:  2, sy: 9 },
   { species: 'Coelacanth', category: 'Legendary', value: 1200.0, rarityWeight: 0.05, color: '#204880', sx:  5, sy: 5 },
   { species: 'Blue Sea Dragon', category: 'Legendary', value: 1500.0, rarityWeight: 0.05, color: '#3070e0', sx:  9, sy: 10 },
+  // ── Regional ────────────────────────────────────────────────────
+  // Only caught in the waters around one offshore island (see regionAt in
+  // grid.js). `region` is the offshore island's index in offshoreIslands.
+  // Island 0 (Kelp Forest)
+  { species: 'Pale Sea Pig', category: 'Uncommon', value: 5.0, rarityWeight: 30, color: '#e8e8e0', sx: 1, sy: 11, region: 0 },
+  { species: 'Lettuce Sea Slug', category: 'Uncommon', value: 6.0, rarityWeight: 28, color: '#40c040', sx: 2, sy: 11, region: 0 },
+  { species: 'Leaf Sheep', category: 'Rare', value: 55.0, rarityWeight: 5, color: '#60b860', sx: 3, sy: 11, region: 0 },
+  // Island 1 (Tide Pools)
+  { species: 'Beach Hopper', category: 'Uncommon', value: 4.5, rarityWeight: 32, color: '#d8a878', sx: 5, sy: 11, region: 1 },
+  { species: 'Egg Cowrie', category: 'Rare', value: 60.0, rarityWeight: 5, color: '#e8e4d8', sx: 4, sy: 11, region: 1 },
+  // Island 2 (Coral Rubble)
+  { species: 'Snapping Shrimp', category: 'Uncommon', value: 6.5, rarityWeight: 28, color: '#c08070', sx: 6, sy: 11, region: 2 },
+  { species: 'Cone Snail', category: 'Rare', value: 62.0, rarityWeight: 5, color: '#805040', sx: 7, sy: 11, region: 2 },
+  { species: 'Bearded Fireworm', category: 'Epic', value: 175.0, rarityWeight: 1.2, color: '#c02020', sx: 8, sy: 11, region: 2 },
+  // Island 3 (Murky Deep)
+  { species: 'Sea Squirt', category: 'Uncommon', value: 5.5, rarityWeight: 30, color: '#506050', sx: 9, sy: 11, region: 3 },
+  { species: 'Bootlace Worm', category: 'Rare', value: 58.0, rarityWeight: 5, color: '#604838', sx: 10, sy: 11, region: 3 },
+  { species: 'Black Leather Chiton', category: 'Epic', value: 190.0, rarityWeight: 1.2, color: '#403838', sx: 11, sy: 11, region: 3 },
 ];
+
+// Names for the regions above, indexed by offshoreIslands index. Regions past
+// the last name (islands added by ocean expansion) simply have no regional fish.
+const REGION_NAMES = ['Kelp Forest', 'Tide Pools', 'Coral Rubble', 'Murky Deep'];
+const REGION_RADIUS = 13;        // tiles from an island's centre that count as its waters
+const REGION_WEIGHT_BOOST = 25;  // regional species are far more likely inside their region
 
 // Display preferences - kept in their own localStorage key, separate from
 // the save-game data in js/save.js, since these are UI settings rather than
@@ -228,8 +252,23 @@ function weightedRandom(pool, weightKey) {
 // Fisher's effect - see fisherLuckMult in upgrades.js), leaving Common's odds
 // as the fixed baseline so the bias is purely "rarer fish come up more often"
 // rather than uniformly rescaling the whole pool.
-function randomFish(luckMult = 1) {
-  const pool = luckMult === 1 ? FISH : FISH.map(f => ({
+//
+// `loc` ({ c, r } in tiles) is where the catch happens. Regional species are
+// only in the pool inside their own region (see regionAt in grid.js), where
+// they are also boosted; catches with no location, or in home waters, use the
+// ordinary species only.
+const _regionPools = {};
+function _basePool(region) {
+  if (_regionPools[region]) return _regionPools[region];
+  return (_regionPools[region] = FISH
+    .filter(f => f.region === undefined || f.region === region)
+    .map(f => f.region === undefined ? f : { ...f, rarityWeight: f.rarityWeight * REGION_WEIGHT_BOOST }));
+}
+
+function randomFish(luckMult = 1, loc = null) {
+  const region = loc && typeof regionAt === 'function' ? regionAt(loc.c, loc.r) : -1;
+  const base = _basePool(region);
+  const pool = luckMult === 1 ? base : base.map(f => ({
     ...f, rarityWeight: f.category === 'Common' ? f.rarityWeight : f.rarityWeight * luckMult,
   }));
   const spec = weightedRandom(pool, 'rarityWeight');
@@ -243,6 +282,7 @@ function randomFish(luckMult = 1) {
   if (wasNew) maybeAwardFishIndexCategoryBonus(spec.category);
   return { species: spec.species, category: spec.category, size: size.name,
            value, color: spec.color, sx: spec.sx, sy: spec.sy, mults: [],
+           region: spec.region,
            wigglePhase: Math.random() * Math.PI * 2 };
 }
 
