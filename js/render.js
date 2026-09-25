@@ -658,119 +658,205 @@ function tileHash(c, r, salt) {
   return x - Math.floor(x);
 }
 
-// Hand-drawn sand tile: solid base + scattered grain speckles, no sprite assets.
-const SAND_SHADES = ['#cfa86f', '#d6b079', '#c8a065', '#dcb886'];
+// ─── Terrain ground ──────────────────────────────────────────────────────────
+// Grass and sand colours come from smooth noise sampled in WORLD pixels, so the
+// ground flows across tile borders (no per-tile stamp look) and one repainted
+// tile comes out identical to a full rebuild. Colours are picked per 2px cell
+// from a short ramp with an ordered (Bayer) dither between neighbouring steps.
+
+const CELL = 2;
+const BAYER4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+function _bayer(cx, cy) { return (BAYER4[(cy & 3) * 4 + (cx & 3)] + 0.5) / 16; }
+
+// Fast integer hash -> 0..1 (no Math.sin; called hundreds of thousands of times per rebuild)
+function _ih(x, y, salt) {
+  let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(salt | 0, 1274126177);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+// Smooth value noise, 0..1
+function valueNoise(x, y, salt) {
+  const ix = Math.floor(x), iy = Math.floor(y);
+  const fx = x - ix, fy = y - iy;
+  const u = fx * fx * (3 - 2 * fx), w = fy * fy * (3 - 2 * fy);
+  const a = _ih(ix, iy, salt), b = _ih(ix + 1, iy, salt);
+  const d = _ih(ix, iy + 1, salt), e = _ih(ix + 1, iy + 1, salt);
+  return a + (b - a) * u + (d - a) * w + (a - b - d + e) * u * w;
+}
+
+function _clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
+
+// Ramp index for field value v, dithering toward the next step.
+function _rampIdx(v, thr, n) {
+  const p = v * (n - 1), i = Math.floor(p);
+  return (p - i) > thr ? Math.min(i + 1, n - 1) : i;
+}
+
+function _mixHex(a, b, t) {
+  const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+  let out = 0;
+  for (const sh of [16, 8, 0]) {
+    const x = (pa >> sh) & 255, y = (pb >> sh) & 255;
+    out = (out << 8) | Math.round(x + (y - x) * t);
+  }
+  return '#' + out.toString(16).padStart(6, '0');
+}
+
+// Gentle: a few close greens around the original flat base (#436b2c)
+const GRASS_RAMP = ['#3e6529', '#43692b', '#486f2e', '#4d7531', '#537c34'];
+function _grassColor(wx, wy, cx, cy) {
+  const n = 0.5 * valueNoise(wx / 300, wy / 300, 1) +
+            0.35 * valueNoise(wx / 90,  wy / 90,  2) +
+            0.15 * valueNoise(wx / 24,  wy / 24,  3);
+  const v = _clamp01((n - 0.5) * 2.2 + 0.5);
+  return GRASS_RAMP[_rampIdx(v, _bayer(cx, cy), GRASS_RAMP.length)];
+}
+
+const SAND_RAMP = ['#cba46b', '#d0a970', '#d6b079', '#dab581'];
+function _sandColor(wx, wy, cx, cy) {
+  const n = 0.6 * valueNoise(wx / 200, wy / 200, 21) +
+            0.4 * valueNoise(wx / 50,  wy / 50,  22);
+  const v = _clamp01((n - 0.5) * 2 + 0.5);
+  return SAND_RAMP[_rampIdx(v, _bayer(cx, cy), SAND_RAMP.length)];
+}
+
+// Fills a tile cell by cell, merging horizontal runs of one colour into a
+// single fillRect.
+function _paintFieldTile(ctx, sx, sy, c, r, pick) {
+  const n = TILE_SIZE / CELL;
+  for (let j = 0; j < n; j++) {
+    let runStart = 0, runCol = null;
+    for (let i = 0; i <= n; i++) {
+      const col = i < n ? pick(sx + i * CELL + 1, sy + j * CELL + 1, c * n + i, r * n + j) : null;
+      if (col !== runCol) {
+        if (runCol !== null) {
+          ctx.fillStyle = runCol;
+          ctx.fillRect(sx + runStart * CELL, sy + j * CELL, (i - runStart) * CELL, CELL);
+        }
+        runStart = i; runCol = col;
+      }
+    }
+  }
+}
+
+// Soft shoreline: on this tile, cells near a neighbouring tile of `matchType`
+// take on that neighbour's ground: a dither of its colour (with half-way tones
+// around it) that is densest at the border and thins out with distance, so the
+// two grounds melt into each other over about a tile and a half (both sides do
+// this, so the transition straddles the border). Corners are
+// handled by measuring distance to all 8 neighbours. Pure function of the 3x3
+// neighbourhood, which is exactly what repaintTerrainTile redraws.
+function _blendInto(ctx, sx, sy, S, c, r, matchType, ownPick, otherPick, depth) {
+  const m = [];
+  for (let dr = -1; dr <= 1; dr++)
+    for (let dc = -1; dc <= 1; dc++)
+      if ((dc || dr) && tileAt(c + dc, r + dr) === matchType) m.push(dc, dr);
+  if (!m.length) return;
+  const n = S / CELL;
+  for (let j = 0; j < n; j++) {
+    for (let i = 0; i < n; i++) {
+      const x = (i + 0.5) * CELL, y = (j + 0.5) * CELL;
+      let best = depth;
+      for (let k = 0; k < m.length; k += 2) {
+        const x0 = m[k] * S, y0 = m[k + 1] * S;
+        const dx = Math.max(0, x0 - x, x - (x0 + S)), dy = Math.max(0, y0 - y, y - (y0 + S));
+        const d = Math.hypot(dx, dy);
+        if (d < best) best = d;
+      }
+      const s = 1 - best / depth;
+      if (s <= 0) continue;
+      const cx = c * n + i, cy = r * n + j;
+      // Coverage by the neighbour's ground peaks at half right on the border (the
+      // neighbouring tile mirrors it), fading to none `depth` px away.
+      const p = 0.5 * s * s * (3 - 2 * s);
+      const thr = _bayer(cx, cy) + (_ih(cx, cy, 555) - 0.5) * 0.14;
+      const wx = sx + i * CELL + 1, wy = sy + j * CELL + 1;
+      if (p > thr) ctx.fillStyle = otherPick(wx, wy, cx, cy);
+      else if (p * 1.7 > thr) ctx.fillStyle = _mixHex(ownPick(wx, wy, cx, cy), otherPick(wx, wy, cx, cy), 0.4);
+      else continue;
+      ctx.fillRect(sx + i * CELL, sy + j * CELL, CELL, CELL);
+    }
+  }
+}
+
+const SHORE_BLEND_DEPTH = 22; // px each side of the grass/sand border
+
+// Hand-drawn sand tile: a smooth noise-driven ramp plus a little grain, melting
+// into neighbouring grass.
 function drawSandTile(ctx, sx, sy, S, c, r) {
-  const shades = SAND_SHADES;
-  ctx.fillStyle = shades[Math.floor(tileHash(c, r, 1) * shades.length)];
-  ctx.fillRect(sx, sy, S, S);
+  _paintFieldTile(ctx, sx, sy, c, r, _sandColor);
 
-  for (let i = 0; i < 7; i++) {
-    const gx = sx + 2 + tileHash(c, r, i * 2 + 10) * (S - 4);
-    const gy = sy + 2 + tileHash(c, r, i * 2 + 11) * (S - 4);
+  for (let i = 0; i < 6; i++) {
+    const gx = sx + 2 + Math.floor(tileHash(c, r, i * 2 + 10) * (S - 4));
+    const gy = sy + 2 + Math.floor(tileHash(c, r, i * 2 + 11) * (S - 4));
     const dark = tileHash(c, r, i * 2 + 12) > 0.5;
-    ctx.fillStyle = dark ? 'rgba(110,80,45,0.35)' : 'rgba(255,235,195,0.4)';
-    ctx.fillRect(gx, gy, 1.5, 1.5);
+    ctx.fillStyle = dark ? 'rgba(110,80,45,0.3)' : 'rgba(255,235,195,0.35)';
+    ctx.fillRect(gx, gy, 1, 1);
   }
 
-  drawEdgeBlend(ctx, sx, sy, S, c, r, T_EMPTY, 'rgba(80,120,50,0.4)');
+  _blendInto(ctx, sx, sy, S, c, r, T_EMPTY, _sandColor, _grassColor, SHORE_BLEND_DEPTH);
 }
 
-// Smooth continuous noise (sum of sines) - value at any real (x,y) is the same
-// regardless of which tile reads it, so patches drawn from it never seam.
-function fieldNoise(x, y) {
-  const n = Math.sin(x * 1.3 + y * 2.1) +
-            Math.sin(x * 2.7 - y * 1.7) * 0.5 +
-            Math.sin(x * 0.6 + y * 0.9) * 0.7;
-  return (n + 2.2) / 4.4; // ~0..1
-}
-
-// Scatters a few speckles of `color` near whichever edges border a tile of
-// `neighborType`, so two adjacent terrain types dither into each other
-// instead of meeting at a hard line. Deterministic per tile via tileHash.
-function drawEdgeBlend(ctx, sx, sy, S, c, r, neighborType, color) {
-  ctx.fillStyle = color;
-  const band = 5;
-  const edges = [
-    { match: tileAt(c - 1, r) === neighborType, x0: 0, x1: band, y0: 0, y1: S },
-    { match: tileAt(c + 1, r) === neighborType, x0: S - band, x1: S, y0: 0, y1: S },
-    { match: tileAt(c, r - 1) === neighborType, x0: 0, x1: S, y0: 0, y1: band },
-    { match: tileAt(c, r + 1) === neighborType, x0: 0, x1: S, y0: S - band, y1: S },
-  ];
-  let salt = 200;
-  for (const e of edges) {
-    if (!e.match) { salt += 6; continue; }
-    for (let i = 0; i < 5; i++) {
-      const px = sx + e.x0 + tileHash(c, r, salt + i * 2) * (e.x1 - e.x0);
-      const py = sy + e.y0 + tileHash(c, r, salt + i * 2 + 1) * (e.y1 - e.y0);
-      ctx.fillRect(px, py, 1.5, 1.5);
-    }
-    salt += 6;
-  }
-}
-
-// Hand-drawn grass tile, styled after a reference pixel-art field: flat base +
-// soft speckle dither + larger fuzzy bush patches (continuous noise, multi-tile,
-// no per-tile seams) + occasional small flower clusters.
-const FLOWER_PALETTE = ['#f3c98a', '#e8748a', '#fdf1d6'];
+// Simple grass: the blended base, a few blade tufts, an occasional wildflower
+// or stone cluster. All detail stays inside the tile (3px margin) so neighbours
+// never overpaint it.
+const FLOWER_COLORS = ['#f3c98a', '#e8748a', '#fdf1d6'];
 function drawGrassTile(ctx, sx, sy, S, c, r) {
-  ctx.fillStyle = '#436b2c';
-  ctx.fillRect(sx, sy, S, S);
+  _paintFieldTile(ctx, sx, sy, c, r, _grassColor);
 
-  // Bush patch strength at this tile, from a low-frequency noise field so
-  // patches span several tiles and fade in/out smoothly across borders.
-  const bush = fieldNoise(c * 0.22, r * 0.22);
-  const speckleCount = bush > 0.6 ? 14 : 6;
-  const bushy = bush > 0.6;
+  const inner = S - 8;
+  const px = (salt) => sx + 4 + Math.floor(tileHash(c, r, salt) * inner);
+  const py = (salt) => sy + 4 + Math.floor(tileHash(c, r, salt) * inner);
 
-  for (let i = 0; i < speckleCount; i++) {
-    const px = sx + 1 + tileHash(c, r, i * 2 + 30) * (S - 2);
-    const py = sy + 1 + tileHash(c, r, i * 2 + 31) * (S - 2);
-    const toneRoll = tileHash(c, r, i * 2 + 32);
-    let color;
-    if (bushy && toneRoll > 0.35) {
-      color = toneRoll > 0.7 ? 'rgba(30,55,60,0.55)' : 'rgba(45,75,55,0.5)';
-    } else {
-      color = toneRoll > 0.5 ? 'rgba(90,125,45,0.4)' : 'rgba(30,55,20,0.35)';
-    }
-    ctx.fillStyle = color;
-    ctx.fillRect(px, py, 1.5, 1.5);
+  // a couple of soft speckles for grain
+  for (let i = 0; i < 4; i++) {
+    ctx.fillStyle = tileHash(c, r, i * 2 + 30) > 0.5 ? 'rgba(150,200,90,0.25)' : 'rgba(20,45,20,0.28)';
+    ctx.fillRect(sx + 1 + Math.floor(tileHash(c, r, i * 2 + 31) * (S - 2)),
+                 sy + 1 + Math.floor(tileHash(c, r, i * 2 + 32) * (S - 2)), 1, 1);
   }
 
-  // Rare flower cluster, placed via the same hash so it's stable per tile.
+  // sparse blade tufts
+  const tufts = Math.floor(tileHash(c, r, 300) * 3); // 0-2
+  for (let i = 0; i < tufts; i++) {
+    const x = px(310 + i * 2), y = py(311 + i * 2);
+    ctx.fillStyle = 'rgba(28,62,26,0.55)';
+    ctx.fillRect(x - 1, y + 2, 3, 1);
+    ctx.fillStyle = 'rgba(140,195,85,0.7)';
+    ctx.fillRect(x, y - 2, 1, 4);
+    ctx.fillRect(x - 2, y, 1, 2);
+    ctx.fillRect(x + 2, y - 1, 1, 3);
+  }
+
+  // rare flower cluster
   if (tileHash(c, r, 77) > 0.985) {
-    const fx = sx + 5 + tileHash(c, r, 78) * (S - 10);
-    const fy = sy + 5 + tileHash(c, r, 79) * (S - 10);
-    const palette = FLOWER_PALETTE;
+    const fx = px(78), fy = py(79);
     for (let i = 0; i < 4; i++) {
-      const ox = (tileHash(c, r, i * 2 + 80) - 0.5) * 5;
-      const oy = (tileHash(c, r, i * 2 + 81) - 0.5) * 5;
-      ctx.fillStyle = palette[Math.floor(tileHash(c, r, i + 85) * palette.length)];
-      ctx.fillRect(fx + ox, fy + oy, 1.5, 1.5);
+      ctx.fillStyle = FLOWER_COLORS[Math.floor(tileHash(c, r, i + 85) * FLOWER_COLORS.length)];
+      ctx.fillRect(fx + Math.round((tileHash(c, r, i * 2 + 80) - 0.5) * 5),
+                   fy + Math.round((tileHash(c, r, i * 2 + 81) - 0.5) * 5), 1, 1);
     }
   }
 
-  // Sparse decorative rock cluster, drawn procedurally (small flat-shaded
-  // pebble blocks + a shadow speckle + a highlight speckle) to match the
-  // hand-drawn look of the speckles/flowers above rather than a sprite.
+  // rare stone cluster
   if (tileHash(c, r, 140) > 0.96) {
-    const cx = sx + 5 + tileHash(c, r, 141) * (S - 10);
-    const cy = sy + 5 + tileHash(c, r, 142) * (S - 10);
+    const cx = sx + 6 + Math.floor(tileHash(c, r, 141) * (S - 12));
+    const cy = sy + 6 + Math.floor(tileHash(c, r, 142) * (S - 12));
     const pebbleCount = 2 + Math.floor(tileHash(c, r, 143) * 3); // 2-4 pebbles
     for (let i = 0; i < pebbleCount; i++) {
-      const ox = (tileHash(c, r, i * 3 + 144) - 0.5) * 7;
-      const oy = (tileHash(c, r, i * 3 + 145) - 0.5) * 5;
-      const size = 2 + tileHash(c, r, i * 3 + 146) * 2;
+      const ox = Math.round((tileHash(c, r, i * 3 + 144) - 0.5) * 7);
+      const oy = Math.round((tileHash(c, r, i * 3 + 145) - 0.5) * 5);
+      const size = 2 + Math.floor(tileHash(c, r, i * 3 + 146) * 2);
       ctx.fillStyle = '#8a8378';
-      ctx.fillRect(cx + ox - size / 2, cy + oy - size / 2, size, size);
+      ctx.fillRect(cx + ox, cy + oy, size, size);
       ctx.fillStyle = 'rgba(50,45,40,0.5)';
-      ctx.fillRect(cx + ox - size / 2, cy + oy + size / 2 - 1, size, 1);
+      ctx.fillRect(cx + ox, cy + oy + size - 1, size, 1);
       ctx.fillStyle = 'rgba(210,205,195,0.6)';
-      ctx.fillRect(cx + ox - size / 2, cy + oy - size / 2, 1, 1);
+      ctx.fillRect(cx + ox, cy + oy, 1, 1);
     }
   }
 
-  drawEdgeBlend(ctx, sx, sy, S, c, r, T_SHORE, 'rgba(206,170,115,0.4)');
+  _blendInto(ctx, sx, sy, S, c, r, T_SHORE, _grassColor, _sandColor, SHORE_BLEND_DEPTH);
 }
 
 // Hand-drawn water tile: flat shade (no gradient - avoids per-tile seams).
@@ -1794,6 +1880,8 @@ function drawDroneSprite(ctx, cx, cy, pulse) {
 // and glows gold; one you can't (still sealed behind its earnings requirement,
 // or mending after being claimed) lies broken. Claiming one shows a brief
 // mid-smash frame (smashPot) before it settles into the broken pile.
+// Glow colour per pot atlas column (sage, red, lilac, orange), sampled from img/pots.png
+const POT_GLOW = ['168,180,140', '224,112,106', '154,122,168', '224,160,80'];
 const _potSmashAt = {}; // pot key -> performance.now() when it was last smashed
 function smashPot(key) { _potSmashAt[key] = performance.now(); }
 
@@ -1819,10 +1907,11 @@ function drawChests(ctx) {
 
     const px = Math.round(sx), py = Math.round(sy);
     if (ready) {
-      const pulse = 0.22 + 0.14 * Math.sin(performance.now() / 550);
-      ctx.fillStyle = `rgba(255,210,60,${pulse.toFixed(3)})`;
+      // Soft pool of light in the pot's own colour (never gold), kept faint
+      const pulse = 0.13 + 0.05 * Math.sin(performance.now() / 550);
+      ctx.fillStyle = `rgba(${POT_GLOW[(i - 1) % 4]},${pulse.toFixed(3)})`;
       ctx.beginPath();
-      ctx.ellipse(px, py + 5, 13, 8, 0, 0, Math.PI * 2);
+      ctx.ellipse(px, py + 6, 11, 6, 0, 0, Math.PI * 2);
       ctx.fill();
     }
 
