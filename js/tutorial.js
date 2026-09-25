@@ -266,7 +266,7 @@ const TUTORIAL_EXPLORE_STEPS = [
       ? 'See the <strong>treasure pot</strong>? It lies broken until you have earned $' + _chestGate(TUT.exIsland).toLocaleString() + ' in total, then it mends itself.'
       : 'This is the <strong>Worker Island</strong>. Point at its depot and press ' + keyBadge('E') + ' to hire fishermen.',
     why: () => TUT.exIsland >= 1
-      ? 'Once it is whole again, point at it and press <strong>E</strong> to smash it open. It pays cash, adds a permanent income bonus, mends itself every few minutes, and the first time it also holds a rare keepsake fish.'
+      ? 'Once it is whole again, point at it and press <strong>E</strong> to smash it open. It pays a share of your cash, adds a permanent income bonus, mends itself every few minutes, and the first time it also holds a rare keepsake fish.'
       : 'Hired fishermen catch fish for you on their own and bring them back to your dock.',
     targets: () => { const t = exploreIslandTile(); return t ? [{ tile: t, label: TUT.exIsland >= 1 ? 'Treasure pot' : 'Worker depot' }] : []; },
   },

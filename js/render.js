@@ -526,7 +526,7 @@ function worldTooltipLines(c, r) {
         const secs = Math.ceil(ch.nextOpen - game.time);
         lines.push(`Broken. It mends itself in ${Math.floor(secs / 60)}m ${secs % 60}s.`);
       }
-      lines.push('Pays cash and a permanent income bonus.');
+      lines.push('Pays a share of your cash and a permanent income bonus.');
     }
     if (typeof REGION_NAMES !== 'undefined' && REGION_NAMES[i]) lines.push(`Fishing here: ${REGION_NAMES[i]} species`);
     return lines;
@@ -743,11 +743,11 @@ function _paintFieldTile(ctx, sx, sy, c, r, pick) {
 // Soft shoreline: on this tile, cells near a neighbouring tile of `matchType`
 // take on that neighbour's ground: a dither of its colour (with half-way tones
 // around it) that is densest at the border and thins out with distance, so the
-// two grounds melt into each other over about a tile and a half (both sides do
-// this, so the transition straddles the border). Corners are
+// grass runs into the sand over about a tile and a half. Only the grass side
+// does this; the sand tiles stay clean. Corners are
 // handled by measuring distance to all 8 neighbours. Pure function of the 3x3
 // neighbourhood, which is exactly what repaintTerrainTile redraws.
-function _blendInto(ctx, sx, sy, S, c, r, matchType, ownPick, otherPick, depth) {
+function _blendInto(ctx, sx, sy, S, c, r, matchType, ownPick, otherPick, depth, peak) {
   const m = [];
   for (let dr = -1; dr <= 1; dr++)
     for (let dc = -1; dc <= 1; dc++)
@@ -767,9 +767,9 @@ function _blendInto(ctx, sx, sy, S, c, r, matchType, ownPick, otherPick, depth) 
       const s = 1 - best / depth;
       if (s <= 0) continue;
       const cx = c * n + i, cy = r * n + j;
-      // Coverage by the neighbour's ground peaks at half right on the border (the
-      // neighbouring tile mirrors it), fading to none `depth` px away.
-      const p = 0.5 * s * s * (3 - 2 * s);
+      // Coverage by the neighbour's ground peaks at `peak` right on the border,
+      // fading to none `depth` px away.
+      const p = peak * s * s * (3 - 2 * s);
       const thr = _bayer(cx, cy) + (_ih(cx, cy, 555) - 0.5) * 0.14;
       const wx = sx + i * CELL + 1, wy = sy + j * CELL + 1;
       if (p > thr) ctx.fillStyle = otherPick(wx, wy, cx, cy);
@@ -795,7 +795,8 @@ function drawSandTile(ctx, sx, sy, S, c, r) {
     ctx.fillRect(gx, gy, 1, 1);
   }
 
-  _blendInto(ctx, sx, sy, S, c, r, T_EMPTY, _sandColor, _grassColor, SHORE_BLEND_DEPTH);
+  // No blending back into grass here: the grass tile carries the whole dither,
+  // so the sand stays clean right up to the border.
 }
 
 // Simple grass: the blended base, a few blade tufts, an occasional wildflower
@@ -856,7 +857,7 @@ function drawGrassTile(ctx, sx, sy, S, c, r) {
     }
   }
 
-  _blendInto(ctx, sx, sy, S, c, r, T_SHORE, _grassColor, _sandColor, SHORE_BLEND_DEPTH);
+  _blendInto(ctx, sx, sy, S, c, r, T_SHORE, _grassColor, _sandColor, SHORE_BLEND_DEPTH, 1);
 }
 
 // Hand-drawn water tile: flat shade (no gradient - avoids per-tile seams).

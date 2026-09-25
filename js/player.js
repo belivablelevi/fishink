@@ -400,7 +400,10 @@ function triggerInteract(fromKey = false) {
   // Chest interaction - non-worker offshore islands have a chest at their center
   // Each island is gated by lifetime earnings; opening gives cash + permanent income bonus.
   const CHEST_EARN_GATES  = [5000, 25000, 100000];   // lifetime $ needed per island (index 0 = island 1)
-  const CHEST_CASH_RANGES = [[200, 500], [600, 1500], [2000, 5000]]; // [min, max] cash per island
+  // Cash scales with the current balance: a random share of it per island, never
+  // less than that island's flat minimum (so an empty wallet still pays something).
+  const CHEST_CASH_SHARE  = [[0.02, 0.04], [0.03, 0.06], [0.05, 0.09]]; // [min, max] fraction of balance
+  const CHEST_CASH_FLOOR  = [200, 600, 2000];
   const CHEST_INCOME_INC  = [0.005, 0.008, 0.012];   // income bonus per open per island
   const CHEST_INCOME_CAP  = 0.30;                     // total cap across all chests
   const CHEST_COOLDOWN    = 300;                      // 5 minutes between opens
@@ -422,8 +425,9 @@ function triggerInteract(fromKey = false) {
         if (!game.islandChests) game.islandChests = {};
         const chest = game.islandChests[key];
         if (!chest || game.time >= chest.nextOpen) {
-          const [cMin, cMax] = CHEST_CASH_RANGES[idx];
-          const reward = Math.floor(cMin + Math.random() * (cMax - cMin));
+          const [sMin, sMax] = CHEST_CASH_SHARE[idx];
+          const share = sMin + Math.random() * (sMax - sMin);
+          const reward = Math.max(CHEST_CASH_FLOOR[idx], Math.floor((game.cash || 0) * share));
           awardCash(reward, `Pot smashed! +$${reward.toLocaleString()}`, '#f0c030');
           smashPot(key);
           spawnParticles((ct.c + 0.5) * TILE_SIZE, (ct.r + 0.5) * TILE_SIZE, 'sparkle', 16);
