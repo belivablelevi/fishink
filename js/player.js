@@ -582,6 +582,7 @@ function updatePlayer(dt) {
     if (!player.inBoat) {
       if (t === T_SHORE) {
         player.inBoat = true;
+        game.boatUsed = true;
         // Snap to tile center so all 4 corner probes land on T_SHORE, not the
         // adjacent inland tile - otherwise the boat collision check immediately
         // fails and the player can't move.

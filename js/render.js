@@ -431,10 +431,21 @@ function drawLabelChip(ctx, cx, cy, text) {
 // doing rather than by reading: "R: rotate" while placing a belt (until they
 // have rotated once) and "E: Upgrade $N" over a machine they can afford.
 function drawContextChips(ctx, canvas) {
+  const touch = typeof IS_TOUCH !== 'undefined' && IS_TOUCH;
+
+  // Standing still on a beach with a boat available and never having used it:
+  // say so. (Nothing else in the game tells you about the boat.)
+  if (!touch && !buildMode.active && !player.inBoat && !game.boatUsed && offshoreIslands && offshoreIslands.length > 0
+      && typeof TUT !== 'undefined' && !TUT.active && player.walkAmp < 0.1
+      && tileAt(Math.floor(player.wx / TILE_SIZE), Math.floor(player.wy / TILE_SIZE)) === T_SHORE) {
+    const px = (player.wx - cam.x) * ZOOM, py = (player.wy - cam.y) * ZOOM;
+    drawLabelChip(ctx, px, py - 74, 'F: sail to other islands');
+  }
+
+
   if (!hoverTile || blockPopup.open) return;
   const tileTopY = (hoverTile.r * TILE_SIZE - cam.y) * ZOOM;
   const cx = ((hoverTile.c + 0.5) * TILE_SIZE - cam.x) * ZOOM;
-  const touch = typeof IS_TOUCH !== 'undefined' && IS_TOUCH;
 
   if (buildMode.active) {
     if (!buildMode.menuOpen && !buildMode.boxMode && IS_TRANSPORT(buildMode.selectedId) && !game.rotatedOnce) {
@@ -478,13 +489,44 @@ function tooltipLinesFor(id, c, r) {
   return lines;
 }
 
+// Tooltip lines for things in the world that aren't blocks: the offshore
+// islands' treasure chests. Returns null when (c, r) isn't one.
+function worldTooltipLines(c, r) {
+  if (!offshoreIslands || offshoreIslands.length <= 1) return null;
+  const touch = typeof IS_TOUCH !== 'undefined' && IS_TOUCH;
+  for (let i = 1; i < offshoreIslands.length; i++) {
+    const isl = offshoreIslands[i];
+    const ct = chestTile(isl);
+    if (ct.c !== c || ct.r !== r) continue;
+    const gates = [5000, 25000, 100000];
+    const gate = gates[Math.min(i - 1, gates.length - 1)];
+    const lines = ['Treasure Chest'];
+    if ((game.lifetimeEarned || 0) < gate) {
+      lines.push(`Locked: earn $${gate.toLocaleString()} in total to open it.`);
+    } else {
+      const ch = game.islandChests && game.islandChests[`${isl.cx},${isl.cy}`];
+      if (!ch || game.time >= ch.nextOpen) {
+        lines.push(touch ? 'Ready! Stand next to it and press Interact.' : 'Ready! Stand next to it and press E.');
+      } else {
+        const secs = Math.ceil(ch.nextOpen - game.time);
+        lines.push(`Refills in ${Math.floor(secs / 60)}m ${secs % 60}s`);
+      }
+      lines.push('Pays cash and a permanent income bonus.');
+    }
+    if (typeof REGION_NAMES !== 'undefined' && REGION_NAMES[i]) lines.push(`Fishing here: ${REGION_NAMES[i]} species`);
+    return lines;
+  }
+  return null;
+}
+
 function drawHoverTooltip(ctx, canvas) {
   if (buildMode.active || blueprint.selecting || blueprint.pasting) return;
   if (!hoverTile || performance.now() - hoverStart < HOVER_TOOLTIP_DELAY) return;
   const { c, r } = hoverTile;
   const id = blockAt(c, r);
-  if (id === B_NONE) return;
-  const lines = tooltipLinesFor(id, c, r);
+  const worldLines = worldTooltipLines(c, r);
+  if (id === B_NONE && !worldLines) return;
+  const lines = worldLines || tooltipLinesFor(id, c, r);
 
   ctx.font = 'bold 12px "Segoe UI", system-ui, sans-serif';
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';

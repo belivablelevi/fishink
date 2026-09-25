@@ -185,6 +185,101 @@ const TUTORIAL_PHASE2_STEPS = [
   },
 ];
 
+// Phase 3: an optional island tour, offered once when the automation tutorial
+// ends (and any time from the Controls tab). Everything it points at already
+// exists in the game; it just was never explained: the boat (F at a beach),
+// other islands with regional fish and treasure chests, and Ocean Expansion.
+const _CHEST_GATES = [5000, 25000, 100000];
+function _chestGate(i) { return _CHEST_GATES[Math.min(Math.max(i, 1) - 1, _CHEST_GATES.length - 1)]; }
+
+function pickExploreIsland() {
+  const pc = player.wx / TILE_SIZE, pr = player.wy / TILE_SIZE;
+  let best = -1, bd = Infinity;
+  for (let i = 0; i < offshoreIslands.length; i++) {
+    const isl = offshoreIslands[i];
+    // Prefer islands with a treasure chest (index 1+) over the worker island.
+    const d = Math.hypot(pc - isl.cx, pr - isl.cy) + (i >= 1 ? 0 : 6);
+    if (d < bd) { bd = d; best = i; }
+  }
+  TUT.exIsland = best;
+}
+function exploreIslandTile() {
+  const isl = offshoreIslands[TUT.exIsland];
+  if (!isl) return null;
+  return TUT.exIsland >= 1 ? chestTile(isl) : { c: Math.floor(isl.cx), r: Math.floor(isl.cy) };
+}
+function nearExploreIsland(dist) {
+  const isl = offshoreIslands[TUT.exIsland];
+  if (!isl) return true;
+  return Math.hypot(player.wx / TILE_SIZE - isl.cx, player.wy / TILE_SIZE - isl.cy) < dist;
+}
+function _regionalFound() {
+  const reg = FISH.filter(f => f.region !== undefined);
+  return { found: reg.filter(f => game.fishIndex.has(f.species)).length, total: reg.length };
+}
+
+const TUTORIAL_EXPLORE_STEPS = [
+  {
+    id: 'x_offer',
+    manual: true,
+    nextLabel: 'Show me',
+    text: 'Want a quick tour of the islands?',
+    why: 'There is more out there than your dock: other islands with treasure chests, fish that only live around them, and a way to grow the whole map. It takes about a minute.',
+  },
+  {
+    id: 'x_beach',
+    text: 'Walk to a <strong>beach</strong> (the sand at the water\'s edge) and press ' + keyBadge('F') + ' to board your boat.',
+    why: 'Your boat is waiting at any beach. Once aboard you sail with <strong>WASD</strong>, and pressing <strong>F</strong> at a beach again lets you step out.',
+    targets: () => TUT.exBeach ? [{ tile: TUT.exBeach, label: 'Board here (F)' }] : [],
+    advance: () => player.inBoat,
+    onEnter() { pickExploreIsland(); TUT.exBeach = tileNear(player, (c, r) => tileAt(c, r) === T_SHORE, 0); },
+  },
+  {
+    id: 'x_sail',
+    text: 'Sail to the marked <strong>island</strong> with ' + keyBadge('WASD') + '.',
+    why: 'Follow the arrow across the water. Islands are dotted around the ocean, and each one is different.',
+    targets: () => { const t = exploreIslandTile(); return t ? [{ tile: t, label: 'Island' }] : []; },
+    advance: () => nearExploreIsland(9),
+  },
+  {
+    id: 'x_land',
+    text: 'Steer up to the island\'s beach and press ' + keyBadge('F') + ' to land.',
+    why: 'You can only step out on sand. If it says "Sail to shore to disembark", nudge closer to the beach.',
+    targets: () => { const t = exploreIslandTile(); return t ? [{ tile: t, label: 'Land nearby' }] : []; },
+    advance: () => !player.inBoat && nearExploreIsland(10),
+  },
+  {
+    id: 'x_fish',
+    manual: true,
+    nextLabel: 'Got it',
+    dwell: 1500,
+    text: 'Cast a line from the island shore.',
+    why: 'The waters around each island hold <strong>fish you cannot catch at home</strong>. Every island has its own kinds, and Fishers you build on the island catch them too. Check the <strong>Fish Index</strong> to see what you have found.',
+    hint: () => { const r = _regionalFound(); return `Island species found: ${r.found} / ${r.total}`; },
+  },
+  {
+    id: 'x_chest',
+    manual: true,
+    nextLabel: 'Got it',
+    dwell: 1500,
+    text: () => TUT.exIsland >= 1
+      ? 'See the <strong>treasure chest</strong>? It unlocks once you have earned $' + _chestGate(TUT.exIsland).toLocaleString() + ' in total.'
+      : 'This is the <strong>Worker Island</strong>. Point at its depot and press ' + keyBadge('E') + ' to hire fishermen.',
+    why: () => TUT.exIsland >= 1
+      ? 'Point at it and press <strong>E</strong> once it is ready. It pays cash, adds a permanent income bonus, refills every few minutes, and the first time it also holds a rare keepsake fish.'
+      : 'Hired fishermen catch fish for you on their own and bring them back to your dock.',
+    targets: () => { const t = exploreIslandTile(); return t ? [{ tile: t, label: TUT.exIsland >= 1 ? 'Treasure chest' : 'Worker depot' }] : []; },
+  },
+  {
+    id: 'x_expand',
+    manual: true,
+    nextLabel: 'Done',
+    ui: '#gameMenuToggleBtn',
+    text: 'One more thing: open the <strong>cog menu</strong> to expand the ocean.',
+    why: () => `<strong>Expand Island</strong> grows the map and adds new islands to explore. The first ring costs <strong>$${islandExpandCost().toLocaleString()}</strong>.`,
+  },
+];
+
 const TUT = {
   active: false,
   phase: 1,       // 1 = manual fishing, 2 = automation
@@ -196,17 +291,23 @@ const TUT = {
   fisher: null,   // { c, r } of the player's placed Fisher
   startWx: 0, startWy: 0,
   shownAt: 0,     // performance.now() when the current step appeared (for dwell)
+  exIsland: -1,   // offshoreIslands index the island tour is heading for
+  exBeach: null,  // beach tile the tour points the player at
   advanceQueued: false, // a step finished before its dwell time elapsed
   review: null,   // index into allSteps() being re-read (null = showing the live step)
 };
 
-function currentSteps() { return TUT.phase === 2 ? TUTORIAL_PHASE2_STEPS : TUTORIAL_PHASE1_STEPS; }
+function currentSteps() { return TUT.phase === 3 ? TUTORIAL_EXPLORE_STEPS : TUT.phase === 2 ? TUTORIAL_PHASE2_STEPS : TUTORIAL_PHASE1_STEPS; }
 function currentStep()  { return currentSteps()[TUT.stepIndex]; }
 const _val = v => (typeof v === 'function' ? v() : v);
 
 // Every step in order across phases, for review and the How to play panel.
-function allSteps() { return [...TUTORIAL_PHASE1_STEPS, ...TUTORIAL_PHASE2_STEPS]; }
-function liveFlatIndex() { return (TUT.phase === 2 ? TUTORIAL_PHASE1_STEPS.length : 0) + TUT.stepIndex; }
+function allSteps() { return [...TUTORIAL_PHASE1_STEPS, ...TUTORIAL_PHASE2_STEPS, ...TUTORIAL_EXPLORE_STEPS]; }
+function liveFlatIndex() {
+  const base = TUT.phase === 3 ? TUTORIAL_PHASE1_STEPS.length + TUTORIAL_PHASE2_STEPS.length
+             : TUT.phase === 2 ? TUTORIAL_PHASE1_STEPS.length : 0;
+  return base + TUT.stepIndex;
+}
 
 // Average sale value of one home-waters catch, from the real fish tables.
 function _avgFishValue() {
@@ -493,7 +594,7 @@ function advanceStep() {
   // The very first "Let's go" is just a greeting, not an accomplishment.
   if (!(TUT.phase === 1 && TUT.stepIndex === 0)) tutorialCelebrate(TUT.stepIndex >= steps.length - 1);
   if (TUT.stepIndex >= steps.length - 1) {
-    TUT.phase === 2 ? finishPhase2Tutorial() : finishTutorial();
+    TUT.phase === 3 ? finishExploreTour() : TUT.phase === 2 ? finishPhase2Tutorial() : finishTutorial();
   } else {
     TUT.stepIndex++;
     enterStep();
@@ -578,6 +679,7 @@ function fixWrongBelts() {
 // DOM pointer.
 let _lastHint = null;
 function tutorialTick() {
+  checkExplorationHints();
   if (!TUT.active) { _syncUiPointer(null); return; }
   if (onTouch() && TUT.phase === 2 && currentStep()?.id === 'place_belt') fixWrongBelts();
   for (let guard = 0; guard < 8; guard++) {
@@ -606,6 +708,7 @@ function tutorialTick() {
 
 function skipTutorial() {
   if (UPGRADE_TIP.active) { dismissUpgradeTip(); return; }
+  if (TUT.phase === 3) { finishExploreTour(); return; }
   // In phase 1, skipping used to silently skip the automation lessons too -
   // ask which one the player means.
   if (TUT.phase === 1 && !TUT.skipAsk) {
@@ -656,6 +759,53 @@ function finishPhase2Tutorial() {
   renderTutorialOverlay();
   updateBuildHintUI();
   queueToast('Factory is running! Fish sell automatically now.', '#4dca7c');
+  maybeOfferExplore();
+}
+
+// Starts the island tour. `skipOffer` jumps past the "want a tour?" card (used
+// when the player asked for it from the Controls tab).
+function startExploreTour(skipOffer) {
+  if (!offshoreIslands || offshoreIslands.length === 0) { queueToast('There are no islands to explore yet.', '#9aa0a8'); return; }
+  if (onTouch()) { queueToast('The boat needs a keyboard (F to sail).', '#9aa0a8'); return; }
+  if (buildMode.active) exitBuildMode();
+  TUT.active = true;
+  TUT.phase = 3;
+  TUT.stepIndex = skipOffer ? 1 : 0;
+  TUT.skipAsk = false;
+  TUT.review = null;
+  enterStep();
+}
+
+// Offered once, right after the automation tutorial. Skipped on touch (the boat
+// is keyboard-only) and when the world has no islands.
+function maybeOfferExplore() {
+  if (game.exploreOffered || onTouch() || !offshoreIslands || offshoreIslands.length === 0) return;
+  game.exploreOffered = true;
+  saveGame();
+  startExploreTour(false);
+}
+
+function finishExploreTour() {
+  TUT.active = false;
+  TUT.phase = 1;
+  game.exploreOffered = true;
+  saveGame();
+  renderTutorialOverlay();
+  updateBuildHintUI();
+}
+
+// One-time nudges toward features nothing else points at. Cheap enough to run
+// every frame; each fires at most once per save. (Not a milestone system.)
+function checkExplorationHints() {
+  if (!offshoreIslands || offshoreIslands.length === 0) return;
+  if (!game.chestToastShown && offshoreIslands.length > 1 && game.lifetimeEarned >= _CHEST_GATES[0]) {
+    game.chestToastShown = true;
+    queueToast('Treasure chests on the islands are now unlocked! Walk to a beach and press F to sail.', '#f0c419');
+  }
+  if (!game.oceanToastShown && game.cash >= islandExpandCost()) {
+    game.oceanToastShown = true;
+    queueToast('You can afford Ocean Expansion: open the cog menu to add new islands.', '#7ec8e3');
+  }
 }
 
 // ─── Upgrade tip ─────────────────────────────────────────────────────────────
@@ -711,11 +861,11 @@ function renderTutorialOverlay() {
   }
 
   if (!TUT.active) { el.classList.add('hidden'); _syncUiPointer(null); return; }
-  document.getElementById('tutorialSkipBtn').textContent = 'Skip tutorial';
+  document.getElementById('tutorialSkipBtn').textContent = TUT.phase === 3 ? 'Not now' : 'Skip tutorial';
 
   const steps      = currentSteps();
   const step       = steps[TUT.stepIndex];
-  const phaseLabel = TUT.phase === 2 ? 'Automation Tutorial' : 'Fishing Tutorial';
+  const phaseLabel = TUT.phase === 3 ? 'Island Tour' : TUT.phase === 2 ? 'Automation Tutorial' : 'Fishing Tutorial';
 
   el.classList.remove('hidden');
   const reviewing = TUT.review !== null;
@@ -734,8 +884,8 @@ function renderTutorialOverlay() {
   _updateNavButtons();
 
   // Progress across the whole tutorial (both phases), and the step badge.
-  const total = TUTORIAL_PHASE1_STEPS.length + TUTORIAL_PHASE2_STEPS.length;
-  const doneCount = (TUT.phase === 2 ? TUTORIAL_PHASE1_STEPS.length : 0) + TUT.stepIndex;
+  const total = TUT.phase === 3 ? TUTORIAL_EXPLORE_STEPS.length : TUTORIAL_PHASE1_STEPS.length + TUTORIAL_PHASE2_STEPS.length;
+  const doneCount = TUT.phase === 3 ? TUT.stepIndex : (TUT.phase === 2 ? TUTORIAL_PHASE1_STEPS.length : 0) + TUT.stepIndex;
   const fill = document.getElementById('tutorialProgressFill');
   if (fill) fill.style.width = Math.round((doneCount / total) * 100) + '%';
   const badge = document.getElementById('tutorialBadge');
@@ -778,9 +928,11 @@ function renderHowTo() {
   const box = document.getElementById('howToContent');
   if (!box) return;
   if (!TUT.plan) { try { replan(null); } catch (e) { /* world not ready */ } }
+  if (offshoreIslands && offshoreIslands.length && TUT.exIsland < 0) pickExploreIsland();
   const groups = [
     { name: 'Fishing basics', steps: TUTORIAL_PHASE1_STEPS },
     { name: 'Building your factory', steps: TUTORIAL_PHASE2_STEPS },
+    { name: 'Exploring the islands', steps: TUTORIAL_EXPLORE_STEPS.filter(st => st.id !== 'x_offer') },
   ];
   let n = 0;
   box.innerHTML = groups.map(g => `<div class="howto-group">${g.name}</div>` + g.steps.map(st => {
@@ -789,7 +941,7 @@ function renderHowTo() {
     try { text = _val(st.text) || ''; why = _val(st.why) || ''; } catch (e) { /* step needs live state */ }
     return `<div class="howto-step"><div class="howto-num">${n}</div><div><div class="howto-step-text">${text}</div>${why ? `<div class="howto-step-why">${why}</div>` : ''}</div></div>`;
   }).join('')).join('') +
-    `<div class="howto-replay-row"><button class="upgrade-buy" onclick="toggleHowTo(false); replayTutorial();">Replay the fishing tutorial</button></div>`;
+    `<div class="howto-replay-row"><button class="upgrade-buy" onclick="toggleHowTo(false); replayTutorial();">Replay the fishing tutorial</button><button class="upgrade-buy" onclick="toggleHowTo(false); startExploreTour(true);">Take the island tour</button></div>`;
 }
 
 function toggleHowTo(force) {

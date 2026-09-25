@@ -1214,6 +1214,16 @@ function renderControlsPanel() {
   howRow.appendChild(howBtn);
   controlsPanelEl.appendChild(howRow);
 
+  const tourRow = document.createElement('div');
+  tourRow.className = 'upgrade-row';
+  tourRow.innerHTML = '<div class="upgrade-info"><div class="name">Island tour</div><div class="desc">A quick guide to the boat, other islands, treasure chests and Ocean Expansion</div></div>';
+  const tourBtn = document.createElement('button');
+  tourBtn.className = 'upgrade-buy';
+  tourBtn.textContent = 'Start';
+  tourBtn.addEventListener('click', () => { exitBuildMode(); startExploreTour(true); });
+  tourRow.appendChild(tourBtn);
+  controlsPanelEl.appendChild(tourRow);
+
   for (const group of CONTROL_GROUPS) {
     const divider = document.createElement('div');
     divider.className = 'cat-divider';
