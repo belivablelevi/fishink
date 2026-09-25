@@ -740,14 +740,23 @@ function _paintFieldTile(ctx, sx, sy, c, r, pick) {
   }
 }
 
-// One shared grass/sand shoreline. Every cell near the border gets a "grassiness"
-// from its signed distance to the border (grass side positive, sand side
-// negative), bent by low-frequency noise so the edge wanders instead of running
-// ruler straight, then is painted grass or sand by comparing that against a
-// noisy threshold. Both tile types evaluate the same formula on the same world
-// cells, so the transition is one smooth scatter centred on the border (no
-// doubled rings), and it never reads a tile outside the 3x3 that repaints.
-const SHORE_W = 10; // px each side of the border the mix reaches
+// One shared grass/sand shoreline, drawn as a real colour gradient. Every cell
+// near the border gets a blend amount from its signed distance to the border
+// (grass side positive, sand side negative, bent slightly by low-frequency
+// noise), and is painted with the sand/grass mix at that amount, stepped through
+// a few in-between tones and dithered between neighbouring tones so it reads as
+// a smooth pixel-art gradient. Both tile types evaluate the same formula on the
+// same world cells, so the join has no seam and no doubled rings, and it never
+// reads a tile outside the 3x3 that repaints.
+const SHORE_W = 16;    // px each side of the border the gradient reaches
+const SHORE_STEPS = 5; // intervals between pure sand and pure grass
+const _mixCache = new Map();
+function _mixCached(sand, grass, k) {
+  const key = sand + grass + k;
+  let v = _mixCache.get(key);
+  if (v === undefined) { v = _mixHex(sand, grass, k / SHORE_STEPS); _mixCache.set(key, v); }
+  return v;
+}
 function _shoreBlend(ctx, sx, sy, S, c, r, selfType) {
   const oppType = selfType === T_EMPTY ? T_SHORE : T_EMPTY;
   const m = [];
@@ -757,6 +766,7 @@ function _shoreBlend(ctx, sx, sy, S, c, r, selfType) {
   if (!m.length) return;
   const n = S / CELL;
   const selfGrass = selfType === T_EMPTY;
+  const ownLevel = selfGrass ? SHORE_STEPS : 0;
   for (let j = 0; j < n; j++) {
     for (let i = 0; i < n; i++) {
       const x = (i + 0.5) * CELL, y = (j + 0.5) * CELL;
@@ -770,14 +780,16 @@ function _shoreBlend(ctx, sx, sy, S, c, r, selfType) {
       if (best >= SHORE_W) continue;
       const cx = c * n + i, cy = r * n + j;
       const wx = sx + i * CELL + 1, wy = sy + j * CELL + 1;
-      const sd = (selfGrass ? best : -best) + (valueNoise(wx / 22, wy / 22, 40) - 0.5) * 8;
+      const sd = (selfGrass ? best : -best) + (valueNoise(wx / 26, wy / 26, 40) - 0.5) * 5;
       const t = _clamp01((sd + SHORE_W) / (2 * SHORE_W));
       const grassy = t * t * (3 - 2 * t);
-      const raw = 0.5 * _ih(cx, cy, 555) + 0.5 * valueNoise(wx / 5, wy / 5, 41);
-      const thr = _clamp01((raw - 0.5) * 1.5 + 0.5);
-      const isGrass = grassy > thr;
-      if (isGrass === selfGrass) continue; // already painted with this tile's own ground
-      ctx.fillStyle = isGrass ? _grassColor(wx, wy, cx, cy) : _sandColor(wx, wy, cx, cy);
+      // dither between the two nearest tones
+      const p = grassy * SHORE_STEPS, lo = Math.floor(p);
+      const thr = 0.65 * _bayer(cx, cy) + 0.35 * _ih(cx, cy, 555);
+      const level = (p - lo) > thr ? Math.min(lo + 1, SHORE_STEPS) : lo;
+      if (level === ownLevel) continue; // already painted with this tile's own ground
+      const sand = _sandColor(wx, wy, cx, cy), grass = _grassColor(wx, wy, cx, cy);
+      ctx.fillStyle = level === 0 ? sand : level === SHORE_STEPS ? grass : _mixCached(sand, grass, level);
       ctx.fillRect(sx + i * CELL, sy + j * CELL, CELL, CELL);
     }
   }
