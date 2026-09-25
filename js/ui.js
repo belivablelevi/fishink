@@ -693,10 +693,17 @@ function renderUpgradesPanel() {
 
   const hint = document.createElement('div');
   hint.className = 'panel-hint';
-  hint.textContent = 'Spend cash on permanent stat boosts';
+  hint.textContent = 'Spend cash on permanent stat boosts. Ones you can afford are listed first.';
   upgradesPanelEl.appendChild(hint);
 
-  for (const def of UPGRADES) {
+  // Affordable first, then the rest, then maxed; original order within each group.
+  const upgradeRank = d => { const c = upgradeCost(d); return c == null ? 2 : game.cash >= c ? 0 : 1; };
+  const orderedUpgrades = UPGRADES.map((d, i) => ({ d, i }))
+    .sort((a, b) => upgradeRank(a.d) - upgradeRank(b.d) || a.i - b.i)
+    .map(e => e.d);
+  _upgradeSig = upgradeAffordSig();
+
+  for (const def of orderedUpgrades) {
     const lvl  = upgradeLevels[def.id];
     const cost = upgradeCost(def);
     const maxed = cost == null;
@@ -726,6 +733,7 @@ function renderUpgradesPanel() {
     buyBtn.className = 'upgrade-buy';
     buyBtn.textContent = maxed ? 'MAXED' : `$${cost}`;
     buyBtn.disabled = maxed || game.cash < cost;
+    buyBtn.dataset.upgradeId = def.id;
     buyBtn.addEventListener('click', () => {
       if (buyUpgrade(def.id)) renderUpgradesPanel();
     });
@@ -749,10 +757,19 @@ function renderResearchPanel() {
     return;
   }
 
-  hint.textContent = 'One-time cash purchases for late-game upgrades';
+  hint.textContent = 'One-time cash purchases for late-game upgrades. Ones you can afford are listed first.';
   researchPanelEl.appendChild(hint);
 
-  for (const def of RESEARCH_NODES) {
+  const researchRank = d => {
+    if (researchLevels[d.id] >= 1) return 3;
+    if (d.requires && researchLevels[d.requires] < 1) return 2;
+    return game.cash >= researchCost(d) ? 0 : 1;
+  };
+  const orderedResearch = RESEARCH_NODES.map((d, i) => ({ d, i }))
+    .sort((a, b) => researchRank(a.d) - researchRank(b.d) || a.i - b.i)
+    .map(e => e.d);
+
+  for (const def of orderedResearch) {
     const owned  = researchLevels[def.id] >= 1;
     const locked = !owned && def.requires && researchLevels[def.requires] < 1;
     const cost   = researchCost(def);
@@ -818,7 +835,12 @@ function renderPrestigePanel() {
   summary.appendChild(prestigeBtn);
   prestigePanelEl.appendChild(summary);
 
-  for (const def of PRESTIGE_UPGRADES) {
+  const prestigeRank = d => { const c = prestigeUpgradeCost(d); return c == null ? 2 : prestigeTokens.total >= c ? 0 : 1; };
+  const orderedPrestige = PRESTIGE_UPGRADES.map((d, i) => ({ d, i }))
+    .sort((a, b) => prestigeRank(a.d) - prestigeRank(b.d) || a.i - b.i)
+    .map(e => e.d);
+
+  for (const def of orderedPrestige) {
     const lvl  = prestigeLevels[def.id];
     const cost = prestigeUpgradeCost(def);
     const maxed = cost == null;
@@ -1777,13 +1799,25 @@ function updateBlockPopupLive() {
 // Cheap per-frame refresh: patches progress text in place on the existing
 // Refresh affordability/levels each frame while the menu is open (cheap: only DOM attr toggles)
 let _upgradeBuyBtns = null; // cached node list, invalidated by renderUpgradesPanel
+let _upgradeSig = '';       // which upgrades were affordable when the panel was last rendered
+
+// One char per upgrade (in UPGRADES order): 1 = affordable now, 0 = not, x = maxed.
+function upgradeAffordSig() {
+  return UPGRADES.map(d => { const c = upgradeCost(d); return c == null ? 'x' : game.cash >= c ? '1' : '0'; }).join('');
+}
 
 function updateBuildMenuLive() {
   if (!buildMenuEl || buildMenuEl.classList.contains('hidden')) return;
   refreshBuildPanel();
+  // Something became (un)affordable: re-sort the list, but never while the
+  // mouse is over it, so a row can't jump away just as it's being clicked.
+  if (!upgradesPanelEl.classList.contains('hidden') && upgradeAffordSig() !== _upgradeSig && !upgradesPanelEl.matches(':hover')) {
+    renderUpgradesPanel();
+  }
   if (!_upgradeBuyBtns) _upgradeBuyBtns = Array.from(upgradesPanelEl.querySelectorAll('.upgrade-buy'));
   for (let i = 0; i < _upgradeBuyBtns.length; i++) {
-    const cost = upgradeCost(UPGRADES[i]);
+    const def = UPGRADES.find(u => u.id === _upgradeBuyBtns[i].dataset.upgradeId);
+    const cost = def ? upgradeCost(def) : null;
     if (cost != null) {
       const dis = game.cash < cost;
       if (_upgradeBuyBtns[i].disabled !== dis) _upgradeBuyBtns[i].disabled = dis;
