@@ -1187,6 +1187,16 @@ function renderControlsPanel() {
   replayRow.appendChild(replayBtn);
   controlsPanelEl.appendChild(replayRow);
 
+  const howRow = document.createElement('div');
+  howRow.className = 'upgrade-row';
+  howRow.innerHTML = '<div class="upgrade-info"><div class="name">How to play</div><div class="desc">Every tutorial step in one place, any time (also the ? button, top-left)</div></div>';
+  const howBtn = document.createElement('button');
+  howBtn.className = 'upgrade-buy';
+  howBtn.textContent = 'Open';
+  howBtn.addEventListener('click', () => { exitBuildMode(); toggleHowTo(true); });
+  howRow.appendChild(howBtn);
+  controlsPanelEl.appendChild(howRow);
+
   for (const group of CONTROL_GROUPS) {
     const divider = document.createElement('div');
     divider.className = 'cat-divider';

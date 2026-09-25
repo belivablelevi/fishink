@@ -312,6 +312,7 @@ function draw(ctx, canvas, dt) {
   drawRareFlash(ctx, canvas, dt);
   drawToasts(ctx, canvas, dt);
   drawHoverTooltip(ctx, canvas);
+  drawContextChips(ctx, canvas);
   drawTutorialArrow(ctx, canvas);
 }
 
@@ -397,32 +398,58 @@ function drawTutorialArrowAt(ctx, canvas, target) {
 
   // Label chip above the bobbing arrow (only when the target is on screen -
   // an edge-clamped arrow has no room and is rotated anyway).
-  if (onScreen && target.label) {
-    ctx.save();
-    // The game's own UI font (Chakra Petch, heaviest loaded weight) instead of
-    // the default sans, with a dark outline behind the white text so it reads
-    // heavier and stays crisp over any terrain.
-    ctx.font = '700 14px "Chakra Petch", sans-serif';
-    ctx.letterSpacing = '0.5px';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    const w = ctx.measureText(target.label).width + 20;
-    const cy = ay - 30 + bob - 22;
-    ctx.fillStyle = 'rgba(10,18,16,0.94)';
-    ctx.strokeStyle = '#f0d060';
-    ctx.lineWidth = 1.8;
-    ctx.beginPath();
-    ctx.roundRect(ax - w / 2, cy - 12, w, 24, 8);
-    ctx.fill();
-    ctx.stroke();
-    ctx.lineJoin = 'round';
-    ctx.strokeStyle = 'rgba(0,0,0,0.9)';
-    ctx.lineWidth = 3;
-    ctx.strokeText(target.label, ax, cy + 1);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(target.label, ax, cy + 1);
-    ctx.restore();
+  if (onScreen && target.label) drawLabelChip(ctx, ax, ay - 30 + bob - 22, target.label);
+}
+
+// Dark rounded chip with a gold border and outlined white text, in the game's
+// UI font (Chakra Petch, heaviest loaded weight). `cx, cy` is the chip centre in
+// screen pixels. Shared by the tutorial arrows and the contextual key hints.
+function drawLabelChip(ctx, cx, cy, text) {
+  ctx.save();
+  ctx.font = '700 14px "Chakra Petch", sans-serif';
+  ctx.letterSpacing = '0.5px';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const w = ctx.measureText(text).width + 20;
+  ctx.fillStyle = 'rgba(10,18,16,0.94)';
+  ctx.strokeStyle = '#f0d060';
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.roundRect(cx - w / 2, cy - 12, w, 24, 8);
+  ctx.fill();
+  ctx.stroke();
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = 'rgba(0,0,0,0.9)';
+  ctx.lineWidth = 3;
+  ctx.strokeText(text, cx, cy + 1);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(text, cx, cy + 1);
+  ctx.restore();
+}
+
+// Key hints that appear where the player is pointing, so features are found by
+// doing rather than by reading: "R: rotate" while placing a belt (until they
+// have rotated once) and "E: Upgrade $N" over a machine they can afford.
+function drawContextChips(ctx, canvas) {
+  if (!hoverTile || blockPopup.open) return;
+  const tileTopY = (hoverTile.r * TILE_SIZE - cam.y) * ZOOM;
+  const cx = ((hoverTile.c + 0.5) * TILE_SIZE - cam.x) * ZOOM;
+  const touch = typeof IS_TOUCH !== 'undefined' && IS_TOUCH;
+
+  if (buildMode.active) {
+    if (!buildMode.menuOpen && !buildMode.boxMode && IS_TRANSPORT(buildMode.selectedId) && !game.rotatedOnce) {
+      drawLabelChip(ctx, cx, tileTopY + TILE_SIZE * ZOOM + 18, touch ? 'Tap Rotate to turn it' : 'R: rotate the belt'); // below the tile so it never covers the tutorial's own label above it
+    }
+    return;
   }
+  const id = blockAt(hoverTile.c, hoverTile.r);
+  if (!IS_UPGRADABLE(id)) return;
+  // The tutorial's own upgrade step already labels the Fisher.
+  if (typeof TUT !== 'undefined' && TUT.active && currentStep() && currentStep().id === 'upgrade') return;
+  const st = stateAt(hoverTile.c, hoverTile.r);
+  const cost = st ? machineUpgradeCost(id, st.level || 0) : null;
+  if (cost == null || game.cash < cost) return;
+  drawLabelChip(ctx, cx, tileTopY - 16, (touch ? 'Interact' : 'E') + ': Upgrade $' + cost);
 }
 
 // ─── Hover tooltips ──────────────────────────────────────────────────────────

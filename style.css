@@ -1091,6 +1091,76 @@ body.touch-active .tutorial-step-hint  { font-size: 10.5px; margin: 0 0 5px; }
   color: #fff;
   margin-bottom: 8px;
 }
+
+/* Back / forward through earlier steps (read-only review). */
+.tutorial-nav {
+  appearance: none; flex: none;
+  width: 22px; height: 22px; padding: 0;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.07);
+  color: var(--c-text);
+  border-radius: 6px;
+  font-size: 16px; line-height: 1; font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+.tutorial-nav:hover:not(:disabled) { background: rgba(255,255,255,0.18); }
+.tutorial-nav:disabled { opacity: 0.25; cursor: default; }
+.tutorial-overlay.reviewing { border-color: rgba(126,200,227,0.7); }
+.tutorial-overlay.reviewing .tutorial-badge { background: var(--c-sky); box-shadow: 0 0 0 3px rgba(126,200,227,0.25); }
+.tutorial-overlay.reviewing .tutorial-step-count { color: var(--c-sky); }
+
+/* Cash meter inside the live hint pill (the "fund" step). */
+.tut-meter { display: inline-block; width: 90px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.14); vertical-align: middle; margin: 0 8px; overflow: hidden; }
+.tut-meter > i { display: block; height: 100%; background: linear-gradient(90deg, #4dca7c, #a8f0c0); border-radius: 3px; transition: width 0.3s; }
+
+/* "?" button + How to play reference panel */
+.howto-toggle-btn {
+  position: fixed;
+  top: 14px;
+  left: 152px;
+  z-index: 25;
+  width: 38px; height: 38px;
+  appearance: none;
+  border: 1px solid var(--c-border);
+  background: rgba(10,18,16,0.85);
+  color: var(--c-text);
+  border-radius: 8px;
+  font-family: var(--font-ui);
+  font-size: 18px; font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.howto-toggle-btn:hover { background: rgba(255,255,255,0.16); }
+.howto-panel {
+  position: fixed;
+  top: 5vh;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  width: min(92vw, 640px);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-ui);
+}
+.howto-panel.hidden { display: none; }
+.howto-content {
+  background: rgba(10,18,16,0.97);
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  overflow-y: auto;
+  box-shadow: 0 14px 32px rgba(0,0,0,0.5);
+  padding: 8px 20px 18px;
+}
+.howto-group { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--c-accent); margin: 16px 0 6px; }
+.howto-step { display: flex; gap: 12px; padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.07); }
+.howto-step:first-of-type { border-top: none; }
+.howto-num { flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--c-accent); color: #1a1208; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+.howto-step-text { font-size: 13.5px; font-weight: 700; color: #fff; line-height: 1.4; }
+.howto-step-why  { font-size: 12.5px; color: #d3ddd8; line-height: 1.5; margin-top: 3px; }
+.howto-step-why strong { color: #fff; }
+.howto-replay-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
 .tutorial-skip-btn {
   appearance: none;
   border: 1px solid rgba(255,255,255,0.18);

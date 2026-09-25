@@ -73,7 +73,7 @@ const START_SCREENS = [
 function showAccountChoice(card, done) {
   card.innerHTML = `
     <div class="start-screen-title">Welcome to Fish INK!</div>
-    <div class="start-screen-sub">Create an account to save your progress across devices.</div>
+    <div class="start-screen-sub">Create an account to save your progress across devices. Just want to play? Choose Sign Up, then Sign Up Without Leaderboard.</div>
     <button id="ssBtnSignUp" class="start-screen-btn">Sign Up</button>
     <div class="start-screen-divider"></div>
     <button id="ssBtnSignIn" class="start-screen-btn-ghost">Sign In (Returning Player)</button>

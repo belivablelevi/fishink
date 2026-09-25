@@ -129,6 +129,7 @@ function toggleBoxMode() {
 }
 
 function rotateBeltDir() {
+  game.rotatedOnce = true;
   buildMode.beltDir = (buildMode.beltDir + 1) % BELT_DIRS.length;
 }
 

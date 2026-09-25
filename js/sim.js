@@ -15,6 +15,11 @@ const game = {
   tutorialDone: false,
   upgradeTipDone: false,
   automationTutorialDone: false,
+  rotatedOnce: false,        // has used R/Rotate on a belt at least once (hides the rotate hint)
+  boatUsed: false,           // has boarded the boat at least once (hides the beach prompt)
+  exploreOffered: false,     // the optional explore tour was offered at the end of the tutorial
+  oceanToastShown: false,    // one-time 'Ocean Expansion is available' pointer
+  chestToastShown: false,    // one-time 'treasure chests unlocked' pointer
   pets: [],          // owned axolotl pets [{uid, variant}]
   petNextUid: 1,
   petPullsTotal: 0,

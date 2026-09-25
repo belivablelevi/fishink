@@ -36,6 +36,8 @@ function serializeGame() {
       tutorialDone: game.tutorialDone,
       upgradeTipDone: game.upgradeTipDone,
       automationTutorialDone: game.automationTutorialDone,
+      rotatedOnce: game.rotatedOnce, boatUsed: game.boatUsed, exploreOffered: game.exploreOffered,
+      oceanToastShown: game.oceanToastShown, chestToastShown: game.chestToastShown,
     },
     upgradeLevels,
     researchLevels,
@@ -74,6 +76,11 @@ function deserializeGame(data) {
   game.tutorialDone           = data.game.tutorialDone || false;
   game.upgradeTipDone         = data.game.upgradeTipDone || false;
   game.automationTutorialDone = data.game.automationTutorialDone || false;
+  game.rotatedOnce     = data.game.rotatedOnce     || false;
+  game.boatUsed        = data.game.boatUsed        || false;
+  game.exploreOffered  = data.game.exploreOffered  || false;
+  game.oceanToastShown = data.game.oceanToastShown || false;
+  game.chestToastShown = data.game.chestToastShown || false;
   game.rareCatches     = data.game.rareCatches || 0;
   game.blocksPlaced    = data.game.blocksPlaced || 0;
   game.maxMachineLevel = data.game.maxMachineLevel || 0;
