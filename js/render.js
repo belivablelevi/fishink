@@ -505,7 +505,7 @@ function wrapCanvasText(ctx, text, maxW) {
 }
 
 // Tooltip lines for things in the world that aren't blocks: the offshore
-// islands' treasure chests. Returns null when (c, r) isn't one.
+// islands' treasure pots. Returns null when (c, r) isn't one.
 function worldTooltipLines(c, r) {
   if (!offshoreIslands || offshoreIslands.length <= 1) return null;
   const touch = typeof IS_TOUCH !== 'undefined' && IS_TOUCH;
@@ -515,16 +515,16 @@ function worldTooltipLines(c, r) {
     if (ct.c !== c || ct.r !== r) continue;
     const gates = [5000, 25000, 100000];
     const gate = gates[Math.min(i - 1, gates.length - 1)];
-    const lines = ['Treasure Chest'];
+    const lines = ['Treasure Pot'];
     if ((game.lifetimeEarned || 0) < gate) {
-      lines.push(`Locked: earn $${gate.toLocaleString()} in total to open it.`);
+      lines.push(`Broken: earn $${gate.toLocaleString()} in total to mend it.`);
     } else {
       const ch = game.islandChests && game.islandChests[`${isl.cx},${isl.cy}`];
       if (!ch || game.time >= ch.nextOpen) {
-        lines.push(touch ? 'Ready! Stand next to it and press Interact.' : 'Ready! Stand next to it and press E.');
+        lines.push(touch ? 'Whole and ready! Stand next to it and press Interact to smash it open.' : 'Whole and ready! Stand next to it and press E to smash it open.');
       } else {
         const secs = Math.ceil(ch.nextOpen - game.time);
-        lines.push(`Refills in ${Math.floor(secs / 60)}m ${secs % 60}s`);
+        lines.push(`Broken. It mends itself in ${Math.floor(secs / 60)}m ${secs % 60}s.`);
       }
       lines.push('Pays cash and a permanent income bonus.');
     }
@@ -1790,8 +1790,13 @@ function drawDroneSprite(ctx, cx, cy, pulse) {
 }
 
 // Draws a wooden pier at each offshore island's dock position.
-// Treasure chests on non-worker offshore islands. Ready chests glow gold;
-// spent chests show a closed darker box.
+// Treasure pots on non-worker offshore islands. A pot you can claim stands whole
+// and glows gold; one you can't (still sealed behind its earnings requirement,
+// or mending after being claimed) lies broken. Claiming one shows a brief
+// mid-smash frame (smashPot) before it settles into the broken pile.
+const _potSmashAt = {}; // pot key -> performance.now() when it was last smashed
+function smashPot(key) { _potSmashAt[key] = performance.now(); }
+
 function drawChests(ctx) {
   if (!offshoreIslands || offshoreIslands.length <= 1) return;
   const S = TILE_SIZE;
@@ -1812,34 +1817,21 @@ function drawChests(ctx) {
     const chst = game.islandChests && game.islandChests[key];
     const ready = !locked && (!chst || game.time >= chst.nextOpen);
 
+    const px = Math.round(sx), py = Math.round(sy);
     if (ready) {
-      const pulse = 0.25 + 0.15 * Math.sin(performance.now() / 550);
+      const pulse = 0.22 + 0.14 * Math.sin(performance.now() / 550);
       ctx.fillStyle = `rgba(255,210,60,${pulse.toFixed(3)})`;
       ctx.beginPath();
-      ctx.arc(sx, sy, 11, 0, Math.PI * 2);
+      ctx.ellipse(px, py + 5, 13, 8, 0, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // Chest body
-    ctx.fillStyle = locked ? '#303030' : (ready ? '#c08020' : '#5a3a10');
-    ctx.fillRect(sx - 7, sy - 4, 14, 10);
-    // Lid
-    ctx.fillStyle = locked ? '#484848' : (ready ? '#e8a030' : '#7a5020');
-    ctx.fillRect(sx - 7, sy - 4, 14, 4);
-    // Frame
-    ctx.strokeStyle = '#301808';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(sx - 7, sy - 4, 14, 10);
-    // Latch / lock
-    if (locked) {
-      ctx.fillStyle = '#888';
-      ctx.fillRect(sx - 2, sy - 1, 4, 5);        // lock body
-      ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.arc(sx, sy - 2, 2.5, Math.PI, 0); ctx.stroke(); // shackle
-    } else {
-      ctx.fillStyle = ready ? '#f0d040' : '#706050';
-      ctx.fillRect(sx - 2, sy, 4, 4);
-    }
+    if (!IMAGES.pots) continue;
+    const smashed = _potSmashAt[key];
+    const row = ready ? 0 : (smashed !== undefined && performance.now() - smashed < 350 ? 1 : 2);
+    const col = (i - 1) % 4; // one colour per island
+    // Cell art rests its feet on row 30; put that just below the tile centre.
+    ctx.drawImage(IMAGES.pots, col * 32, row * 32, 32, 32, px - 16, py + 8 - 30, 32, 32);
   }
 }
 

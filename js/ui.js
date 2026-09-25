@@ -1269,7 +1269,7 @@ function renderControlsPanel() {
 
   const tourRow = document.createElement('div');
   tourRow.className = 'upgrade-row';
-  tourRow.innerHTML = '<div class="upgrade-info"><div class="name">Island tour</div><div class="desc">A quick guide to the boat, other islands, treasure chests and Ocean Expansion</div></div>';
+  tourRow.innerHTML = '<div class="upgrade-info"><div class="name">Island tour</div><div class="desc">A quick guide to the boat, other islands, treasure pots and Ocean Expansion</div></div>';
   const tourBtn = document.createElement('button');
   tourBtn.className = 'upgrade-buy';
   tourBtn.textContent = 'Start';

@@ -415,7 +415,7 @@ function triggerInteract(fromKey = false) {
         const idx = Math.min(i - 1, CHEST_EARN_GATES.length - 1);
         const gate = CHEST_EARN_GATES[idx];
         if ((game.lifetimeEarned || 0) < gate) {
-          queueToast(`Chest locked: earn $${gate.toLocaleString()} lifetime to open`, '#9aa0a8');
+          queueToast(`The pot is broken: earn $${gate.toLocaleString()} lifetime to mend it`, '#9aa0a8');
           return;
         }
         const key = `${isl.cx},${isl.cy}`;
@@ -424,7 +424,9 @@ function triggerInteract(fromKey = false) {
         if (!chest || game.time >= chest.nextOpen) {
           const [cMin, cMax] = CHEST_CASH_RANGES[idx];
           const reward = Math.floor(cMin + Math.random() * (cMax - cMin));
-          awardCash(reward, `Chest! +$${reward.toLocaleString()}`, '#f0c030');
+          awardCash(reward, `Pot smashed! +$${reward.toLocaleString()}`, '#f0c030');
+          smashPot(key);
+          spawnParticles((ct.c + 0.5) * TILE_SIZE, (ct.r + 0.5) * TILE_SIZE, 'sparkle', 16);
           if ((game.chestIncomeBonus || 0) < CHEST_INCOME_CAP) {
             const inc = CHEST_INCOME_INC[idx];
             game.chestIncomeBonus = Math.min(CHEST_INCOME_CAP, (game.chestIncomeBonus || 0) + inc);
@@ -446,7 +448,7 @@ function triggerInteract(fromKey = false) {
         } else {
           const secs = Math.ceil(chest.nextOpen - game.time);
           const min = Math.floor(secs / 60), sec = secs % 60;
-          queueToast(`Chest refills in ${min > 0 ? `${min}m ` : ''}${sec}s`, '#9aa0a8');
+          queueToast(`The pot mends itself in ${min > 0 ? `${min}m ` : ''}${sec}s`, '#9aa0a8');
         }
         return;
       }

@@ -1,6 +1,6 @@
 // Fish INK Factory - game loop
 
-const GAME_VERSION = '1.10.4';
+const GAME_VERSION = '1.11.0';
 
 let canvas, ctx;
 let lastTime = 0;
@@ -40,6 +40,7 @@ function loadImages(cb, onProgress) {
     sorter2: 'img/sorter-2.png', sorter3: 'img/sorter-3.png',
     sorter4: 'img/sorter-4.png', sorter5: 'img/sorter-5.png',
     iconMoney: 'img/icon-money.png', rod: 'img/rod.png',
+    pots: 'img/pots.png', // treasure pots: 4 colours x (intact, mid-smash, broken), 32px cells
     boatSheet: 'img/boat0001-sheet.png',
     // Axolotl pet spritesheets
     axo_pink:         'img/axolotl/pink.png',

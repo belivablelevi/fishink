@@ -90,11 +90,46 @@ function audioInit() {
   startAmbient();
 }
 
+// ─── Background songs ───────────────────────────────────────────────────────
+// A few extra songs on top of the birdsong bed: one at a time in random order
+// (never the same song twice in a row), with a short pause between songs, at a
+// very low fixed volume so they sit under everything else. Follows the Music
+// mute setting like the ambient bed does.
+const MUSIC_TRACKS = [
+  'audio/music-sheep.ogg',
+  'audio/music-gentle-breeze.ogg',
+  'audio/music-wanderers-tale.ogg',
+];
+const MUSIC_TRACK_VOLUME = 0.05;
+let _lastTrack = -1;
+
+function _startPlaylist() {
+  if (AUDIO.playlistStarted) return;
+  AUDIO.playlistStarted = true;
+  _playNextTrack();
+}
+
+function _playNextTrack() {
+  let i;
+  do { i = Math.floor(Math.random() * MUSIC_TRACKS.length); } while (MUSIC_TRACKS.length > 1 && i === _lastTrack);
+  _lastTrack = i;
+  const a = new Audio(MUSIC_TRACKS[i]);
+  a.preload = 'auto';
+  a.volume = MUSIC_TRACK_VOLUME;
+  a.muted = AUDIO.musicMuted;
+  a.addEventListener('ended', () => { AUDIO.playlist = null; setTimeout(_playNextTrack, 4000); });
+  // A missing/undecodable file must not spin: wait, then move on to the next.
+  a.addEventListener('error', () => { AUDIO.playlist = null; setTimeout(_playNextTrack, 15000); });
+  AUDIO.playlist = a;
+  a.play().catch(() => {}); // resumed by audioUnlock if this is blocked
+}
+
 // Browsers block audio until a user gesture - unlock/resume on first input.
 function audioUnlock() {
   if (!AUDIO.ctx) { audioInit(); return; }
   if (AUDIO.ctx.state !== 'running') AUDIO.ctx.resume();
   if (AUDIO.music && AUDIO.music.paused) AUDIO.music.play().catch(() => {});
+  if (AUDIO.playlist && AUDIO.playlist.paused) AUDIO.playlist.play().catch(() => {});
   // If startAmbient ran before the AudioContext existed, the synth was never started - retry now.
   if (!AUDIO.nightSynthGain) _startNightSynth();
 }
@@ -117,6 +152,7 @@ function startAmbient() {
   music.muted = AUDIO.musicMuted;
   AUDIO.music = music;
   music.play().catch(() => {}); // resumed by audioUnlock if this is blocked
+  _startPlaylist();
 
   // Night ambient - synthesized drone using Web Audio so no file is needed.
   // A pair of detuned oscillators (fundamental + fifth) at very low volume
@@ -189,6 +225,7 @@ function updateMusicForTimeOfDay(p, dt) {
 function setMusicMuted(v) {
   AUDIO.musicMuted = v;
   if (AUDIO.music) AUDIO.music.muted = v;
+  if (AUDIO.playlist) AUDIO.playlist.muted = v;
   if (AUDIO.nightSynthGain) AUDIO.nightSynthGain.gain.value = v ? 0 : AUDIO.nightSynthVol;
 }
 function setSfxMuted(v)  { AUDIO.sfxMuted  = v; }

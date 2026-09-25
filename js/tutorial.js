@@ -224,7 +224,7 @@ const TUTORIAL_EXPLORE_STEPS = [
     manual: true,
     nextLabel: 'Show me',
     text: 'Want a quick tour of the islands?',
-    why: 'There is more out there than your dock: other islands with treasure chests, fish that only live around them, and a way to grow the whole map. It takes about a minute.',
+    why: 'There is more out there than your dock: other islands with treasure pots, fish that only live around them, and a way to grow the whole map. It takes about a minute.',
   },
   {
     id: 'x_beach',
@@ -263,12 +263,12 @@ const TUTORIAL_EXPLORE_STEPS = [
     nextLabel: 'Got it',
     dwell: 1500,
     text: () => TUT.exIsland >= 1
-      ? 'See the <strong>treasure chest</strong>? It unlocks once you have earned $' + _chestGate(TUT.exIsland).toLocaleString() + ' in total.'
+      ? 'See the <strong>treasure pot</strong>? It lies broken until you have earned $' + _chestGate(TUT.exIsland).toLocaleString() + ' in total, then it mends itself.'
       : 'This is the <strong>Worker Island</strong>. Point at its depot and press ' + keyBadge('E') + ' to hire fishermen.',
     why: () => TUT.exIsland >= 1
-      ? 'Point at it and press <strong>E</strong> once it is ready. It pays cash, adds a permanent income bonus, refills every few minutes, and the first time it also holds a rare keepsake fish.'
+      ? 'Once it is whole again, point at it and press <strong>E</strong> to smash it open. It pays cash, adds a permanent income bonus, mends itself every few minutes, and the first time it also holds a rare keepsake fish.'
       : 'Hired fishermen catch fish for you on their own and bring them back to your dock.',
-    targets: () => { const t = exploreIslandTile(); return t ? [{ tile: t, label: TUT.exIsland >= 1 ? 'Treasure chest' : 'Worker depot' }] : []; },
+    targets: () => { const t = exploreIslandTile(); return t ? [{ tile: t, label: TUT.exIsland >= 1 ? 'Treasure pot' : 'Worker depot' }] : []; },
   },
   {
     id: 'x_expand',
@@ -800,7 +800,7 @@ function checkExplorationHints() {
   if (!offshoreIslands || offshoreIslands.length === 0) return;
   if (!game.chestToastShown && offshoreIslands.length > 1 && game.lifetimeEarned >= _CHEST_GATES[0]) {
     game.chestToastShown = true;
-    queueToast('Treasure chests on the islands are now unlocked! Walk to a beach and press F to sail.', '#f0c419');
+    queueToast('The treasure pots on the islands are now mended! Walk to a beach and press F to sail.', '#f0c419');
   }
   if (!game.oceanToastShown && game.cash >= islandExpandCost()) {
     game.oceanToastShown = true;

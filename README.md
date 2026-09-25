@@ -31,6 +31,10 @@ Vanilla HTML5/Canvas/JS - no framework, no bundler:
 - `js/save.js`, `js/cloud.js`, `js/leaderboard.js` - local save, cloud sync, leaderboard (Supabase backend - see `leaderboard/SETUP.md`)
 - `js/main.js` - bootstraps the game and the render/sim loop
 
+## Credits
+
+- Treasure pot sprites (`img/pots.png`, cut from a purchased pack) and the three background songs (`audio/music-*.ogg`, re-encoded smaller) are by Seliel the Shaper: https://seliel-the-shaper.itch.io/ (see `img/pots-credits.txt`).
+
 ## Backend setup (optional)
 
 Cloud saves and the leaderboard run on Supabase. See [`leaderboard/SETUP.md`](leaderboard/SETUP.md) for the 5-minute setup, including optional Google Sign-In.
