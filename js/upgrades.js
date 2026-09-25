@@ -1,4 +1,4 @@
-// Fish INK Factory — upgrades: persistent stat boosts bought with cash
+// Fish INK Factory - upgrades: persistent stat boosts bought with cash
 
 const UPGRADES = [
   { id: 'castSpeed',   name: 'Quick Cast',         desc: 'Casting lands a catch faster', baseCost: 200, costMult: 1.8, maxLevel: 5, perLevel: 0.15, suffix: ' cast time' },
@@ -65,7 +65,7 @@ function effectivePondCapacity()        { return POND_CAPACITY + upgradeLevels.p
 function effectiveGlobalLuckMult()      { return 1 + upgradeLevels.globalLuck * 0.20; }
 
 // ─── Per-instance upgrades ───────────────────────────────────────────────────
-// Separate from the global tree above — click/E a placed instance of any
+// Separate from the global tree above - click/E a placed instance of any
 // IS_UPGRADABLE block (the four processing machines, Fisher, Drone Fisher,
 // Recycler, Packer, Drone Delivery) to level up that *specific* block. Cost
 // scales off that block's own price, so pricier blocks cost more per level.
@@ -75,7 +75,7 @@ const MACHINE_UPGRADE_SPEED_PER_LV = 0.08; // -8% process/catch/trip time per le
 const MACHINE_UPGRADE_VALUE_PER_LV = 0.08; // +8% value/payout multiplier per level
 const MACHINE_UPGRADE_LUCK_PER_LV  = 0.25; // +25% weight on Uncommon+ catches per level
 
-// Which stat(s) leveling a given block improves — production blocks (Fisher,
+// Which stat(s) leveling a given block improves - production blocks (Fisher,
 // Drone Fisher) get faster, sinks (Recycler, Drone Delivery) pay out more,
 // and the four processing machines plus Packer get both. Fisher additionally
 // gets luck (better odds at rarer fish) since speed alone doesn't make a
@@ -108,7 +108,7 @@ const DRONE_LUCK_PENALTY = 0.6; // Drone Fisher catches rarer fish at 60% normal
 function droneLuckMult(level) {
   // Per-level recovery claws back some of the penalty but a maxed drone
   // (0.6 + 5*0.06 = 0.9) never reaches a level-0 Fisher's baseline (1.0),
-  // let alone a maxed Fisher's 2.25x — Drone Fisher wins on throughput,
+  // let alone a maxed Fisher's 2.25x - Drone Fisher wins on throughput,
   // Fisher wins on quality.
   return Math.min(1, DRONE_LUCK_PENALTY + level * 0.06);
 }

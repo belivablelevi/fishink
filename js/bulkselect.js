@@ -1,4 +1,4 @@
-// Fish INK Factory — bulk config editor
+// Fish INK Factory - bulk config editor
 
 const bulkSelect = {
   active:      false,
@@ -63,6 +63,10 @@ function toggleBulkSelectMode() {
 function enterBulkSelectMode() {
   if (typeof petPlaceMode !== 'undefined' && petPlaceMode.active) {
     queueToast('Exit pet placement first', '#e8a030');
+    return;
+  }
+  if (typeof frogPlaceMode !== 'undefined' && frogPlaceMode.active) {
+    queueToast('Exit frog placement first', '#e8a030');
     return;
   }
   if (typeof blueprint !== 'undefined' && (blueprint.pasting || blueprint.selecting)) {

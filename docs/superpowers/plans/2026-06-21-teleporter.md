@@ -2,19 +2,19 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a new advanced logistics block — the Teleporter — that instantly relays a fish from one placed Teleporter to another anywhere on the map, per `docs/superpowers/specs/2026-06-21-teleporter-design.md`.
+**Goal:** Add a new advanced logistics block - the Teleporter - that instantly relays a fish from one placed Teleporter to another anywhere on the map, per `docs/superpowers/specs/2026-06-21-teleporter-design.md`.
 
-**Architecture:** Teleporter is a new `IS_TRANSPORT` block (`B_TELEPORTER`). Each instance stores an optional `teleportTarget: {c, r}` in its cell state, set via a destination-picker popup (E key, reusing the existing per-block popup system). When a fish lands on a Teleporter that has a valid target, it is instantly relocated into the destination's `item` slot (no transit animation), then exits the destination through normal belt-style hand-off using the destination's own `dir`/rotation — exactly like a plain Belt. A transient `fish.viaTeleport` flag on the fish object distinguishes "just arrived via hop, should exit normally" from "freshly fed by an upstream belt, should consume this tile's own `teleportTarget`," preventing accidental teleport-chaining.
+**Architecture:** Teleporter is a new `IS_TRANSPORT` block (`B_TELEPORTER`). Each instance stores an optional `teleportTarget: {c, r}` in its cell state, set via a destination-picker popup (E key, reusing the existing per-block popup system). When a fish lands on a Teleporter that has a valid target, it is instantly relocated into the destination's `item` slot (no transit animation), then exits the destination through normal belt-style hand-off using the destination's own `dir`/rotation - exactly like a plain Belt. A transient `fish.viaTeleport` flag on the fish object distinguishes "just arrived via hop, should exit normally" from "freshly fed by an upstream belt, should consume this tile's own `teleportTarget`," preventing accidental teleport-chaining.
 
 **Tech Stack:** Vanilla JS, HTML5 Canvas, no build step, no framework, no test runner.
 
 ## Global Constraints
 
-- No build step — every file is loaded directly via `<script>` tags in `index.html`, in load order. No new files need registering in `index.html` for this feature (all changes are to existing files already loaded).
+- No build step - every file is loaded directly via `<script>` tags in `index.html`, in load order. No new files need registering in `index.html` for this feature (all changes are to existing files already loaded).
 - No test framework exists in this project. "Run the tests" in every task below means: (1) `node -c <file>` to catch syntax errors, and (2) a precise manual verification procedure performed by serving the game locally (`npx serve .` from the project root, or opening `index.html` directly) and checking specific in-game behavior. This mirrors how every prior change in this codebase has been verified.
 - Follow existing code conventions exactly: defensive `st && st.field` reads in `render.js` (since `drawBlock` is also called for build-menu swatches with `c = -1, r = -1`, where `stateAt` returns no real cell), and the existing per-instance settings pattern (`captureConfig`/`applyConfig` in `js/undo.js`) for anything that should survive undo/redo and blueprint copy/paste.
 - Reuse existing colors/classes; no new sprite image assets (procedural canvas rendering only, consistent with Belt/Splitter/Sorter/Recycler/Smart Router).
-- Block id, cost, unlock gate, and array values below are exact and final — do not invent placeholder values.
+- Block id, cost, unlock gate, and array values below are exact and final - do not invent placeholder values.
 
 ---
 
@@ -26,7 +26,7 @@
 
 **Interfaces:**
 - Produces: `B_TELEPORTER` (numeric id `17`), `IS_TRANSPORT(B_TELEPORTER) === true`, `isBlockUnlocked(B_TELEPORTER)` gated on `game.lifetimeEarned >= 15000`, every cell state object has a `teleportTarget` field (`null` by default) that later tasks read/write, and a new global helper `teleporterTiles(excludeC, excludeR)` that later tasks (the popup) call to list link targets.
-- Consumes: nothing new (all referenced globals — `game`, `WORLD_ROWS`, `WORLD_COLS`, `blockAt` — already exist in `js/grid.js`).
+- Consumes: nothing new (all referenced globals - `game`, `WORLD_ROWS`, `WORLD_COLS`, `blockAt` - already exist in `js/grid.js`).
 
 - [ ] **Step 1: Add the `B_TELEPORTER` constant**
 
@@ -99,14 +99,14 @@ const BLOCK_DESCS = ['',
   'Flash-freezes fish for an even bigger value boost.',
   'Stamps fish with a quality seal for a final price bump.',
   'Sells anything dropped on it for cash.',
-  'Paved floor — required before placing any equipment.',
-  'Place anywhere — flies to the nearest water, fishes a batch, then flies back.',
+  'Paved floor - required before placing any equipment.',
+  'Place anywhere - flies to the nearest water, fishes a batch, then flies back.',
   'Belt sink that sells fish for a delivery bonus, like a long-range Seller.',
   'Alternates output between straight-ahead and a turn, balancing two belts.',
-  'Routes big fish one way, small fish the other — R flips which side is which.',
+  'Routes big fish one way, small fish the other - R flips which side is which.',
   'Buffers up to 20 items so a jam downstream doesn’t stall the whole line.',
-  'Belt that salvages selected rarities for a flat fee as they ride past — press E to pick which ones.',
-  'Bundles several fish into one higher-value box — press E to set the target count.',
+  'Belt that salvages selected rarities for a flat fee as they ride past - press E to pick which ones.',
+  'Bundles several fish into one higher-value box - press E to set the target count.',
   'Belt junction that auto-routes around a jam instead of backing up. The blue circle marks the input side.',
 ];
 ```
@@ -122,16 +122,16 @@ const BLOCK_DESCS = ['',
   'Flash-freezes fish for an even bigger value boost.',
   'Stamps fish with a quality seal for a final price bump.',
   'Sells anything dropped on it for cash.',
-  'Paved floor — required before placing any equipment.',
-  'Place anywhere — flies to the nearest water, fishes a batch, then flies back.',
+  'Paved floor - required before placing any equipment.',
+  'Place anywhere - flies to the nearest water, fishes a batch, then flies back.',
   'Belt sink that sells fish for a delivery bonus, like a long-range Seller.',
   'Alternates output between straight-ahead and a turn, balancing two belts.',
-  'Routes big fish one way, small fish the other — R flips which side is which.',
+  'Routes big fish one way, small fish the other - R flips which side is which.',
   'Buffers up to 20 items so a jam downstream doesn’t stall the whole line.',
-  'Belt that salvages selected rarities for a flat fee as they ride past — press E to pick which ones.',
-  'Bundles several fish into one higher-value box — press E to set the target count.',
+  'Belt that salvages selected rarities for a flat fee as they ride past - press E to pick which ones.',
+  'Bundles several fish into one higher-value box - press E to set the target count.',
   'Belt junction that auto-routes around a jam instead of backing up. The blue circle marks the input side.',
-  'Press E to link it to another Teleporter — fish that land on it are instantly relayed there, then exit normally in this block’s facing direction.',
+  'Press E to link it to another Teleporter - fish that land on it are instantly relayed there, then exit normally in this block’s facing direction.',
 ];
 ```
 
@@ -179,20 +179,20 @@ function makeCellState() {
     inputItem: null,
     timer: 0,
     processing: false,
-    dir: 0, // IS_TRANSPORT only — index into BELT_DIRS — rotated with R before placing
-    flashAnim: 0, // drone blocks only — game.time value the visual pulse ends at
-    dronePhase: DRONE_OUT, // B_DRONE_FISHER only — current flight phase
+    dir: 0, // IS_TRANSPORT only - index into BELT_DIRS - rotated with R before placing
+    flashAnim: 0, // drone blocks only - game.time value the visual pulse ends at
+    dronePhase: DRONE_OUT, // B_DRONE_FISHER only - current flight phase
     droneT: 0,             // 0..1 progress through the current phase
-    waterC: null,          // B_DRONE_FISHER only — cached nearest-water target
+    waterC: null,          // B_DRONE_FISHER only - cached nearest-water target
     waterR: null,
     carrying: [],          // B_DRONE_FISHER (drop-off queue) or B_CRATE (FIFO buffer)
-    altOut: false,         // B_SPLITTER only — which of the two output sides is next
-    level: 0,              // IS_MACHINE only — per-instance upgrade level, click to buy
-    sortMode: 'size',       // B_SORTER only — 'size' or 'rarity'
-    sortThreshold: 2,      // B_SORTER only — SIZES index that splits "big" from "small"
-    sortCategory: 'Rare',   // B_SORTER only — CATEGORY_NAMES entry routed to st.dir in rarity mode
-    recycleRarities: [],   // B_RECYCLER only — CATEGORY_NAMES entries that get salvaged on sight
-    packTarget: 5,          // B_PACKER only — fish count that triggers a bundle
+    altOut: false,         // B_SPLITTER only - which of the two output sides is next
+    level: 0,              // IS_MACHINE only - per-instance upgrade level, click to buy
+    sortMode: 'size',       // B_SORTER only - 'size' or 'rarity'
+    sortThreshold: 2,      // B_SORTER only - SIZES index that splits "big" from "small"
+    sortCategory: 'Rare',   // B_SORTER only - CATEGORY_NAMES entry routed to st.dir in rarity mode
+    recycleRarities: [],   // B_RECYCLER only - CATEGORY_NAMES entries that get salvaged on sight
+    packTarget: 5,          // B_PACKER only - fish count that triggers a bundle
   };
 }
 ```
@@ -206,21 +206,21 @@ function makeCellState() {
     inputItem: null,
     timer: 0,
     processing: false,
-    dir: 0, // IS_TRANSPORT only — index into BELT_DIRS — rotated with R before placing
-    flashAnim: 0, // drone blocks only — game.time value the visual pulse ends at
-    dronePhase: DRONE_OUT, // B_DRONE_FISHER only — current flight phase
+    dir: 0, // IS_TRANSPORT only - index into BELT_DIRS - rotated with R before placing
+    flashAnim: 0, // drone blocks only - game.time value the visual pulse ends at
+    dronePhase: DRONE_OUT, // B_DRONE_FISHER only - current flight phase
     droneT: 0,             // 0..1 progress through the current phase
-    waterC: null,          // B_DRONE_FISHER only — cached nearest-water target
+    waterC: null,          // B_DRONE_FISHER only - cached nearest-water target
     waterR: null,
     carrying: [],          // B_DRONE_FISHER (drop-off queue) or B_CRATE (FIFO buffer)
-    altOut: false,         // B_SPLITTER only — which of the two output sides is next
-    level: 0,              // IS_MACHINE only — per-instance upgrade level, click to buy
-    sortMode: 'size',       // B_SORTER only — 'size' or 'rarity'
-    sortThreshold: 2,      // B_SORTER only — SIZES index that splits "big" from "small"
-    sortCategory: 'Rare',   // B_SORTER only — CATEGORY_NAMES entry routed to st.dir in rarity mode
-    recycleRarities: [],   // B_RECYCLER only — CATEGORY_NAMES entries that get salvaged on sight
-    packTarget: 5,          // B_PACKER only — fish count that triggers a bundle
-    teleportTarget: null,   // B_TELEPORTER only — { c, r } of the linked destination, or null if unset/broken
+    altOut: false,         // B_SPLITTER only - which of the two output sides is next
+    level: 0,              // IS_MACHINE only - per-instance upgrade level, click to buy
+    sortMode: 'size',       // B_SORTER only - 'size' or 'rarity'
+    sortThreshold: 2,      // B_SORTER only - SIZES index that splits "big" from "small"
+    sortCategory: 'Rare',   // B_SORTER only - CATEGORY_NAMES entry routed to st.dir in rarity mode
+    recycleRarities: [],   // B_RECYCLER only - CATEGORY_NAMES entries that get salvaged on sight
+    packTarget: 5,          // B_PACKER only - fish count that triggers a bundle
+    teleportTarget: null,   // B_TELEPORTER only - { c, r } of the linked destination, or null if unset/broken
   };
 }
 ```
@@ -242,7 +242,7 @@ function isBlockUnlocked(id) {
 add:
 
 ```javascript
-// All placed Teleporter tiles except the one at (excludeC, excludeR) — backs
+// All placed Teleporter tiles except the one at (excludeC, excludeR) - backs
 // the destination picker in the Teleporter's settings popup (ui.js).
 function teleporterTiles(excludeC, excludeR) {
   const out = [];
@@ -286,7 +286,7 @@ Expected: no output, exit code 0.
 
 Serve the game (`npx serve .` from the project root, or open `index.html` directly) and:
 1. Open the build menu (B). Confirm a "Teleporter" card now appears in the "floor" category group, showing the lock badge and the text `$15,000 lifetime earnings` instead of a price (since a fresh save has `lifetimeEarned: 0`).
-2. Open the browser dev console and run `game.lifetimeEarned = 20000;` then close/reopen the build menu (B, B) — the Teleporter card should now show `$2500` and no lock badge.
+2. Open the browser dev console and run `game.lifetimeEarned = 20000;` then close/reopen the build menu (B, B) - the Teleporter card should now show `$2500` and no lock badge.
 Expected: both checks match.
 
 - [ ] **Step 10: Commit**
@@ -296,7 +296,7 @@ git add js/grid.js js/player.js
 git commit -m "feat: register Teleporter block data (id, cost, unlock gate, cell state field)"
 ```
 
-(If this project is not its own git repository — it may live inside a much larger personal home-directory repo — skip the commit and just note the change is complete; do not run `git add`/`git commit` against unrelated files.)
+(If this project is not its own git repository - it may live inside a much larger personal home-directory repo - skip the commit and just note the change is complete; do not run `git add`/`git commit` against unrelated files.)
 
 ---
 
@@ -307,7 +307,7 @@ git commit -m "feat: register Teleporter block data (id, cost, unlock gate, cell
 
 **Interfaces:**
 - Consumes: `B_TELEPORTER`, `IS_TRANSPORT` (Task 1), `stateAt(c, r).teleportTarget` (Task 1), `blockAt`, `cellAcceptsItem`, `transferItem`, `nextCellFor`, `effectiveBeltSpeed` (all pre-existing in `js/sim.js`).
-- Produces: at runtime, a fish object may carry a transient `fish.viaTeleport` boolean property (not part of `makeCellState`, lives on the fish item itself, mirroring how `fish.progress` already does). No other task reads this directly, but Task 5 (rendering) must NOT assume fish state — it only reads cell state.
+- Produces: at runtime, a fish object may carry a transient `fish.viaTeleport` boolean property (not part of `makeCellState`, lives on the fish item itself, mirroring how `fish.progress` already does). No other task reads this directly, but Task 5 (rendering) must NOT assume fish state - it only reads cell state.
 
 - [ ] **Step 1: Add the Teleporter sender/receiver branch**
 
@@ -326,7 +326,7 @@ function stepBeltCell(c, r, dt, onlyPositive) {
   if (fish.progress === undefined) fish.progress = 0;
 
   // Recycler: a fish whose rarity is selected gets salvaged the instant it
-  // lands here — it never continues onward to wherever the belt points.
+  // lands here - it never continues onward to wherever the belt points.
   if (id === B_RECYCLER && st.recycleRarities.includes(fish.category)) {
     recycleFish(fish, c, r);
     st.item = null;
@@ -339,7 +339,7 @@ function stepBeltCell(c, r, dt, onlyPositive) {
 
   const beltSpeed = effectiveBeltSpeed();
   if (blocked) {
-    // Queue up near the tile edge — shows backpressure visually
+    // Queue up near the tile edge - shows backpressure visually
     fish.progress = Math.min(fish.progress + dt * beltSpeed, 0.88);
   } else {
     fish.progress += dt * beltSpeed;
@@ -368,7 +368,7 @@ function stepBeltCell(c, r, dt, onlyPositive) {
   if (fish.progress === undefined) fish.progress = 0;
 
   // Recycler: a fish whose rarity is selected gets salvaged the instant it
-  // lands here — it never continues onward to wherever the belt points.
+  // lands here - it never continues onward to wherever the belt points.
   if (id === B_RECYCLER && st.recycleRarities.includes(fish.category)) {
     recycleFish(fish, c, r);
     st.item = null;
@@ -376,21 +376,21 @@ function stepBeltCell(c, r, dt, onlyPositive) {
   }
 
   // Teleporter sender role: a fish that arrived here normally (not one that
-  // just hopped in from another Teleporter — see fish.viaTeleport below)
+  // just hopped in from another Teleporter - see fish.viaTeleport below)
   // instantly relays to the linked destination's *item slot*, the moment a
   // destination is set and free. The destination then exits it through the
   // normal belt-step logic below using its own `dir`, exactly like a plain
-  // Belt — the hop itself has no transit animation, only the final leg out
+  // Belt - the hop itself has no transit animation, only the final leg out
   // of the destination does.
   if (id === B_TELEPORTER && !fish.viaTeleport) {
     if (st.teleportTarget && blockAt(st.teleportTarget.c, st.teleportTarget.r) !== B_TELEPORTER) {
-      // Destination was sold/replaced since this was set — clear it so the
+      // Destination was sold/replaced since this was set - clear it so the
       // dimmed "no destination" indicator picks it up (see render.js).
       st.teleportTarget = null;
     }
     const destSt = st.teleportTarget ? stateAt(st.teleportTarget.c, st.teleportTarget.r) : null;
     if (!destSt || destSt.item) {
-      // No destination, or destination tile currently occupied — queue at
+      // No destination, or destination tile currently occupied - queue at
       // the edge like any other blocked belt until it clears.
       fish.progress = Math.min(fish.progress + dt * effectiveBeltSpeed(), 0.88);
       return;
@@ -408,7 +408,7 @@ function stepBeltCell(c, r, dt, onlyPositive) {
 
   const beltSpeed = effectiveBeltSpeed();
   if (blocked) {
-    // Queue up near the tile edge — shows backpressure visually
+    // Queue up near the tile edge - shows backpressure visually
     fish.progress = Math.min(fish.progress + dt * beltSpeed, 0.88);
   } else {
     fish.progress += dt * beltSpeed;
@@ -416,7 +416,7 @@ function stepBeltCell(c, r, dt, onlyPositive) {
 
   if (fish.progress >= 1.0) {
     fish.progress = 0;
-    // Clears the hop flag the instant a fish successfully leaves ANY tile —
+    // Clears the hop flag the instant a fish successfully leaves ANY tile -
     // this is what makes a Teleporter-to-Teleporter belt hand-off (the
     // destination's exit happens to feed straight into another Teleporter)
     // treat that next Teleporter as a fresh sender, not a second hop.
@@ -437,7 +437,7 @@ Expected: no output, exit code 0.
 Serve the game and, in the browser dev console:
 1. `game.lifetimeEarned = 20000;` then open the build menu and place two Teleporters several tiles apart (e.g. at world cells `(5,5)` and `(20,5)`), each on its own paved Concrete tile, each with a Belt feeding into the first one and a Belt/Seller leading away from the second one.
 2. Run `stateAt(5,5).teleportTarget = {c: 20, r: 5};` to link them (the popup will do this automatically once Task 4 lands).
-3. Drop a fish onto the belt feeding the first Teleporter (cast a line, walk it over, press E to drop it on the belt — or directly run `stateAt(<belt c>,<belt r>).item = randomFish();` for a faster check).
+3. Drop a fish onto the belt feeding the first Teleporter (cast a line, walk it over, press E to drop it on the belt - or directly run `stateAt(<belt c>,<belt r>).item = randomFish();` for a faster check).
 4. Confirm: the fish disappears from the first Teleporter's tile without ever visibly riding across it, then a moment later appears riding out of the second Teleporter in its facing direction and continues down the belt/into the Seller as normal.
 5. Run `stateAt(20,5).item = randomFish();` directly (simulating the exit being momentarily occupied) right as another fish is mid-hop, and confirm the sender's fish queues (visually nudges toward its tile edge) instead of being lost, then completes the hop once the destination clears.
 Expected: all behaviors match.
@@ -460,7 +460,7 @@ git commit -m "feat: add Teleporter instant-relay logic to belt simulation"
 
 **Interfaces:**
 - Consumes: `stateAt(c, r).teleportTarget` (Task 1).
-- Produces: nothing new — `captureConfig`/`applyConfig` already have a defined shape consumed by `js/blueprint.js`'s `pasteBlueprint` and `js/undo.js`'s own `redoOneEntry`; this task only adds one more field to that existing shape, no signature change.
+- Produces: nothing new - `captureConfig`/`applyConfig` already have a defined shape consumed by `js/blueprint.js`'s `pasteBlueprint` and `js/undo.js`'s own `redoOneEntry`; this task only adds one more field to that existing shape, no signature change.
 
 - [ ] **Step 1: Add `teleportTarget` to the captured/applied config shape**
 
@@ -493,7 +493,7 @@ function captureConfig(c, r) {
 }
 ```
 
-`applyConfig` needs no change — it already does `Object.assign(stateAt(c, r), cfg)`, which will pick up the new `teleportTarget` key automatically.
+`applyConfig` needs no change - it already does `Object.assign(stateAt(c, r), cfg)`, which will pick up the new `teleportTarget` key automatically.
 
 - [ ] **Step 2: Syntax-check**
 
@@ -505,7 +505,7 @@ Expected: no output, exit code 0.
 Serve the game and, with the two linked Teleporters from Task 2's verification still in place:
 1. In the dev console, confirm `stateAt(5,5).teleportTarget` is `{c: 20, r: 5}`.
 2. Press Ctrl+Z to undo the second Teleporter's placement (you may need to undo a few times to reach it, depending on what else you placed). Confirm the tile at `(20,5)` reverts to bare concrete (or whatever it was before).
-3. Press Ctrl+Shift+Z (or Ctrl+Y) to redo. Confirm the Teleporter reappears at `(20,5)` AND `stateAt(5,5).teleportTarget` still reads `{c: 20, r: 5}` (i.e. the *sender's* link survived its own undo/redo cycle, since the sender itself was never removed — this step is really confirming the redo path for the destination's own placement doesn't throw and the sender's independent state is untouched).
+3. Press Ctrl+Shift+Z (or Ctrl+Y) to redo. Confirm the Teleporter reappears at `(20,5)` AND `stateAt(5,5).teleportTarget` still reads `{c: 20, r: 5}` (i.e. the *sender's* link survived its own undo/redo cycle, since the sender itself was never removed - this step is really confirming the redo path for the destination's own placement doesn't throw and the sender's independent state is untouched).
 4. Use C to copy a box containing the first Teleporter, then V to paste it elsewhere. Confirm the pasted copy's `teleportTarget` (check via `stateAt(<paste c>, <paste r>).teleportTarget` in console) still points at the *original* `{c: 20, r: 5}` coordinates, per the spec's documented simplification (no remapping on paste).
 Expected: all four checks match.
 
@@ -622,7 +622,7 @@ In `js/ui.js`, directly after the existing `renderRecyclerPopupContent` function
 
 ```javascript
 // Teleporter settings: pick which other Teleporter on the map this one sends
-// fish to. The list is rebuilt fresh every render (cheap — the map is small
+// fish to. The list is rebuilt fresh every render (cheap - the map is small
 // and this only runs when the popup is opened or a button inside it is
 // clicked, never per-frame; see updateBlockPopupLive for the per-frame path).
 function renderTeleporterPopupContent(c, r) {
@@ -670,7 +670,7 @@ function renderTeleporterPopupContent(c, r) {
 In `style.css`, directly after the existing crate-list rules (the block ending in `.block-popup .mp-crate-value { color: var(--c-mint); font-weight: 700; }`), add:
 
 ```css
-/* Teleporter settings — destination picker list */
+/* Teleporter settings - destination picker list */
 .block-popup .mp-target-list {
   display: flex;
   flex-direction: column;
@@ -718,7 +718,7 @@ Serve the game and:
 1. With the two Teleporters from earlier tasks still placed, hover the first one and press E. Confirm a popup opens titled "Teleporter Settings" listing "No destination" and "Teleporter @ (20, 5)" (or whatever its actual coordinates are), with "Teleporter @ (20, 5)" highlighted as active (since Task 2's verification already set it via the console).
 2. Click "No destination." Confirm the button highlights as active and, back in the dev console, `stateAt(5,5).teleportTarget` now reads `null`.
 3. Click "Teleporter @ (20, 5)" again. Confirm it re-highlights and `stateAt(5,5).teleportTarget` is restored.
-4. Hover the *second* Teleporter and press E. Confirm its own popup lists only the *first* Teleporter as an option (not itself) — i.e. self-targeting is impossible because the picker never lists the tile it was opened from.
+4. Hover the *second* Teleporter and press E. Confirm its own popup lists only the *first* Teleporter as an option (not itself) - i.e. self-targeting is impossible because the picker never lists the tile it was opened from.
 5. Press Escape (or click the × ) to close the popup. Confirm it closes.
 Expected: all five checks match.
 
@@ -740,7 +740,7 @@ git commit -m "feat: add Teleporter destination-picker popup"
 
 **Interfaces:**
 - Consumes: `BELT_DIRS`, `drawBelt`, `drawDirArrow` (all pre-existing in `js/render.js`), `stateAt(c, r).dir`/`.teleportTarget` (Task 1).
-- Produces: nothing consumed elsewhere — this is a leaf rendering function.
+- Produces: nothing consumed elsewhere - this is a leaf rendering function.
 
 - [ ] **Step 1: Wire the dispatcher**
 
@@ -825,7 +825,7 @@ Expected: no output, exit code 0.
 - [ ] **Step 4: Manual verification**
 
 Serve the game and:
-1. Open the build menu and find the Teleporter card's swatch preview — confirm it shows a gray (no-destination) double-ring icon over a belt base, since the swatch is drawn with `c=-1, r=-1` (no real state, so `st` is falsy and `hasTarget` is `false`).
+1. Open the build menu and find the Teleporter card's swatch preview - confirm it shows a gray (no-destination) double-ring icon over a belt base, since the swatch is drawn with `c=-1, r=-1` (no real state, so `st` is falsy and `hasTarget` is `false`).
 2. With the linked pair from earlier tasks placed and linked (destination set), zoom in and confirm the *sender* Teleporter (the one with a destination set) renders with purple/sky-blue rings and a visibly rotating swirl, with a small arrow pointing in its facing direction.
 3. Open the sender's popup (E) and click "No destination." Confirm its rings immediately desaturate to gray and the swirl stops, without needing to reopen the popup or refresh the page.
 4. While in build mode with the Teleporter selected, press R a few times before placing one. Confirm the preview's arrow direction rotates accordingly, matching how R already behaves for Belt/Sorter.
@@ -844,13 +844,13 @@ git commit -m "feat: add procedural Teleporter rendering (rings, swirl, facing a
 
 ### Task 6: Full end-to-end verification pass
 
-**Files:** none (verification only — no code changes expected; if this step uncovers a bug, fix it in the relevant file from Tasks 1–5 and re-run this task's checklist from the top).
+**Files:** none (verification only - no code changes expected; if this step uncovers a bug, fix it in the relevant file from Tasks 1–5 and re-run this task's checklist from the top).
 
 **Interfaces:** N/A.
 
 - [ ] **Step 1: Fresh-save placement and economy check**
 
-Serve the game with a fresh save (clear `localStorage` for the page, or use a private/incognito window). Confirm the Teleporter card is locked and shows `$15,000 lifetime earnings`. Use the console (`game.lifetimeEarned = 15000;`) to cross the threshold, reopen the build menu, and confirm it unlocks and shows `$2500`. Place one — confirm `game.cash` drops by exactly 2500 and it requires a paved Concrete tile underneath first (try placing directly on bare dirt — it should be rejected, same as any other piece of equipment).
+Serve the game with a fresh save (clear `localStorage` for the page, or use a private/incognito window). Confirm the Teleporter card is locked and shows `$15,000 lifetime earnings`. Use the console (`game.lifetimeEarned = 15000;`) to cross the threshold, reopen the build menu, and confirm it unlocks and shows `$2500`. Place one - confirm `game.cash` drops by exactly 2500 and it requires a paved Concrete tile underneath first (try placing directly on bare dirt - it should be rejected, same as any other piece of equipment).
 
 - [ ] **Step 2: Basic relay over a real belt line**
 
@@ -858,7 +858,7 @@ Build a small real production line with no console shortcuts: Fisher → Belt �
 
 - [ ] **Step 3: Many-to-one**
 
-Add a second sender Teleporter (fed by its own Belt/Fisher line) and link it to the *same* destination Teleporter B used in Step 2. Feed both senders simultaneously (e.g. drop multiple fish via console at the same instant: `stateAt(<sender1 belt>).item = randomFish(); stateAt(<sender2 belt>).item = randomFish();`). Confirm neither fish is lost — one hops through immediately and the other queues at its sender's edge until the destination's `item` slot clears, then it also hops through.
+Add a second sender Teleporter (fed by its own Belt/Fisher line) and link it to the *same* destination Teleporter B used in Step 2. Feed both senders simultaneously (e.g. drop multiple fish via console at the same instant: `stateAt(<sender1 belt>).item = randomFish(); stateAt(<sender2 belt>).item = randomFish();`). Confirm neither fish is lost - one hops through immediately and the other queues at its sender's edge until the destination's `item` slot clears, then it also hops through.
 
 - [ ] **Step 4: Destination removed mid-network**
 
@@ -870,7 +870,7 @@ With at least one linked Teleporter pair on the map, trigger a save (the game me
 
 - [ ] **Step 6: No regressions in existing transport blocks**
 
-Quickly re-verify Belt, Splitter, Sorter, Recycler, and Smart Router still behave exactly as before (place one of each, run a fish through each) — this confirms the new `IS_TRANSPORT` membership and the new branch inserted at the top of `stepBeltCell` didn't change behavior for any block type other than `B_TELEPORTER`.
+Quickly re-verify Belt, Splitter, Sorter, Recycler, and Smart Router still behave exactly as before (place one of each, run a fish through each) - this confirms the new `IS_TRANSPORT` membership and the new branch inserted at the top of `stepBeltCell` didn't change behavior for any block type other than `B_TELEPORTER`.
 
 - [ ] **Step 7: Final full syntax pass**
 
@@ -884,4 +884,4 @@ git add -A
 git commit -m "fix: address issues found during Teleporter end-to-end verification"
 ```
 
-(Only run this if Step 1–6 actually required code changes. Skip entirely, including for this task, if this isn't its own git repo — see Task 1 Step 10.)
+(Only run this if Step 1–6 actually required code changes. Skip entirely, including for this task, if this isn't its own git repo - see Task 1 Step 10.)

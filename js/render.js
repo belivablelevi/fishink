@@ -1,4 +1,4 @@
-// Fish INK Factory — rendering
+// Fish INK Factory - rendering
 
 const FISH_CELL = 32;
 const IMAGES = {};
@@ -46,7 +46,7 @@ let beltAnim = 0;
 let _terrainCanvas = null;
 let _terrainCtx = null;
 let _terrainCacheDirty = true;
-const _twinkles = []; // { x, y, phase } in world pixels — sparse water sparkle sites
+const _twinkles = []; // { x, y, phase } in world pixels - sparse water sparkle sites
 
 function invalidateTerrainCache() { _terrainCacheDirty = true; }
 
@@ -77,7 +77,7 @@ function rebuildTerrainCache() {
     for (let c = 0; c < WORLD_COLS; c++) {
       const t = terrain[r][c];
       drawTile(_terrainCtx, t, c * TILE_SIZE, r * TILE_SIZE, c, r);
-      // Same hash gates drawWaterTile's old inline sparkle used — collected
+      // Same hash gates drawWaterTile's old inline sparkle used - collected
       // here once so the per-frame overlay only visits actual sparkle sites.
       if (t === T_WATER && tileHash(c, r, 90) > 0.85) {
         _twinkles.push({
@@ -92,7 +92,7 @@ function rebuildTerrainCache() {
   _terrainCacheDirty = false;
 }
 
-// Repaints a single edited tile plus its 3×3 neighborhood into the cache —
+// Repaints a single edited tile plus its 3×3 neighborhood into the cache -
 // the edge-blend dither of each neighbor depends on this tile's type, and
 // repainting the full 3×3 block (then re-stroking the grid lines clipped to
 // it) leaves no seams or double-drawn lines. Twinkle sites are untouched:
@@ -113,7 +113,7 @@ function repaintTerrainTile(c, r) {
   g.restore();
 }
 
-// Animated water sparkle — the only dynamic part of the terrain layer.
+// Animated water sparkle - the only dynamic part of the terrain layer.
 function drawWaterTwinkles(ctx, c0, c1, r0, r1) {
   const x0 = c0 * TILE_SIZE, x1 = (c1 + 1) * TILE_SIZE;
   const y0 = r0 * TILE_SIZE, y1 = (r1 + 1) * TILE_SIZE;
@@ -146,13 +146,13 @@ function draw(ctx, canvas, dt) {
   const c1 = Math.min(WORLD_COLS - 1, Math.ceil((cam.x + vw) / TILE_SIZE));
   const r1 = Math.min(WORLD_ROWS - 1, Math.ceil((cam.y + vh) / TILE_SIZE));
 
-  // Ocean backdrop fills the whole viewport first — at low zoom the view can
+  // Ocean backdrop fills the whole viewport first - at low zoom the view can
   // be wider than the world itself, so without this the area past the map's
   // edge would show empty canvas instead of surrounding sea.
   ctx.fillStyle = COLORS.water;
   ctx.fillRect(0, 0, vw, vh);
 
-  // Terrain + grid — one blit from the cached layer
+  // Terrain + grid - one blit from the cached layer
   if (_terrainCacheDirty || !_terrainCanvas ||
       _terrainCanvas.width  !== WORLD_COLS * TILE_SIZE ||
       _terrainCanvas.height !== WORLD_ROWS * TILE_SIZE) {
@@ -174,7 +174,7 @@ function draw(ctx, canvas, dt) {
       if (b !== B_NONE) drawBlock(ctx, b, c * TILE_SIZE - cam.x, r * TILE_SIZE - cam.y, c, r);
     }
 
-  // Machine panel hover highlight — pulse the hovered tile above blocks
+  // Machine panel hover highlight - pulse the hovered tile above blocks
   if (_highlightedMachineTile) {
     const { c, r } = _highlightedMachineTile;
     const sx = c * TILE_SIZE - cam.x, sy = r * TILE_SIZE - cam.y;
@@ -186,39 +186,39 @@ function draw(ctx, canvas, dt) {
     ctx.strokeRect(sx + 0.75, sy + 0.75, TILE_SIZE - 1.5, TILE_SIZE - 1.5);
   }
 
-  // Water-body pets — drawn above tiles+blocks so water shimmer never overlaps
+  // Water-body pets - drawn above tiles+blocks so water shimmer never overlaps
   drawWaterPets(ctx, c0, c1, r0, r1);
 
-  // Land frogs — drawn on top of terrain
+  // Land frogs - drawn on top of terrain
   drawFrogs(ctx);
 
-  // Pet placement mode overlay — teal pulse on valid target tiles
+  // Pet placement mode overlay - teal pulse on valid target tiles
   if (typeof petPlaceMode !== 'undefined' && petPlaceMode.active) {
     drawPetPlaceOverlay(ctx, c0, c1, r0, r1);
   }
 
-  // Frog placement mode overlay — green pulse on valid land tiles
+  // Frog placement mode overlay - green pulse on valid land tiles
   if (typeof frogPlaceMode !== 'undefined' && frogPlaceMode.active) {
     drawFrogPlaceOverlay(ctx, c0, c1, r0, r1);
   }
 
-  // Fish — separate pass so they render above all blocks at interpolated positions
+  // Fish - separate pass so they render above all blocks at interpolated positions
   drawAllFish(ctx, c0, c1, r0, r1);
 
-  // Island chests and worker boats — drawn over terrain, under particles
+  // Island chests and worker boats - drawn over terrain, under particles
   drawChests(ctx);
   drawWorkers(ctx);
 
-  // Shipping boat — fixed dock the Drone Delivery network sends fish to
+  // Shipping boat - fixed dock the Drone Delivery network sends fish to
   drawBoat(ctx);
 
-  // Fishing Drones in flight — not tied to a single tile, drawn world-wide
+  // Fishing Drones in flight - not tied to a single tile, drawn world-wide
   drawDrones(ctx);
 
-  // Delivery drones in flight toward the boat — cosmetic only
+  // Delivery drones in flight toward the boat - cosmetic only
   drawDeliveryFlights(ctx);
 
-  // Catch particles (splash/sparkle) — drawn last so they sit on top of everything else
+  // Catch particles (splash/sparkle) - drawn last so they sit on top of everything else
   drawParticles(ctx);
 
   // Build ghost
@@ -226,7 +226,7 @@ function draw(ctx, canvas, dt) {
     const { c, r } = tileFromMouse(mouseCanvas.x, mouseCanvas.y);
 
     if (buildMode.boxMode && boxDragStart) {
-      // Dragging a box — highlight the whole pending rectangle instead of a
+      // Dragging a box - highlight the whole pending rectangle instead of a
       // single tile, green for a place-drag, red for a remove-drag.
       const c0 = Math.min(boxDragStart.c, c), c1 = Math.max(boxDragStart.c, c);
       const r0 = Math.min(boxDragStart.r, r), r1 = Math.max(boxDragStart.r, r);
@@ -256,7 +256,7 @@ function draw(ctx, canvas, dt) {
     }
   }
 
-  // Blueprint copy/paste overlay — independent of buildMode, distinct color
+  // Blueprint copy/paste overlay - independent of buildMode, distinct color
   // from the box-drag ghost above so the two tools are never visually confused.
   if (blueprint.selecting && bpDragStart) {
     const { c, r } = tileFromMouse(mouseCanvas.x, mouseCanvas.y);
@@ -273,7 +273,7 @@ function draw(ctx, canvas, dt) {
     const { c, r } = tileFromMouse(mouseCanvas.x, mouseCanvas.y);
     const sx = c * TILE_SIZE - cam.x, sy = r * TILE_SIZE - cam.y;
     // Preview reflects pasteRotation on top of the stored (always-unrotated)
-    // clipboard — see getRotatedClipboard() in blueprint.js.
+    // clipboard - see getRotatedClipboard() in blueprint.js.
     const clip = getRotatedClipboard();
     const w = clip.w * TILE_SIZE, h = clip.h * TILE_SIZE;
     ctx.fillStyle = 'rgba(189,131,232,0.18)';
@@ -293,12 +293,12 @@ function draw(ctx, canvas, dt) {
   // Player (on top of everything)
   drawPlayer(ctx);
 
-  // Fishing rod — drawn after (on top of) the player, anchored to the
+  // Fishing rod - drawn after (on top of) the player, anchored to the
   // casting hand position drawPlayer just computed, so it reads as actually
   // being held rather than floating behind the body.
   drawFishingRod(ctx);
 
-  // Floating catch labels — drawn in world space so coordinates match naturally
+  // Floating catch labels - drawn in world space so coordinates match naturally
   drawFloatTexts(ctx);
 
   ctx.restore();
@@ -312,12 +312,13 @@ function draw(ctx, canvas, dt) {
   drawRareFlash(ctx, canvas, dt);
   drawToasts(ctx, canvas, dt);
   drawHoverTooltip(ctx, canvas);
+  drawContextChips(ctx, canvas);
   drawTutorialArrow(ctx, canvas);
 }
 
 // ─── Floating catch labels ───────────────────────────────────────────────────
 // Called inside the ctx.scale(ZOOM,ZOOM) world transform, so ft.wx/wy are
-// plain world pixels with cam offset — same as drawPlayer, drawParticles, etc.
+// plain world pixels with cam offset - same as drawPlayer, drawParticles, etc.
 function drawFloatTexts(ctx) {
   if (!floatTexts.length) return;
   ctx.save();
@@ -342,12 +343,14 @@ function drawFloatTexts(ctx) {
 
 // ─── Tutorial arrow ──────────────────────────────────────────────────────────
 // Points at whatever the active tutorial step wants the player to go to (the
-// nearest water/belt/seller — see tutorialTargetWorldPos() in tutorial.js).
+// nearest water/belt/seller - see tutorialTargets() in tutorial.js).
 // Bobs in place above the target when it's on screen; otherwise clamps to the
 // screen edge and rotates to point off toward it, like a quest-marker compass.
 function drawTutorialArrow(ctx, canvas) {
-  const target = tutorialTargetWorldPos();
-  if (!target) return;
+  for (const target of tutorialTargets()) drawTutorialArrowAt(ctx, canvas, target);
+}
+
+function drawTutorialArrowAt(ctx, canvas, target) {
   const cw = canvas.width, ch = canvas.height;
   const sx = (target.wx - cam.x) * ZOOM;
   const sy = (target.wy - cam.y) * ZOOM;
@@ -361,43 +364,174 @@ function drawTutorialArrow(ctx, canvas) {
   const ay = ch / 2 + dy * scale;
   const bob = onScreen ? Math.sin(performance.now() / 200) * 6 : 0;
 
+  // Pulsing highlight box on the target tile itself, so the exact tile reads
+  // at a glance instead of just "somewhere under that arrow".
+  if (onScreen) {
+    const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 320);
+    const half = TILE_SIZE * ZOOM / 2 - 2 + pulse * 3;
+    ctx.save();
+    ctx.fillStyle = `rgba(240,208,96,${(0.10 + 0.12 * pulse).toFixed(3)})`;
+    ctx.strokeStyle = `rgba(240,208,96,${(0.6 + 0.35 * pulse).toFixed(3)})`;
+    ctx.lineWidth = 3;
+    ctx.shadowColor = 'rgba(240,208,96,0.8)';
+    ctx.shadowBlur = 10 + pulse * 8;
+    roundRect(ctx, ax - half, ay - half, half * 2, half * 2, 8);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
   ctx.save();
   ctx.translate(ax, onScreen ? ay - 30 + bob : ay);
   if (!onScreen) ctx.rotate(Math.atan2(dy, dx) - Math.PI / 2);
-  ctx.fillStyle = '#e8c43f';
-  ctx.strokeStyle = 'rgba(0,0,0,0.55)';
-  ctx.lineWidth = 2;
+  ctx.fillStyle = '#f0d060';
+  ctx.strokeStyle = 'rgba(60,36,0,0.85)';
+  ctx.lineWidth = 2.5;
+  ctx.lineJoin = 'round';
+  ctx.shadowColor = 'rgba(0,0,0,0.5)';
+  ctx.shadowBlur = 6;
   ctx.beginPath();
-  ctx.moveTo(0, 12); ctx.lineTo(-9, -6); ctx.lineTo(9, -6); ctx.closePath();
+  ctx.moveTo(0, 13); ctx.lineTo(-10, -6); ctx.lineTo(10, -6); ctx.closePath();
   ctx.fill();
   ctx.stroke();
   ctx.restore();
+
+  // Label chip above the bobbing arrow (only when the target is on screen -
+  // an edge-clamped arrow has no room and is rotated anyway).
+  if (onScreen && target.label) drawLabelChip(ctx, ax, ay - 30 + bob - 22, target.label);
+}
+
+// Dark rounded chip with a gold border and outlined white text, in the game's
+// UI font (Chakra Petch, heaviest loaded weight). `cx, cy` is the chip centre in
+// screen pixels. Shared by the tutorial arrows and the contextual key hints.
+function drawLabelChip(ctx, cx, cy, text) {
+  ctx.save();
+  ctx.font = '700 14px "Chakra Petch", sans-serif';
+  ctx.letterSpacing = '0.5px';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const w = ctx.measureText(text).width + 20;
+  ctx.fillStyle = 'rgba(10,18,16,0.94)';
+  ctx.strokeStyle = '#f0d060';
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.roundRect(cx - w / 2, cy - 12, w, 24, 8);
+  ctx.fill();
+  ctx.stroke();
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = 'rgba(0,0,0,0.9)';
+  ctx.lineWidth = 3;
+  ctx.strokeText(text, cx, cy + 1);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(text, cx, cy + 1);
+  ctx.restore();
+}
+
+// Key hints that appear where the player is pointing, so features are found by
+// doing rather than by reading: "R: rotate" while placing a belt (until they
+// have rotated once) and "E: Upgrade $N" over a machine they can afford.
+function drawContextChips(ctx, canvas) {
+  const touch = typeof IS_TOUCH !== 'undefined' && IS_TOUCH;
+
+  // Standing still on a beach with a boat available and never having used it:
+  // say so. (Nothing else in the game tells you about the boat.)
+  if (!touch && !buildMode.active && !player.inBoat && !game.boatUsed && offshoreIslands && offshoreIslands.length > 0
+      && typeof TUT !== 'undefined' && !TUT.active && player.walkAmp < 0.1
+      && tileAt(Math.floor(player.wx / TILE_SIZE), Math.floor(player.wy / TILE_SIZE)) === T_SHORE) {
+    const px = (player.wx - cam.x) * ZOOM, py = (player.wy - cam.y) * ZOOM;
+    drawLabelChip(ctx, px, py - 74, 'F: sail to other islands');
+  }
+
+
+  if (!hoverTile || blockPopup.open) return;
+  const tileTopY = (hoverTile.r * TILE_SIZE - cam.y) * ZOOM;
+  const cx = ((hoverTile.c + 0.5) * TILE_SIZE - cam.x) * ZOOM;
+
+  if (buildMode.active) {
+    if (!buildMode.menuOpen && !buildMode.boxMode && IS_TRANSPORT(buildMode.selectedId) && !game.rotatedOnce) {
+      drawLabelChip(ctx, cx, tileTopY + TILE_SIZE * ZOOM + 18, touch ? 'Tap Rotate to turn it' : 'R: rotate the belt'); // below the tile so it never covers the tutorial's own label above it
+    }
+    return;
+  }
+  const id = blockAt(hoverTile.c, hoverTile.r);
+  if (!IS_UPGRADABLE(id)) return;
+  // The tutorial's own upgrade step already labels the Fisher.
+  if (typeof TUT !== 'undefined' && TUT.active && currentStep() && currentStep().id === 'upgrade') return;
+  const st = stateAt(hoverTile.c, hoverTile.r);
+  const cost = st ? machineUpgradeCost(id, st.level || 0) : null;
+  if (cost == null || game.cash < cost) return;
+  drawLabelChip(ctx, cx, tileTopY - 16, (touch ? 'Interact' : 'E') + ': Upgrade $' + cost);
 }
 
 // ─── Hover tooltips ──────────────────────────────────────────────────────────
-const HOVER_TOOLTIP_DELAY = 300; // ms — avoids flashing tooltips while panning the mouse across tiles
+const HOVER_TOOLTIP_DELAY = 300; // ms - avoids flashing tooltips while panning the mouse across tiles
 
-function tooltipLinesFor(id, c, r) {
-  const lines = [BLOCK_NAMES[id]];
-  if (BLOCK_DESCS[id]) lines.push(BLOCK_DESCS[id]);
+// What the hover tooltip shows for a block: a title, a description (wrapped
+// when drawn), short stat lines, and the upgrade line (a cost, 'Max level', or
+// undefined when the block can't be upgraded).
+function tooltipModel(id, c, r) {
+  const m = { title: BLOCK_NAMES[id], desc: BLOCK_DESCS[id] || '', stats: [], upgrade: undefined };
   const st = stateAt(c, r);
-  if (!st) return lines;
+  if (!st) return m;
   if (IS_UPGRADABLE(id)) {
     const cost = machineUpgradeCost(id, st.level || 0);
-    if (st.level > 0) lines.push(`Level ${st.level}`);
-    lines.push(cost == null ? 'Max level' : `Press E to upgrade — $${cost}`);
+    if (st.level > 0) m.stats.push(`Level ${st.level}`);
+    m.upgrade = cost == null ? 'Max level' : cost;
   }
   if (id === B_SORTER) {
-    lines.push(st.sortMode === 'size'
+    m.stats.push(st.sortMode === 'size'
       ? `Mode: by size (${SIZES[st.sortThreshold].name})`
       : `Mode: by rarity (${st.sortCategory})`);
   }
-  if (IS_CRATE(id)) lines.push(`Holding ${st.carrying.length}/20`);
-  if (IS_PACKER(id)) lines.push(`Packing ${st.carrying.length}/${st.packTarget}`);
+  if (IS_CRATE(id)) m.stats.push(`Holding ${st.carrying.length}/20`);
+  if (IS_PACKER(id)) m.stats.push(`Packing ${st.carrying.length}/${st.packTarget}`);
   if (id === B_RECYCLER && st.recycleRarities.length > 0) {
-    lines.push(`Salvaging: ${st.recycleRarities.join(', ')}`);
+    m.stats.push(`Salvaging: ${st.recycleRarities.join(', ')}`);
   }
-  return lines;
+  return m;
+}
+
+// Greedy word wrap for canvas text (ctx.font must already be set).
+function wrapCanvasText(ctx, text, maxW) {
+  const out = [];
+  let line = '';
+  for (const word of String(text).split(' ')) {
+    const t = line ? line + ' ' + word : word;
+    if (line && ctx.measureText(t).width > maxW) { out.push(line); line = word; }
+    else line = t;
+  }
+  if (line) out.push(line);
+  return out;
+}
+
+// Tooltip lines for things in the world that aren't blocks: the offshore
+// islands' treasure pots. Returns null when (c, r) isn't one.
+function worldTooltipLines(c, r) {
+  if (!offshoreIslands || offshoreIslands.length <= 1) return null;
+  const touch = typeof IS_TOUCH !== 'undefined' && IS_TOUCH;
+  for (let i = 1; i < offshoreIslands.length; i++) {
+    const isl = offshoreIslands[i];
+    const ct = chestTile(isl);
+    if (ct.c !== c || ct.r !== r) continue;
+    const gates = [5000, 25000, 100000];
+    const gate = gates[Math.min(i - 1, gates.length - 1)];
+    const lines = ['Treasure Pot'];
+    if ((game.lifetimeEarned || 0) < gate) {
+      lines.push(`Broken: earn $${gate.toLocaleString()} in total to mend it.`);
+    } else {
+      const ch = game.islandChests && game.islandChests[`${isl.cx},${isl.cy}`];
+      if (!ch || game.time >= ch.nextOpen) {
+        lines.push(touch ? 'Whole and ready! Stand next to it and press Interact to smash it open.' : 'Whole and ready! Stand next to it and press E to smash it open.');
+      } else {
+        const secs = Math.ceil(ch.nextOpen - game.time);
+        lines.push(`Broken. It mends itself in ${Math.floor(secs / 60)}m ${secs % 60}s.`);
+      }
+      lines.push('Pays a share of your cash and a permanent income bonus.');
+    }
+    if (typeof REGION_NAMES !== 'undefined' && REGION_NAMES[i]) lines.push(`Fishing here: ${REGION_NAMES[i]} species`);
+    return lines;
+  }
+  return null;
 }
 
 function drawHoverTooltip(ctx, canvas) {
@@ -405,35 +539,78 @@ function drawHoverTooltip(ctx, canvas) {
   if (!hoverTile || performance.now() - hoverStart < HOVER_TOOLTIP_DELAY) return;
   const { c, r } = hoverTile;
   const id = blockAt(c, r);
-  if (id === B_NONE) return;
-  const lines = tooltipLinesFor(id, c, r);
+  const worldLines = worldTooltipLines(c, r);
+  if (id === B_NONE && !worldLines) return;
+  const touch = typeof IS_TOUCH !== 'undefined' && IS_TOUCH;
+  const model = worldLines
+    ? { title: worldLines[0], desc: worldLines.slice(1).join(' '), stats: [], upgrade: undefined }
+    : tooltipModel(id, c, r);
 
-  ctx.font = 'bold 12px "Segoe UI", system-ui, sans-serif';
+  // A narrow card in the game's own UI font: the description wraps into a few
+  // short lines instead of one very wide strip.
+  const MAXW = 240, padX = 14, padY = 11, descH = 18, statH = 17;
+  const F = '"Chakra Petch", sans-serif';
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.font = `500 13px ${F}`;
+  const descLines = model.desc ? wrapCanvasText(ctx, model.desc, MAXW) : [];
+  ctx.font = `700 12px ${F}`;
+  const statLines = model.stats.slice();
+  let upgradeText = null;
+  if (model.upgrade !== undefined) {
+    upgradeText = model.upgrade === 'Max level' ? 'Max level' : (touch ? `Interact: Upgrade $${model.upgrade}` : `Upgrade $${model.upgrade}`);
+  }
   let w = 0;
-  for (const line of lines) w = Math.max(w, ctx.measureText(line).width);
-  const lineH = 16, padX = 10, padY = 8;
-  const boxW = w + padX * 2, boxH = lines.length * lineH + padY * 2;
+  ctx.font = `700 15px ${F}`; w = Math.max(w, ctx.measureText(model.title).width);
+  ctx.font = `500 13px ${F}`; for (const l of descLines) w = Math.max(w, ctx.measureText(l).width);
+  ctx.font = `700 12px ${F}`; for (const l of statLines) w = Math.max(w, ctx.measureText(l).width);
+  if (upgradeText) w = Math.max(w, ctx.measureText(upgradeText).width + (touch || model.upgrade === 'Max level' ? 0 : 26));
+  const boxW = Math.min(MAXW, w) + padX * 2;
+  const boxH = padY * 2 + 20 + descLines.length * descH + (descLines.length ? 4 : 0)
+             + statLines.length * statH + (upgradeText ? statH + 6 : 0);
 
   let x = mouseCanvas.x + 18, y = mouseCanvas.y + 4;
   x = Math.min(x, canvas.width - boxW - 8);
   y = Math.min(y, canvas.height - boxH - 8);
 
-  ctx.fillStyle = 'rgba(8,16,8,0.88)';
-  roundRect(ctx, x, y, boxW, boxH, 6); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-  ctx.lineWidth = 1;
-  roundRect(ctx, x, y, boxW, boxH, 6); ctx.stroke();
+  ctx.fillStyle = 'rgba(10,18,16,0.96)';
+  roundRect(ctx, x, y, boxW, boxH, 8); ctx.fill();
+  ctx.strokeStyle = 'rgba(240,208,96,0.4)';
+  ctx.lineWidth = 1.5;
+  roundRect(ctx, x, y, boxW, boxH, 8); ctx.stroke();
 
-  lines.forEach((line, i) => {
-    ctx.fillStyle = i === 0 ? '#e8c43f' : '#cfe0cf';
-    ctx.font = i === 0 ? 'bold 12px "Segoe UI", system-ui, sans-serif' : '11px "Segoe UI", system-ui, sans-serif';
-    ctx.fillText(line, x + padX, y + padY + i * lineH);
-  });
+  let ty = y + padY;
+  ctx.fillStyle = '#f0d060';
+  ctx.font = `700 15px ${F}`;
+  ctx.fillText(model.title, x + padX, ty);
+  ty += 20 + (descLines.length ? 4 : 0);
+  ctx.fillStyle = '#e6efe9';
+  ctx.font = `500 13px ${F}`;
+  for (const l of descLines) { ctx.fillText(l, x + padX, ty); ty += descH; }
+  ctx.fillStyle = '#9fdcc0';
+  ctx.font = `700 12px ${F}`;
+  for (const l of statLines) { ctx.fillText(l, x + padX, ty); ty += statH; }
+  if (upgradeText) {
+    ty += 6;
+    let tx = x + padX;
+    if (!touch && model.upgrade !== 'Max level') {
+      // "E" keycap, matching the tutorial's key badges
+      ctx.fillStyle = '#e8a030';
+      roundRect(ctx, tx, ty - 1, 20, 18, 4); ctx.fill();
+      ctx.fillStyle = '#1a1208';
+      ctx.font = `800 12px ${F}`;
+      ctx.textAlign = 'center';
+      ctx.fillText('E', tx + 10, ty + 1);
+      ctx.textAlign = 'left';
+      tx += 26;
+    }
+    ctx.fillStyle = model.upgrade === 'Max level' ? '#b8c8c0' : '#6ee7a0';
+    ctx.font = `700 12px ${F}`;
+    ctx.fillText(upgradeText, tx, ty + 1);
+  }
 }
 
 // ─── Day/night lighting ──────────────────────────────────────────────────────
-// Smooth continuous overlay — every segment boundary has matching alpha so
+// Smooth continuous overlay - every segment boundary has matching alpha so
 // there are no jumps. smoothstep eases each ramp in and out.
 function drawDayNightOverlay(ctx, canvas) {
   const p = game.dayTime / DAY_CYCLE_SECONDS; // 0..1 across one full day
@@ -475,7 +652,7 @@ function drawDayNightOverlay(ctx, canvas) {
 
 // ─── Terrain ─────────────────────────────────────────────────────────────────
 
-// Deterministic 0..1 hash from two ints — same tile always renders the same way
+// Deterministic 0..1 hash from two ints - same tile always renders the same way
 function tileHash(c, r, salt) {
   let x = Math.sin(c * 127.1 + r * 311.7 + salt * 74.7) * 43758.5453;
   return x - Math.floor(x);
@@ -499,7 +676,7 @@ function drawSandTile(ctx, sx, sy, S, c, r) {
   drawEdgeBlend(ctx, sx, sy, S, c, r, T_EMPTY, 'rgba(80,120,50,0.4)');
 }
 
-// Smooth continuous noise (sum of sines) — value at any real (x,y) is the same
+// Smooth continuous noise (sum of sines) - value at any real (x,y) is the same
 // regardless of which tile reads it, so patches drawn from it never seam.
 function fieldNoise(x, y) {
   const n = Math.sin(x * 1.3 + y * 2.1) +
@@ -596,8 +773,8 @@ function drawGrassTile(ctx, sx, sy, S, c, r) {
   drawEdgeBlend(ctx, sx, sy, S, c, r, T_SHORE, 'rgba(206,170,115,0.4)');
 }
 
-// Hand-drawn water tile: flat shade (no gradient — avoids per-tile seams).
-// The rare animated sparkle lives in drawWaterTwinkles — this tile is baked
+// Hand-drawn water tile: flat shade (no gradient - avoids per-tile seams).
+// The rare animated sparkle lives in drawWaterTwinkles - this tile is baked
 // into the static terrain cache, so nothing time-varying can render here.
 const WATER_SHADES = ['#1a4a6e', '#1b4c70', '#194869', '#1c4e72'];
 function drawWaterTile(ctx, sx, sy, S, c, r) {
@@ -638,7 +815,7 @@ function drawTile(ctx, t, sx, sy, c, r) {
 
 // ─── Blocks ───────────────────────────────────────────────────────────────────
 
-// Small "Lv N" tag in a block's top-right corner — shown once a placed
+// Small "Lv N" tag in a block's top-right corner - shown once a placed
 // instance has been upgraded at least once, so a stock block stays clean.
 function drawLevelBadge(ctx, sx, sy, S, level) {
   if (!level) return;
@@ -657,7 +834,7 @@ function drawLevelBadge(ctx, sx, sy, S, level) {
 const STUB_SIDES = [[-1, 0, 'left'], [1, 0, 'right'], [0, -1, 'top'], [0, 1, 'bottom']];
 const CONCRETE_BOLTS = [[5, 5], [TILE_SIZE - 5, 5], [5, TILE_SIZE - 5], [TILE_SIZE - 5, TILE_SIZE - 5]];
 
-// forceDir overrides whatever dir is actually stored at (c, r) — used by the
+// forceDir overrides whatever dir is actually stored at (c, r) - used by the
 // build ghost so a transport block's pending rotation (buildMode.beltDir)
 // shows up before it's actually placed, since stateAt(c, r) for an empty
 // tile has no dir of its own to read.
@@ -747,7 +924,7 @@ function drawBlock(ctx, id, sx, sy, c, r, forceDir) {
         ctx.beginPath(); ctx.moveTo(fx, sy + 4); ctx.lineTo(fx, sy + S - 4); ctx.stroke();
       }
     }
-    // Fill-level bar instead of a progress bar — this block isn't "processing"
+    // Fill-level bar instead of a progress bar - this block isn't "processing"
     ctx.fillStyle = 'rgba(0,0,0,0.4)';
     ctx.fillRect(sx + 3, sy + S - 6, S - 6, 3);
     ctx.fillStyle = fill >= 1 ? '#e85d4a' : '#e8a030';
@@ -759,7 +936,7 @@ function drawBlock(ctx, id, sx, sy, c, r, forceDir) {
     const rarities = (st && st.recycleRarities) || [];
     drawBelt(ctx, BELT_DIRS[dirIdx], sx, sy, S);
     // Sprite is a symmetric 8-point glyph with a gray dot per rarity slot
-    // (sprite_0..4 = 0..4 dots lit) — no rotation needed, just pick by count.
+    // (sprite_0..4 = 0..4 dots lit) - no rotation needed, just pick by count.
     const recyclerSprite = IMAGES['recycler' + Math.min(rarities.length, 4)];
     if (recyclerSprite) {
       if (pulse) { ctx.fillStyle = 'rgba(216,240,160,0.25)'; ctx.fillRect(sx + 2, sy + 2, S - 4, S - 4); }
@@ -777,7 +954,7 @@ function drawBlock(ctx, id, sx, sy, c, r, forceDir) {
 
   } else if (id === B_SMART_ROUTER) {
     const dirIdx = forceDir != null ? forceDir : (st && st.dir) || 0;
-    // Plain plate, not drawBelt's single-direction scrolling chevrons — this
+    // Plain plate, not drawBelt's single-direction scrolling chevrons - this
     // block can send a fish out any of 3 sides, so a one-way arrow stream
     // would misleadingly suggest it only ever flows one way.
     drawJunctionBase(ctx, sx, sy, S);
@@ -786,7 +963,7 @@ function drawBlock(ctx, id, sx, sy, c, r, forceDir) {
     // a right turn, dir+3 is a left turn), then rotate it from its drawn
     // orientation (forward = right, the engine's default facing) to match
     // the router's actual facing dir.
-    // No fish has set a route yet, or it's been 0.8s since the last one did —
+    // No fish has set a route yet, or it's been 0.8s since the last one did -
     // show the idle/base icon (highlights the input side) instead of leaving
     // a stale direction lit forever.
     const routeStale = !st || st.routeDir == null || game.time - (st.routeSetAt || 0) > 0.8;
@@ -847,7 +1024,7 @@ function drawBlock(ctx, id, sx, sy, c, r, forceDir) {
     // Small wooden post base the rod is mounted on
     ctx.fillStyle = '#5a4226';
     ctx.fillRect(sx + 6, sy + S - 9, 5, 6);
-    // Rod icon — cropped from the shared fishing_gear sheet. Its top row holds
+    // Rod icon - cropped from the shared fishing_gear sheet. Its top row holds
     // 5 color variants left-to-right (wood/tan/gray/red/black); higher upgrade
     // levels step through them so a leveled-up Fisher visibly looks better.
     if (IMAGES.gear) {
@@ -1127,11 +1304,11 @@ function drawMachineIcon(ctx, id, cx, cy) {
   }
 }
 
-// Small two-pronged fork glyph shared by Splitter/Sorter — visually marks a
+// Small two-pronged fork glyph shared by Splitter/Sorter - visually marks a
 // belt tile as "routes to one of two sides" instead of a plain straight run.
 // Shared directional arrow (shaft + filled triangular head) used by the
 // Splitter/Sorter icons below to show an actual outgoing direction instead
-// of an abstract glyph — the arrow always points exactly where the fish goes.
+// of an abstract glyph - the arrow always points exactly where the fish goes.
 function drawDirArrow(ctx, cx, cy, dir, len, color, lineWidth, headSize) {
   const ex = cx + dir.dx * len, ey = cy + dir.dy * len;
   ctx.strokeStyle = color;
@@ -1142,7 +1319,7 @@ function drawDirArrow(ctx, cx, cy, dir, len, color, lineWidth, headSize) {
   drawArrowHead(ctx, ex, ey, dir, color, headSize);
 }
 
-// Filled triangular arrowhead pointing along `dir`, tip at (ex, ey) — split
+// Filled triangular arrowhead pointing along `dir`, tip at (ex, ey) - split
 // out of drawDirArrow so callers that draw their own shaft (e.g. the Smart
 // Router's through-line) can still get a matching head.
 function drawArrowHead(ctx, ex, ey, dir, color, headSize) {
@@ -1169,7 +1346,7 @@ function drawSplitterIcon(ctx, cx, cy, dirIdx, altOut, S) {
 
 // Sorter: "big fish" exit one way (thick orange arrow), "small fish" exit
 // the opposite way (thin blue arrow), split by a center divider line along
-// the perpendicular axis — so each side visually owns one output direction.
+// the perpendicular axis - so each side visually owns one output direction.
 function drawSorterIcon(ctx, cx, cy, dirIdx, S) {
   const big   = BELT_DIRS[dirIdx];
   const small = BELT_DIRS[(dirIdx + 2) % 4];
@@ -1193,7 +1370,7 @@ function drawSorterIcon(ctx, cx, cy, dirIdx, S) {
 // stopped being a Teleporter), both rings desaturate to gray and the swirl
 // stops, so a broken link reads as "broken" at a glance without opening
 // the settings popup.
-// Teleporter's own belt skin — drawn exactly like drawBelt (rotated per
+// Teleporter's own belt skin - drawn exactly like drawBelt (rotated per
 // direction, frame chosen off the shared beltAnim clock) rather than as a
 // separate icon overlay, swapping its whole 6-frame set between unlinked
 // (dark) and linked (cyan-glow) instead of just recoloring a procedural icon.
@@ -1203,7 +1380,7 @@ const TELEPORTER_ACTIVE_KEYS = ['teleporterActive0', 'teleporterActive1', 'telep
 // Returns the 1-based display number for a teleporter at (tc, tr), sorted
 // in row-major order across all placed teleporters. Numbering is cached and
 // only recomputed when teleporter membership changes (teleporterRev bumps in
-// grid.js) — the old per-frame full-world scan was O(teleporters × world).
+// grid.js) - the old per-frame full-world scan was O(teleporters × world).
 let _teleNums = new Map();
 let _teleNumsRev = -1;
 
@@ -1236,7 +1413,7 @@ function drawTeleporterBelt(ctx, dir, dirIdx, hasTarget, sx, sy, S, c, r) {
     drawTeleporterIcon(ctx, sx + S / 2, sy + S / 2, dirIdx, hasTarget, S);
   }
 
-  // Number badge in top-left corner — "T1", "T2", etc.
+  // Number badge in top-left corner - "T1", "T2", etc.
   if (c != null && r != null) {
     const n = teleporterDisplayNum(c, r);
     const label = 'T' + n;
@@ -1252,7 +1429,7 @@ function drawTeleporterBelt(ctx, dir, dirIdx, hasTarget, sx, sy, S, c, r) {
   }
 }
 
-// Splitter: same treatment as the Teleporter above — a dedicated 4-frame
+// Splitter: same treatment as the Teleporter above - a dedicated 4-frame
 // animated skin replaces the belt-underneath + fork-icon-overlay combo
 // entirely, sharing the same beltAnim clock and per-direction rotation. Only
 // one art set was supplied (no separate altOut variant), so the "which exit
@@ -1279,7 +1456,7 @@ function drawSplitterBelt(ctx, dir, dirIdx, altOut, sx, sy, S) {
   drawSplitterIcon(ctx, sx + S / 2, sy + S / 2, dirIdx, altOut, S);
 }
 
-// Sorter: same treatment as the Splitter/Teleporter above — a dedicated
+// Sorter: same treatment as the Splitter/Teleporter above - a dedicated
 // 6-frame animated skin (matching belt-0..5's frame count) replaces the
 // belt-underneath + orange/blue-arrow-icon-overlay combo entirely. The new
 // art has no per-output color distinction, so (like the Splitter) the
@@ -1348,7 +1525,7 @@ function drawTeleporterIcon(ctx, cx, cy, dirIdx, hasTarget, S) {
 }
 
 // Pixel positions (fraction of the 32x32 recycler sprite) of each baked-in
-// gray dot, keyed by which arm tip it sits on — reverse-engineered from the
+// gray dot, keyed by which arm tip it sits on - reverse-engineered from the
 // sprite_1..4 source PNGs since each dot count uses a different fixed
 // arrangement (count 3 swaps one diagonal for the top arm) rather than
 // simply adding one more dot to the previous arrangement.
@@ -1357,7 +1534,7 @@ const RECYCLER_DOT_POS = {
   SW: [0.287, 0.71], NW: [0.287, 0.287],
 };
 // Which arm tips light up for each rarity count, in clockwise-from-top
-// order — this is the order rarities[] maps onto when recoloring the dots.
+// order - this is the order rarities[] maps onto when recoloring the dots.
 const RECYCLER_DOT_ORDER = {
   1: ['NE'], 2: ['NE', 'SW'], 3: ['N', 'SE', 'SW'], 4: ['NE', 'SE', 'SW', 'NW'],
 };
@@ -1380,7 +1557,7 @@ function drawRecyclerDots(ctx, boxX, boxY, boxSize, rarities) {
 }
 
 // Recycler: a small recycling-arrows glyph, ringed by one dot per rarity
-// currently set to be salvaged (CATEGORY_COLOR) — empty selection (default,
+// currently set to be salvaged (CATEGORY_COLOR) - empty selection (default,
 // nothing chosen yet) shows no dots, so it visually reads as a plain belt
 // until configured via the E-key popup.
 function drawRecyclerIcon(ctx, cx, cy, rarities, pulse, S) {
@@ -1408,7 +1585,7 @@ function drawRecyclerIcon(ctx, cx, cy, rarities, pulse, S) {
   });
 }
 
-// Smart Router's plate — same footprint as a belt (filled square, dark
+// Smart Router's plate - same footprint as a belt (filled square, dark
 // outline) but with no directional chevrons, since this block isn't a
 // one-way belt; see drawSmartRouterIcon below for the actual flow glyph.
 function drawJunctionBase(ctx, sx, sy, S) {
@@ -1447,7 +1624,7 @@ function drawHelipadMarking(ctx, cx, cy, color) {
 }
 
 // Small conveyor nub drawn just inside a machine's own tile edge, hinting at
-// a physical link wherever a real belt sits on that side — kept within the
+// a physical link wherever a real belt sits on that side - kept within the
 // tile's own bounds so the neighboring belt (drawn separately) never has to
 // overdraw it.
 function drawConveyorStub(ctx, sx, sy, S, side) {
@@ -1469,13 +1646,13 @@ function drawConveyorStub(ctx, sx, sy, S, side) {
   ctx.fill();
 }
 
-// One drawn-moving-right orientation, 4-frame loop — rotated per direction
+// One drawn-moving-right orientation, 4-frame loop - rotated per direction
 // the same way the Smart Router icon is, instead of needing 4 sprites per
 // direction. Frame choice rides the existing beltAnim clock so the animation
 // speed/cycle matches the procedural fallback below exactly.
 const BELT_FRAME_KEYS = ['belt0', 'belt1', 'belt2', 'belt3', 'belt4', 'belt5'];
 
-// TEMP DEV TOGGLE — set via window.cheat.procBelt(true) in the console to see
+// TEMP DEV TOGGLE - set via window.cheat.procBelt(true) in the console to see
 // the original procedural fallback for comparison against the sprite. Remove
 // once no longer needed.
 let DEBUG_FORCE_PROC_BELT = false;
@@ -1575,7 +1752,7 @@ function drawAllFish(ctx, c0, c1, r0, r1) {
       const { nc, nr } = nextCellFor(c, r, id, st, fish);
       const wx   = (c + 0.5 + (nc - c) * p) * TILE_SIZE - cam.x;
       const wy   = (r + 0.5 + (nr - r) * p) * TILE_SIZE - cam.y;
-      // Idle wiggle gives each belt fish a bit of personality — out of phase
+      // Idle wiggle gives each belt fish a bit of personality - out of phase
       // with every other fish via its own randomized wigglePhase.
       const wob  = Math.sin(game.time * 4 + (fish.wigglePhase || 0)) * 1.5;
       drawFishSprite(ctx, fish, wx, wy + wob, 22);
@@ -1613,8 +1790,15 @@ function drawDroneSprite(ctx, cx, cy, pulse) {
 }
 
 // Draws a wooden pier at each offshore island's dock position.
-// Treasure chests on non-worker offshore islands. Ready chests glow gold;
-// spent chests show a closed darker box.
+// Treasure pots on non-worker offshore islands. A pot you can claim stands whole
+// and glows gold; one you can't (still sealed behind its earnings requirement,
+// or mending after being claimed) lies broken. Claiming one shows a brief
+// mid-smash frame (smashPot) before it settles into the broken pile.
+// Glow colour per pot atlas column (sage, red, lilac, orange), sampled from img/pots.png
+const POT_GLOW = ['168,180,140', '224,112,106', '154,122,168', '224,160,80'];
+const _potSmashAt = {}; // pot key -> performance.now() when it was last smashed
+function smashPot(key) { _potSmashAt[key] = performance.now(); }
+
 function drawChests(ctx) {
   if (!offshoreIslands || offshoreIslands.length <= 1) return;
   const S = TILE_SIZE;
@@ -1624,8 +1808,9 @@ function drawChests(ctx) {
   const CHEST_EARN_GATES = [5000, 25000, 100000];
   for (let i = 1; i < offshoreIslands.length; i++) {
     const isl = offshoreIslands[i];
-    const sx = (isl.cx + 0.5) * S - cam.x;
-    const sy = (isl.cy + 0.5) * S - cam.y;
+    const ct = chestTile(isl);
+    const sx = (ct.c + 0.5) * S - cam.x;
+    const sy = (ct.r + 0.5) * S - cam.y;
     if (sx < -S * 3 || sx > VW + S * 3 || sy < -S * 3 || sy > VH + S * 3) continue;
 
     const idx = Math.min(i - 1, CHEST_EARN_GATES.length - 1);
@@ -1634,34 +1819,22 @@ function drawChests(ctx) {
     const chst = game.islandChests && game.islandChests[key];
     const ready = !locked && (!chst || game.time >= chst.nextOpen);
 
+    const px = Math.round(sx), py = Math.round(sy);
     if (ready) {
-      const pulse = 0.25 + 0.15 * Math.sin(performance.now() / 550);
-      ctx.fillStyle = `rgba(255,210,60,${pulse.toFixed(3)})`;
+      // Soft pool of light in the pot's own colour (never gold), kept faint
+      const pulse = 0.13 + 0.05 * Math.sin(performance.now() / 550);
+      ctx.fillStyle = `rgba(${POT_GLOW[(i - 1) % 4]},${pulse.toFixed(3)})`;
       ctx.beginPath();
-      ctx.arc(sx, sy, 11, 0, Math.PI * 2);
+      ctx.ellipse(px, py + 6, 11, 6, 0, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // Chest body
-    ctx.fillStyle = locked ? '#303030' : (ready ? '#c08020' : '#5a3a10');
-    ctx.fillRect(sx - 7, sy - 4, 14, 10);
-    // Lid
-    ctx.fillStyle = locked ? '#484848' : (ready ? '#e8a030' : '#7a5020');
-    ctx.fillRect(sx - 7, sy - 4, 14, 4);
-    // Frame
-    ctx.strokeStyle = '#301808';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(sx - 7, sy - 4, 14, 10);
-    // Latch / lock
-    if (locked) {
-      ctx.fillStyle = '#888';
-      ctx.fillRect(sx - 2, sy - 1, 4, 5);        // lock body
-      ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.arc(sx, sy - 2, 2.5, Math.PI, 0); ctx.stroke(); // shackle
-    } else {
-      ctx.fillStyle = ready ? '#f0d040' : '#706050';
-      ctx.fillRect(sx - 2, sy, 4, 4);
-    }
+    if (!IMAGES.pots) continue;
+    const smashed = _potSmashAt[key];
+    const row = ready ? 0 : (smashed !== undefined && performance.now() - smashed < 350 ? 1 : 2);
+    const col = (i - 1) % 4; // one colour per island
+    // Cell art rests its feet on row 30; put that just below the tile centre.
+    ctx.drawImage(IMAGES.pots, col * 32, row * 32, 32, 32, px - 16, py + 8 - 30, 32, 32);
   }
 }
 
@@ -1672,7 +1845,7 @@ function drawWorkers(ctx) {
   const VW = ctx.canvas.width / ZOOM;
   const VH = ctx.canvas.height / ZOOM;
 
-  // Worker island flag — always visible so players can find the island
+  // Worker island flag - always visible so players can find the island
   const wisl = offshoreIslands && offshoreIslands[0];
   if (wisl) {
     const fx = (wisl.cx + 0.5) * S - cam.x - 4;
@@ -1714,7 +1887,7 @@ function drawWorkers(ctx) {
       const facing    = ws ? ws.facing : 1;
       _drawMiniPlayer(ctx, sx, sy, 0.45, walkPhase, facing);
     } else {
-      // Worker in a boat — scaled-down player boat
+      // Worker in a boat - scaled-down player boat
       const angle = Math.atan2(w.targetWy - w.wy, w.targetWx - w.wx);
       // Draw scaled boat hull
       ctx.save();
@@ -1766,7 +1939,7 @@ function drawWorkers(ctx) {
 // Draws a miniature version of the player character centered at (sx, sy).
 // walkPhase: 0–1 walk cycle (0 = standing still). facing: 1=right, -1=left.
 function _drawMiniPlayer(ctx, sx, sy, scale, walkPhase, facing) {
-  // Whole-body bob: peaks once per step, 2 screen-px max — subtle but readable
+  // Whole-body bob: peaks once per step, 2 screen-px max - subtle but readable
   const bob = walkPhase ? Math.abs(Math.sin(walkPhase * Math.PI * 2)) * 2 : 0;
   ctx.save();
   ctx.translate(sx, sy + bob);
@@ -1796,9 +1969,9 @@ function _drawMiniPlayer(ctx, sx, sy, scale, walkPhase, facing) {
   ctx.restore();
 }
 
-// Fixed shipping boat that the Drone Delivery network sends fish to — sits
+// Fixed shipping boat that the Drone Delivery network sends fish to - sits
 // at BOAT_C/BOAT_R, a corner of open ocean carveIslandBlob() never reaches.
-// Hand-drawn cargo ship — bow points right, stern (with the bridge + drone
+// Hand-drawn cargo ship - bow points right, stern (with the bridge + drone
 // pad) sits at the left so the pad reads as the "delivery window" facing
 // back toward the mainland.
 function drawBoat(ctx) {
@@ -1810,7 +1983,7 @@ function drawBoat(ctx) {
   const bowX  = cx + L / 2;
   const sternX = cx - L / 2;
 
-  // Gentle wake ripples ahead of the bow — purely decorative, sits under everything
+  // Gentle wake ripples ahead of the bow - purely decorative, sits under everything
   const t = game.time;
   ctx.strokeStyle = 'rgba(255,255,255,0.18)';
   ctx.lineWidth = 1.5;
@@ -1901,7 +2074,7 @@ function drawBoat(ctx) {
   ctx.fillStyle = blink ? '#ff5a4a' : '#7a2a22';
   ctx.beginPath(); ctx.arc(bx + bw / 2, cy - bh / 2 - 12, 1.4, 0, Math.PI * 2); ctx.fill();
 
-  // ── Drone pad — clear deck space just forward of the bridge ────────────────
+  // ── Drone pad - clear deck space just forward of the bridge ────────────────
   const padX = bx + bw + TILE_SIZE * 0.55;
   if (IMAGES.dronepad) {
     ctx.drawImage(IMAGES.dronepad, padX - 16, cy - 16, 32, 32);
@@ -1911,14 +2084,14 @@ function drawBoat(ctx) {
 }
 
 // Cosmetic-only flight: a small drone glyph gliding from a Drone Delivery
-// station to the boat right after a sale lands — the payout already
+// station to the boat right after a sale lands - the payout already
 // happened in droneSellFish, so nothing here can affect game state.
 function drawDeliveryFlights(ctx) {
   for (const f of deliveryFlights) {
     const dx = BOAT_C - f.fromC, dy = BOAT_R - f.fromR;
     const len = Math.hypot(dx, dy) || 1;
     // Unit vector perpendicular to the flight path, scaled by the flight's
-    // fixed random offset — keeps each drone on its own parallel lane.
+    // fixed random offset - keeps each drone on its own parallel lane.
     const px = -dy / len, py = dx / len;
     const wx = f.fromC + 0.5 + (BOAT_C + 0.5 - f.fromC - 0.5) * f.t;
     const wy = f.fromR + 0.5 + (BOAT_R + 0.5 - f.fromR - 0.5) * f.t;
@@ -1928,7 +2101,7 @@ function drawDeliveryFlights(ctx) {
   }
 }
 
-// Catch particles — splash (blue/white circles) and sparkle (gold diamonds),
+// Catch particles - splash (blue/white circles) and sparkle (gold diamonds),
 // both fading out over their lifetime. `particles` is the shared array
 // maintained by sim.js's spawnParticles/tickParticles.
 function drawParticles(ctx) {
@@ -1971,7 +2144,7 @@ function drawDrones(ctx) {
       wx = st.waterC + (c - st.waterC) * st.droneT;
       wy = st.waterR + (r - st.waterR) * st.droneT;
     } else {
-      continue; // unloading — drawn sitting on the pad in drawBlock
+      continue; // unloading - drawn sitting on the pad in drawBlock
     }
 
     const sx = (wx + 0.5) * TILE_SIZE - cam.x;
@@ -1992,7 +2165,7 @@ function _legendaryGlow(fish) {
   let cv = _legendGlowCache.get(key);
   if (cv === undefined) {
     const img = IMAGES.fishes;
-    if (!img) return null; // don't cache — retry once the sheet loads
+    if (!img) return null; // don't cache - retry once the sheet loads
     const pad = FISH_CELL / 2;
     cv = document.createElement('canvas');
     cv.width = cv.height = FISH_CELL + pad * 2;
@@ -2036,7 +2209,7 @@ function drawFishSprite(ctx, fish, cx, cy, size) {
 
 // ─── Fishing rod ──────────────────────────────────────────────────────────────
 
-// Hand anchor for the rod sprite — set by drawPlayer (called just before
+// Hand anchor for the rod sprite - set by drawPlayer (called just before
 // this) each frame a cast is active, so the rod tracks the actual casting
 // hand instead of a separate facing-based guess.
 let playerRodHand = null;
@@ -2074,28 +2247,36 @@ function drawFishingRod(ctx) {
   }
 
   // Bobber sits at the world position that was clicked, not at a fixed
-  // offset from the player — bobbing gently in place there.
-  const bob = Math.sin(game.time * 5) * 2;
-  const bx = manualCast.wx - cam.x + Math.sin(game.time * 1.5) * 1;
-  const by = manualCast.wy - cam.y + bob;
+  // offset from the player - bobbing gently in place there.
+  // The waterline stays put; only the float rides on it. In the last ~0.7s of
+  // the cast a fish is nibbling, so the float twitches and is tugged under.
+  const castDur     = manualCast.duration || effectiveCastTime();
+  const castElapsed = castDur - manualCast.timer;
+  const biting      = manualCast.timer < 0.7;
+  const dip = biting ? (0.5 + 0.5 * Math.sin(game.time * 26)) * (1.2 + 2.4 * (1 - manualCast.timer / 0.7)) : 0;
+  // Whole-pixel positions so the pixel-art float never lands between pixels.
+  const bx = Math.round(manualCast.wx - cam.x + Math.sin(game.time * 1.5) * 0.6);
+  const surfaceY = Math.round(manualCast.wy - cam.y + 3);
+  const by = Math.round(surfaceY + 1 + Math.sin(game.time * 4) * 0.9 + dip);
+  const topY = by - 9; // top of the float's antenna - where the line ties on
 
-  // Line from rod tip → control point → bobber (slight arc). Drawn before the
+  // Line from rod tip → control point → float (slight arc). Drawn before the
   // rod sprite below so the rod's art renders on top of it near the tip,
   // instead of the thin line floating visibly over the rod.
   const cpx = (rx1 + bx) / 2 + 6;
-  const cpy = (ry1 + by) / 2 - 8;
-  ctx.strokeStyle = 'rgba(200,225,255,0.65)';
+  const cpy = (ry1 + topY) / 2 - 8;
+  ctx.strokeStyle = 'rgba(210,230,255,0.7)';
   ctx.lineWidth = 0.7;
   ctx.beginPath();
   ctx.moveTo(rx1, ry1);
-  ctx.quadraticCurveTo(cpx, cpy, bx, by);
+  ctx.quadraticCurveTo(cpx, cpy, bx, topY);
   ctx.stroke();
 
-  // Rod body — drawn from img/rod.png. The sprite's own handle/tip pixel
+  // Rod body - drawn from img/rod.png. The sprite's own handle/tip pixel
   // coords (measured directly off the source art) define its intrinsic
   // angle/length, which we rotate+scale to match the handle→tip vector above.
   // The art is shaded as if lit from one side, so facing left also mirrors
-  // it horizontally (not just rotates) — a plain rotation would point it the
+  // it horizontally (not just rotates) - a plain rotation would point it the
   // right way but with its shading backwards, reading as flipped on its face.
   const rdx = rx1 - rx0, rdy = ry1 - ry0;
   const rlen = Math.sqrt(rdx * rdx + rdy * rdy) || 1;
@@ -2118,24 +2299,115 @@ function drawFishingRod(ctx) {
     ctx.restore();
   }
 
-  // Bobber
-  ctx.fillStyle = '#cc2222';
-  ctx.beginPath(); ctx.arc(bx, by + 1.5, 3, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath(); ctx.arc(bx, by - 1.5, 3, 0, Math.PI * 2); ctx.fill();
-  // Bobber reflection
-  ctx.fillStyle = 'rgba(150,200,255,0.3)';
-  ctx.beginPath(); ctx.ellipse(bx, by + 3, 3, 1, 0, 0, Math.PI * 2); ctx.fill();
-
-  // Cast progress arc around bobber
-  const progress = 1 - manualCast.timer / (manualCast.duration || effectiveCastTime());
-  ctx.strokeStyle = '#4dca7c';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.arc(bx, by, 7, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
-  ctx.stroke();
-
+  drawBobber(ctx, bx, by, surfaceY, castElapsed, castDur, biting);
   ctx.lineCap = 'butt';
+}
+
+// Pixel-art fishing float sitting in the water. Everything here is drawn from
+// whole-pixel rects (no arcs/strokes), on integer coordinates, so it stays as
+// chunky and hard-edged as the rest of the sprites. Palette is the game's own
+// muted earth tones: terracotta dome + cream belly, the same dark-brown
+// outline the player sprite uses, and the UI's mustard accent for the tip.
+// `by` is the float's reference row, `surfaceY` the waterline (both integers).
+const BOBBER_SPRITE = [
+  '...t...',
+  '...a...',
+  '...a...',
+  '..ooo..',
+  '.ohrro.',
+  'orrrrro',
+  'orrrrdo',
+  'owwwwso',
+  '.owwwo.',
+  '..ooo..',
+];
+const BOBBER_COLORS = {
+  o: '#2a1808', a: '#2a1808', t: '#e8a030',
+  r: '#d0602c', h: '#f0a060', d: '#a4441f',
+  w: '#ecdcb0', s: '#bba57a',
+};
+
+// Plots the outline of an ellipse (or an arc of it) as single pixels.
+function _plotRing(ctx, cx, cy, rx, ry, a0, a1) {
+  const n = Math.max(12, Math.ceil(Math.abs(a1 - a0) * Math.max(rx, ry) * 1.6));
+  const seen = new Set();
+  for (let i = 0; i <= n; i++) {
+    const a = a0 + (a1 - a0) * (i / n);
+    const x = Math.round(cx + Math.cos(a) * rx), y = Math.round(cy + Math.sin(a) * ry);
+    const k = x * 4096 + y;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    ctx.fillRect(x, y, 1, 1);
+  }
+}
+
+function drawBobber(ctx, bx, by, surfaceY, elapsed, dur, biting) {
+  ctx.save();
+  const t = game.time;
+  const TAU = Math.PI * 2;
+
+  // Ripples: two pixel rings spreading out. Fade is stepped (3 levels) rather
+  // than smooth, to match the game's hard-edged look.
+  const speed = biting ? 2.6 : 0.85;
+  ctx.fillStyle = '#d6ecf5';
+  for (let k = 0; k < 2; k++) {
+    const u = (t * speed + k * 0.5) % 1;
+    ctx.globalAlpha = u < 0.4 ? 0.75 : u < 0.75 ? 0.45 : 0.2;
+    const rx = 3 + Math.floor(u * (biting ? 11 : 8));
+    _plotRing(ctx, bx, surfaceY, rx, Math.max(1, Math.round(rx * 0.4)), 0, TAU);
+  }
+
+  // Landing splash: a wider ring plus square droplets thrown up.
+  if (elapsed < 0.35) {
+    const u = Math.max(0, elapsed) / 0.35;
+    ctx.globalAlpha = u < 0.5 ? 0.9 : 0.5;
+    ctx.fillStyle = '#f2fbff';
+    const rx = 4 + Math.floor(u * 12);
+    _plotRing(ctx, bx, surfaceY, rx, Math.max(1, Math.round(rx * 0.4)), 0, TAU);
+    ctx.globalAlpha = 1 - u * 0.7;
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * TAU + 0.4;
+      ctx.fillRect(Math.round(bx + Math.cos(a) * u * 8), Math.round(surfaceY - Math.sin(u * Math.PI) * (5 + (i % 3) * 2)), 1, 1 + (i % 2));
+    }
+  }
+
+  // Cast progress: a ring of pixels on the water that fills as the fish nears.
+  const progress = Math.min(1, Math.max(0, elapsed / dur));
+  ctx.globalAlpha = 0.2;
+  ctx.fillStyle = '#ffffff';
+  _plotRing(ctx, bx, surfaceY, 10, 4, 0, TAU);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = biting ? '#e8a030' : '#4dca7c';
+  if (progress > 0.01) _plotRing(ctx, bx, surfaceY, 10, 4, -Math.PI / 2, -Math.PI / 2 + TAU * progress);
+
+  // The float: rows below the waterline are simply not drawn, so its belly
+  // reads as submerged (and sinks further as it's tugged under).
+  const top = by - 9;
+  for (let r = 0; r < BOBBER_SPRITE.length; r++) {
+    const y = top + r;
+    if (y >= surfaceY) break;
+    const row = BOBBER_SPRITE[r];
+    for (let c = 0; c < row.length; c++) {
+      const col = BOBBER_COLORS[row[c]];
+      if (!col) continue;
+      ctx.fillStyle = col;
+      ctx.fillRect(bx - 3 + c, y, 1, 1);
+    }
+  }
+
+  // Waterline pixels where the float meets the water, and a stepped reflection.
+  ctx.fillStyle = '#bfe3ee';
+  ctx.fillRect(bx - 4, surfaceY, 9, 1);
+  ctx.fillStyle = '#7fb6cf';
+  ctx.fillRect(bx - 5, surfaceY, 1, 1);
+  ctx.fillRect(bx + 5, surfaceY, 1, 1);
+  ctx.fillStyle = '#d0602c';
+  ctx.globalAlpha = 0.4;
+  ctx.fillRect(bx - 2, surfaceY + 1, 5, 1);
+  ctx.globalAlpha = 0.22;
+  ctx.fillRect(bx - 1, surfaceY + 2, 3, 1);
+
+  ctx.restore();
 }
 
 // ─── Player ───────────────────────────────────────────────────────────────────
@@ -2156,13 +2428,13 @@ function drawPlayer(ctx) {
   const legLift  = Math.max(0, Math.sin(player.walkPhase)) * player.walkAmp; // forward leg lifts slightly off the ground
   const legLiftB = Math.max(0, -Math.sin(player.walkPhase)) * player.walkAmp;
 
-  // Shadow — shrinks a touch on the lift to sell the foot leaving the ground
+  // Shadow - shrinks a touch on the lift to sell the foot leaving the ground
   ctx.fillStyle = 'rgba(0,0,0,0.22)';
   ctx.beginPath();
   ctx.ellipse(px, py + 10, 8 - player.walkAmp * 0.6, 3, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Legs — rubber fishing boots (dark olive body, mustard cuff, darker sole),
+  // Legs - rubber fishing boots (dark olive body, mustard cuff, darker sole),
   // swung from a hip pivot so each leg actually rotates forward/back rather
   // than just stretching in place.
   function drawLeg(hipX, angle, lift) {
@@ -2180,7 +2452,7 @@ function drawPlayer(ctx) {
   drawLeg(px - 4, legSwing, legLift);
   drawLeg(px + 4, -legSwing, legLiftB);
 
-  // Body — teal shirt with a khaki fishing vest + chest pockets over top
+  // Body - teal shirt with a khaki fishing vest + chest pockets over top
   ctx.fillStyle = '#2a1808';
   ctx.fillRect(px - 7, py - 14 + bob - 1, 14, 16);
   ctx.fillStyle = '#2a6a78';
@@ -2191,7 +2463,7 @@ function drawPlayer(ctx) {
   ctx.fillRect(px - 5, py - 11 + bob,  3, 3);
   ctx.fillRect(px + 2, py - 11 + bob,  3, 3);
 
-  // Arms — teal sleeves with rolled khaki cuffs, skin below, rotated from the
+  // Arms - teal sleeves with rolled khaki cuffs, skin below, rotated from the
   // shoulder. Walking uses a subtle swing; casting locks into a fixed
   // two-handed grip-the-rod pose instead of just hanging dead at the sides.
   function drawArm(shoulderX, rot) {
@@ -2212,7 +2484,7 @@ function drawPlayer(ctx) {
     drawArm(castShoulderX, rot);
     drawArm(px - 7.5 * rodSide, -0.8 * rodSide);
     // Hand (forearm tip, local point (0,8)) in world space, plus the
-    // shoulder→hand direction — drawFishingRod anchors the rod sprite here
+    // shoulder→hand direction - drawFishingRod anchors the rod sprite here
     // instead of re-deriving its own facing-based offset.
     const hdx = -8 * Math.sin(rot), hdy = 8 * Math.cos(rot);
     playerRodHand = {
@@ -2243,7 +2515,7 @@ function drawPlayer(ctx) {
     ctx.fillRect(px + 1, py - 19 + bob, 2, 2);
   }
 
-  // Hat — wide-brim khaki bucket hat with a dark band
+  // Hat - wide-brim khaki bucket hat with a dark band
   ctx.fillStyle = '#8a7550';
   ctx.fillRect(px - 6, py - 25 + bob, 12, 2);
   ctx.fillStyle = '#a8916a';
@@ -2255,7 +2527,7 @@ function drawPlayer(ctx) {
 // ─── HUD ─────────────────────────────────────────────────────────────────────
 
 const cashAnim = { displayed: 0, prev: 0, pulse: 0 };
-// Screen-space rect of the cash pill — recalculated on resize, not every frame.
+// Screen-space rect of the cash pill - recalculated on resize, not every frame.
 const cashPillRect = { right: 0, top: 0, bottom: 0 };
 let _cashPillDirty = true; // set to true when layout may have changed
 window.addEventListener('resize', () => { _cashPillDirty = true; });
@@ -2270,7 +2542,7 @@ function drawHUD(ctx, canvas, dt) {
   cashAnim.prev = game.cash;
   if (cashAnim.pulse > 0) cashAnim.pulse = Math.max(0, cashAnim.pulse - dt * 1.4);
 
-  // Cash pill — DOM element so it always renders above the tutorial overlay
+  // Cash pill - DOM element so it always renders above the tutorial overlay
   const cashLabel = formatMoney(cashAnim.displayed);
   const cashHudEl  = document.getElementById('cashHud');
   const cashHudVal = document.getElementById('cashHudValue');
@@ -2295,7 +2567,7 @@ function drawHUD(ctx, canvas, dt) {
     _cashPillDirty = false;
   }
 
-  // Corner hint — only show placement controls while in build mode
+  // Corner hint - only show placement controls while in build mode
   if (buildMode.active) {
     ctx.fillStyle = 'rgba(255,255,255,0.28)';
     ctx.font = '11px "Segoe UI", system-ui, sans-serif';
@@ -2366,7 +2638,7 @@ function drawToasts(ctx, canvas, dt) {
     if (t.life <= 0) { toasts.splice(i, 1); continue; }
     t.age = (t.age || 0) + dt;
 
-    const isMilestone = t.type === 'milestone' || t.type === 'achievement';
+    const isMilestone = t.type === 'achievement'; // the larger gold-framed style
 
     // Eased opacity: ease-in over 0.1s, ease-out over 0.35s
     const entryAlpha = Math.min(1, t.age / 0.1);

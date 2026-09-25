@@ -1,6 +1,6 @@
-// Fish INK Factory — build/upgrades menu (DOM overlay, tabbed Godot-style)
+// Fish INK Factory - build/upgrades menu (DOM overlay, tabbed Godot-style)
 
-let buildMenuEl, buildPanelEl, upgradesPanelEl, fishIndexPanelEl, statsPanelEl, controlsPanelEl, researchPanelEl, prestigePanelEl, blueprintsPanelEl, menuCashEl;
+let buildMenuEl, buildPanelEl, upgradesPanelEl, fishIndexPanelEl, statsPanelEl, controlsPanelEl, researchPanelEl, prestigePanelEl, menuCashEl;
 let leaderboardPanelEl;
 
 function updateCloudStatusUI() {
@@ -30,7 +30,8 @@ function updateCloudStatusUI() {
     const ago = lastSync
       ? (Date.now() - lastSync < 60000 ? 'just now' : `${Math.round((Date.now() - lastSync) / 60000)}m ago`)
       : 'not yet';
-    label.textContent = `${name} · ${ago}`;
+    const viaGoogle = typeof _googleSession !== 'undefined' && !!_googleSession;
+    label.textContent = viaGoogle ? `${name} (Google) · ${ago}` : `${name} · ${ago}`;
     if (syncBtn)    syncBtn.style.display    = '';
     if (signOutBtn) signOutBtn.style.display = '';
     if (recovRow && recovCode) {
@@ -208,7 +209,7 @@ function initMachinesMenu() {
 
   // renderMachinesPanel() wipes/rebuilds panel.innerHTML on every Upgrade
   // click, detaching the clicked button before the click bubbles to the
-  // document listener below — stopping propagation here keeps the outside
+  // document listener below - stopping propagation here keeps the outside
   // -click check from ever seeing that detached target.
   panel.addEventListener('click', e => e.stopPropagation());
 
@@ -368,7 +369,7 @@ function calcBulkUpgrade(id, instances) {
   return { count, total };
 }
 
-// Called every frame — patches button states without rebuilding DOM. The
+// Called every frame - patches button states without rebuilding DOM. The
 // button nodes are cached per rebuild (see _machinesLiveCache invalidation in
 // renderMachinesPanel/_renderMachinesDetail) so this doesn't re-run
 // querySelectorAll 60×/second, and text writes only land on change.
@@ -392,7 +393,7 @@ function updateMachinesPanelLive() {
     if (btn.disabled !== dis) btn.disabled = dis;
   }
 
-  // Upgrade All button — update count/cost text live
+  // Upgrade All button - update count/cost text live
   const allBtn = _machinesLiveCache.allBtn;
   if (allBtn) {
     const id = Number(allBtn.dataset.blockId);
@@ -416,7 +417,6 @@ function initBuildMenu() {
   controlsPanelEl  = document.getElementById('controlsPanel');
   researchPanelEl  = document.getElementById('researchPanel');
   prestigePanelEl  = document.getElementById('prestigePanel');
-  blueprintsPanelEl = document.getElementById('blueprintsPanel');
   menuCashEl       = document.getElementById('menuCash');
 
   buildMenuEl.querySelectorAll('.tab').forEach(tab => {
@@ -431,7 +431,6 @@ function initBuildMenu() {
   renderControlsPanel();
   renderResearchPanel();
   renderPrestigePanel();
-  renderBlueprintsPanel();
 }
 
 function switchMenuTab(name) {
@@ -445,8 +444,9 @@ function switchMenuTab(name) {
 function setBuildMenuOpen(open) {
   if (!buildMenuEl) return;
   buildMenuEl.classList.toggle('hidden', !open);
+  if (!open) hideItemTip();
   // The full-screen build menu's bottom corners sit right where the touch
-  // joystick/Interact button float on a phone — hide them while the menu
+  // joystick/Interact button float on a phone - hide them while the menu
   // covers them so they don't block taps on the menu underneath. Build
   // stays visible/reachable (see style.css) since it's the only way to
   // close the panel while staying in placement mode.
@@ -461,13 +461,12 @@ function setBuildMenuOpen(open) {
     renderResearchPanel();
     renderPrestigePanel();
     renderPetsPanel();
-    renderBlueprintsPanel();
     menuCashEl.textContent = `$${formatMoney(game.cash)}`;
   }
   if (typeof updateBuildHintUI === 'function') updateBuildHintUI();
 }
 
-// ─── Leaderboard — standalone top-left icon button + dropdown panel ────────
+// ─── Leaderboard - standalone top-left icon button + dropdown panel ────────
 function initLeaderboardMenu() {
   const btn   = document.getElementById('leaderboardToggleBtn');
   const panel = document.getElementById('leaderboardPanel');
@@ -489,6 +488,35 @@ function initLeaderboardMenu() {
 }
 
 // ─── Build tab ─────────────────────────────────────────────────────────────
+// A narrow vertical card that appears beside a hovered build item: name, cost
+// (or what unlocks it), the full description wrapped to a readable width, and
+// its headline stat. Replaces the native title tooltip.
+let _itemTipEl = null;
+function showItemTip(card, id) {
+  if (!_itemTipEl) {
+    _itemTipEl = document.createElement('div');
+    _itemTipEl.className = 'item-tip';
+    document.body.appendChild(_itemTipEl);
+  }
+  const unlocked = isBlockUnlocked(id);
+  const statFn = BLOCK_QUICK_STAT[id];
+  const stat = statFn ? statFn() : '';
+  _itemTipEl.innerHTML =
+    `<div class="it-name">${BLOCK_NAMES[id]}</div>` +
+    `<div class="it-cost${unlocked ? '' : ' locked'}">${unlocked ? '$' + BLOCK_COSTS[id].toLocaleString() : 'Locked: ' + BLOCK_UNLOCK_REQ[id].label}</div>` +
+    `<div class="it-desc">${BLOCK_DESCS[id] || ''}</div>` +
+    (stat ? `<div class="it-stat">${stat}</div>` : '');
+  _itemTipEl.classList.add('show');
+  const r = card.getBoundingClientRect();
+  const tw = _itemTipEl.offsetWidth, th = _itemTipEl.offsetHeight;
+  let left = r.right + 10;
+  if (left + tw > window.innerWidth - 8) left = Math.max(8, r.left - tw - 10);
+  const top = Math.max(8, Math.min(r.top, window.innerHeight - th - 8));
+  _itemTipEl.style.left = left + 'px';
+  _itemTipEl.style.top = top + 'px';
+}
+function hideItemTip() { if (_itemTipEl) _itemTipEl.classList.remove('show'); }
+
 function renderBuildPanel() {
   buildPanelEl.innerHTML = '';
   _buildCards = null; // node cache is stale the moment the DOM rebuilds
@@ -536,7 +564,10 @@ function renderBuildPanel() {
       card.className = 'item-card';
       card.dataset.id = id;
       card.style.setProperty('--cat-color', cat.color);
-      card.title = BLOCK_DESCS[id];
+      // Custom vertical hover card (showItemTip) instead of the browser's
+      // native single-line title tooltip.
+      card.addEventListener('mouseenter', () => showItemTip(card, id));
+      card.addEventListener('mouseleave', hideItemTip);
 
       const swatch = makeBlockPreview(id);
 
@@ -577,6 +608,7 @@ function renderBuildPanel() {
       card.appendChild(stat);
       card.appendChild(lock);
       card.addEventListener('click', () => {
+        hideItemTip();
         buildMode.selectedId = id;
         buildMode.menuOpen = false;
         setBuildMenuOpen(false);
@@ -637,7 +669,7 @@ function refreshBuildPanel() {
   const descEl = document.getElementById('actionDesc');
   const costEl = document.getElementById('actionCost');
   if (previewEl) {
-    // Only rebuild the preview canvas when the selection actually changed —
+    // Only rebuild the preview canvas when the selection actually changed -
     // this runs every frame via updateBuildMenuLive, no need to reallocate a
     // canvas+2D context 60x/second for an unchanged selection.
     if (previewEl.dataset.id !== String(id)) {
@@ -661,10 +693,17 @@ function renderUpgradesPanel() {
 
   const hint = document.createElement('div');
   hint.className = 'panel-hint';
-  hint.textContent = 'Spend cash on permanent stat boosts';
+  hint.textContent = 'Spend cash on permanent stat boosts. Ones you can afford are listed first.';
   upgradesPanelEl.appendChild(hint);
 
-  for (const def of UPGRADES) {
+  // Affordable first, then the rest, then maxed; original order within each group.
+  const upgradeRank = d => { const c = upgradeCost(d); return c == null ? 2 : game.cash >= c ? 0 : 1; };
+  const orderedUpgrades = UPGRADES.map((d, i) => ({ d, i }))
+    .sort((a, b) => upgradeRank(a.d) - upgradeRank(b.d) || a.i - b.i)
+    .map(e => e.d);
+  _upgradeSig = upgradeAffordSig();
+
+  for (const def of orderedUpgrades) {
     const lvl  = upgradeLevels[def.id];
     const cost = upgradeCost(def);
     const maxed = cost == null;
@@ -672,7 +711,6 @@ function renderUpgradesPanel() {
 
     const row = document.createElement('div');
     row.className = 'upgrade-row';
-    row.title = def.desc;
 
     const info = document.createElement('div');
     info.className = 'upgrade-info';
@@ -695,6 +733,7 @@ function renderUpgradesPanel() {
     buyBtn.className = 'upgrade-buy';
     buyBtn.textContent = maxed ? 'MAXED' : `$${cost}`;
     buyBtn.disabled = maxed || game.cash < cost;
+    buyBtn.dataset.upgradeId = def.id;
     buyBtn.addEventListener('click', () => {
       if (buyUpgrade(def.id)) renderUpgradesPanel();
     });
@@ -718,17 +757,25 @@ function renderResearchPanel() {
     return;
   }
 
-  hint.textContent = 'One-time cash purchases for late-game upgrades';
+  hint.textContent = 'One-time cash purchases for late-game upgrades. Ones you can afford are listed first.';
   researchPanelEl.appendChild(hint);
 
-  for (const def of RESEARCH_NODES) {
+  const researchRank = d => {
+    if (researchLevels[d.id] >= 1) return 3;
+    if (d.requires && researchLevels[d.requires] < 1) return 2;
+    return game.cash >= researchCost(d) ? 0 : 1;
+  };
+  const orderedResearch = RESEARCH_NODES.map((d, i) => ({ d, i }))
+    .sort((a, b) => researchRank(a.d) - researchRank(b.d) || a.i - b.i)
+    .map(e => e.d);
+
+  for (const def of orderedResearch) {
     const owned  = researchLevels[def.id] >= 1;
     const locked = !owned && def.requires && researchLevels[def.requires] < 1;
     const cost   = researchCost(def);
 
     const row = document.createElement('div');
     row.className = 'upgrade-row';
-    row.title = def.desc;
 
     const info = document.createElement('div');
     info.className = 'upgrade-info';
@@ -788,14 +835,18 @@ function renderPrestigePanel() {
   summary.appendChild(prestigeBtn);
   prestigePanelEl.appendChild(summary);
 
-  for (const def of PRESTIGE_UPGRADES) {
+  const prestigeRank = d => { const c = prestigeUpgradeCost(d); return c == null ? 2 : prestigeTokens.total >= c ? 0 : 1; };
+  const orderedPrestige = PRESTIGE_UPGRADES.map((d, i) => ({ d, i }))
+    .sort((a, b) => prestigeRank(a.d) - prestigeRank(b.d) || a.i - b.i)
+    .map(e => e.d);
+
+  for (const def of orderedPrestige) {
     const lvl  = prestigeLevels[def.id];
     const cost = prestigeUpgradeCost(def);
     const maxed = cost == null;
 
     const row = document.createElement('div');
     row.className = 'upgrade-row';
-    row.title = def.desc;
 
     const info = document.createElement('div');
     info.className = 'upgrade-info';
@@ -819,7 +870,7 @@ function renderPrestigePanel() {
       if (buyPrestigeUpgrade(def.id)) {
         renderPrestigePanel();
         // Industry Contacts changes the Research tab's unlock-threshold hint,
-        // but that panel only re-renders on tab switch — refresh it here too
+        // but that panel only re-renders on tab switch - refresh it here too
         // so the discount is visible immediately, matching Seed Capital's
         // instant-effect fix.
         if (def.id === 'unlockGate') renderResearchPanel();
@@ -832,102 +883,13 @@ function renderPrestigePanel() {
   }
 }
 
-// ─── Blueprints tab ────────────────────────────────────────────────────────
-function renderBlueprintsPanel() {
-  blueprintsPanelEl.innerHTML = '';
-
-  const hint = document.createElement('div');
-  hint.className = 'panel-hint';
-  hint.textContent = 'Copy (C) saves a layout here. Pick one Active, then Paste (V) to stamp it.';
-  blueprintsPanelEl.appendChild(hint);
-
-  const importRow = document.createElement('div');
-  importRow.className = 'upgrade-row';
-  importRow.innerHTML = `<div class="upgrade-info"><div class="name">Import a shared layout</div><div class="desc">Paste a blueprint code someone shared on Discord</div></div>`;
-  const importBtn = document.createElement('button');
-  importBtn.className = 'upgrade-buy';
-  importBtn.textContent = 'Paste Code';
-  importBtn.addEventListener('click', () => {
-    const code = prompt('Paste blueprint code:');
-    if (code && importBlueprintCode(code)) { renderBlueprintsPanel(); updateBuildHud(); }
-  });
-  importRow.appendChild(importBtn);
-  blueprintsPanelEl.appendChild(importRow);
-
-  if (blueprint.library.length === 0) {
-    const empty = document.createElement('div');
-    empty.className = 'panel-hint';
-    empty.textContent = 'No blueprints yet. Drag-select an area with Copy (C) to save one.';
-    blueprintsPanelEl.appendChild(empty);
-    return;
-  }
-
-  for (const entry of blueprint.library) {
-    const isActive = blueprint.activeId === entry.id;
-
-    const row = document.createElement('div');
-    row.className = 'upgrade-row';
-
-    const info = document.createElement('div');
-    info.className = 'upgrade-info';
-    info.innerHTML = `
-      <div class="name">
-        <input class="bp-name-input" type="text" value="${entry.name}" maxlength="40">
-        ${isActive ? '<span class="level-badge">ACTIVE</span>' : ''}
-      </div>
-      <div class="desc">${entry.w}&times;${entry.h} tiles &middot; ${entry.tiles.length} cell(s)</div>
-    `;
-    const nameInput = info.querySelector('.bp-name-input');
-    nameInput.addEventListener('change', () => {
-      renameBlueprint(entry.id, nameInput.value);
-      renderBlueprintsPanel();
-      updateBuildHud();
-    });
-
-    const btnGroup = document.createElement('div');
-    btnGroup.className = 'level-pair';
-
-    const loadBtn = document.createElement('button');
-    loadBtn.className = 'upgrade-buy';
-    loadBtn.textContent = isActive ? 'Active' : 'Load';
-    loadBtn.disabled = isActive;
-    loadBtn.addEventListener('click', () => {
-      selectBlueprint(entry.id);
-      renderBlueprintsPanel();
-      updateBuildHud();
-    });
-
-    const copyBtn = document.createElement('button');
-    copyBtn.className = 'upgrade-buy';
-    copyBtn.textContent = 'Copy Code';
-    copyBtn.addEventListener('click', () => {
-      const code = exportBlueprintCode(entry.id);
-      if (code) navigator.clipboard.writeText(code).then(() => queueToast('Blueprint code copied to clipboard', '#4dca7c'));
-    });
-
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'upgrade-buy bp-delete-btn';
-    deleteBtn.textContent = 'Delete';
-    deleteBtn.addEventListener('click', () => {
-      deleteBlueprint(entry.id);
-      renderBlueprintsPanel();
-      updateBuildHud();
-    });
-
-    btnGroup.appendChild(loadBtn);
-    btnGroup.appendChild(copyBtn);
-    btnGroup.appendChild(deleteBtn);
-
-    row.appendChild(info);
-    row.appendChild(btnGroup);
-    blueprintsPanelEl.appendChild(row);
-  }
-}
-
 // ─── Leaderboard tab ───────────────────────────────────────────────────────
-// Leaderboard names can come from any client (open-write table, no auth) —
+// Leaderboard names can come from any client (open-write table, no auth) -
 // escape before interpolating into innerHTML so a hostile name can't inject markup.
 function escapeLeaderboardName(name) {
+  // Names are only filtered when they're entered, so anything that got in
+  // before a filter improvement is still in the table. Hide those on display.
+  if (typeof nameIsClean === 'function' && !nameIsClean(String(name))) name = '[name removed]';
   const div = document.createElement('div');
   div.textContent = name;
   return div.innerHTML;
@@ -964,7 +926,7 @@ function renderLeaderboardPanel() {
     if (result.error) {
       const err = document.createElement('div');
       err.className = 'panel-hint';
-      err.textContent = 'Leaderboard is temporarily unavailable — the server may be down. Try again in a moment.';
+      err.textContent = 'Leaderboard is temporarily unavailable. The server may be down. Try again in a moment.';
       leaderboardPanelEl.appendChild(err);
       const retryBtn = document.createElement('button');
       retryBtn.className = 'upgrade-buy';
@@ -1031,7 +993,7 @@ function renderLeaderboardList(result) {
   if (!top.length) {
     const empty = document.createElement('div');
     empty.className = 'panel-hint';
-    empty.textContent = 'No scores yet — be the first!';
+    empty.textContent = 'No scores yet. Be the first!';
     leaderboardPanelEl.appendChild(empty);
   }
 
@@ -1066,7 +1028,7 @@ function renderLeaderboardList(result) {
 
 // ─── Fish Index tab ──────────────────────────────────────────────────────────
 // A species unlocks the moment it's caught (randomFish() in data.js adds it
-// to game.fishIndex) — selling isn't required, so this reads as "fish you've
+// to game.fishIndex) - selling isn't required, so this reads as "fish you've
 // seen" rather than "fish you've sold".
 function makeFishPreview(spec) {
   const cnv = document.createElement('canvas');
@@ -1080,6 +1042,17 @@ function makeFishPreview(spec) {
   return cnv;
 }
 
+// "north-west island" style hint for where a region's island sits on the map.
+function regionCompassHint(region) {
+  const isl = offshoreIslands && offshoreIslands[region];
+  const name = REGION_NAMES[region];
+  if (!isl) return name || 'Another island';
+  const ns = isl.cy < WORLD_ROWS * 0.4 ? 'north' : isl.cy > WORLD_ROWS * 0.6 ? 'south' : '';
+  const ew = isl.cx < WORLD_COLS * 0.4 ? 'west' : isl.cx > WORLD_COLS * 0.6 ? 'east' : '';
+  const dir = [ns, ew].filter(Boolean).join('-') || 'central';
+  return `${name}: ${dir}`;
+}
+
 function renderFishIndexPanel() {
   if (!fishIndexPanelEl) return;
   fishIndexPanelEl.innerHTML = '';
@@ -1087,7 +1060,7 @@ function renderFishIndexPanel() {
   const caughtCount = FISH.filter(f => game.fishIndex.has(f.species)).length;
   const hint = document.createElement('div');
   hint.className = 'panel-hint';
-  hint.textContent = `${caughtCount} / ${FISH.length} species discovered. Catch one to reveal it.`;
+  hint.textContent = `${caughtCount} / ${FISH.length} species discovered. Catch one to reveal it. Some only live in the waters around the other islands.`;
   fishIndexPanelEl.appendChild(hint);
 
   const grid = document.createElement('div');
@@ -1128,7 +1101,7 @@ function renderFishIndexPanel() {
 
       const value = document.createElement('div');
       value.className = 'cost' + (caught ? ' afford' : '');
-      value.textContent = caught ? `$${spec.value.toFixed(1)} base` : 'Not yet caught';
+      value.textContent = caught ? `$${spec.value.toFixed(1)} base` : (spec.region !== undefined ? 'Found near an island' : 'Not yet caught');
 
       const lock = document.createElement('div');
       lock.className = 'lock-badge';
@@ -1138,6 +1111,12 @@ function renderFishIndexPanel() {
       card.appendChild(swatch);
       card.appendChild(name);
       card.appendChild(value);
+      if (spec.region !== undefined) {
+        const tag = document.createElement('div');
+        tag.className = 'stat';
+        tag.textContent = caught ? REGION_NAMES[spec.region] : regionCompassHint(spec.region);
+        card.appendChild(tag);
+      }
       row.appendChild(card);
     }
     grid.appendChild(row);
@@ -1168,7 +1147,7 @@ function renderStatsPanel() {
   const rows = [
     ['Lifetime earnings', `$${formatMoney(game.lifetimeEarned)}`],
     ['Fish sold', game.fishSold],
-    ['Uptime', formatUptime(game.time)],
+    ['Playtime', formatUptime(game.time)],
     ['Fish Index discovered', `${game.fishIndex.size} / ${FISH.length}`],
     ['Achievements unlocked', `${game.unlockedAchievements.size} / ${ACHIEVEMENTS.length}`],
   ];
@@ -1202,11 +1181,11 @@ function renderStatsPanel() {
 }
 
 
-// ─── Controls tab — full keybind cheat-sheet ───────────────────────────────
-// Static reference content (rendered once at init, see initBuildMenu) — none
+// ─── Controls tab - full keybind cheat-sheet ───────────────────────────────
+// Static reference content (rendered once at init, see initBuildMenu) - none
 // of this depends on live game state, unlike the other tabs.
 // Each row's `combo` is a list of chords; keys within a chord are pressed
-// together ("+"), separate chords are alternatives ("or") — e.g.
+// together ("+"), separate chords are alternatives ("or") - e.g.
 // [['Ctrl','Shift','Z']] renders "Ctrl + Shift + Z", while [['Q'],['E']]
 // renders "Q  or  E".
 const CONTROL_GROUPS = [
@@ -1267,6 +1246,36 @@ function renderControlsPanel() {
   hint.className = 'panel-hint';
   hint.textContent = 'Every keybind and combo, grouped by what you’re doing';
   controlsPanelEl.appendChild(hint);
+
+  const replayRow = document.createElement('div');
+  replayRow.className = 'upgrade-row';
+  replayRow.innerHTML = '<div class="upgrade-info"><div class="name">Fishing tutorial</div><div class="desc">Replay the basics: casting, dropping fish on a belt, selling</div></div>';
+  const replayBtn = document.createElement('button');
+  replayBtn.className = 'upgrade-buy';
+  replayBtn.textContent = 'Replay';
+  replayBtn.addEventListener('click', () => { replayTutorial(); });
+  replayRow.appendChild(replayBtn);
+  controlsPanelEl.appendChild(replayRow);
+
+  const howRow = document.createElement('div');
+  howRow.className = 'upgrade-row';
+  howRow.innerHTML = '<div class="upgrade-info"><div class="name">How to play</div><div class="desc">Every tutorial step in one place, any time (also the ? button, top-left)</div></div>';
+  const howBtn = document.createElement('button');
+  howBtn.className = 'upgrade-buy';
+  howBtn.textContent = 'Open';
+  howBtn.addEventListener('click', () => { exitBuildMode(); toggleHowTo(true); });
+  howRow.appendChild(howBtn);
+  controlsPanelEl.appendChild(howRow);
+
+  const tourRow = document.createElement('div');
+  tourRow.className = 'upgrade-row';
+  tourRow.innerHTML = '<div class="upgrade-info"><div class="name">Island tour</div><div class="desc">A quick guide to the boat, other islands, treasure pots and Ocean Expansion</div></div>';
+  const tourBtn = document.createElement('button');
+  tourBtn.className = 'upgrade-buy';
+  tourBtn.textContent = 'Start';
+  tourBtn.addEventListener('click', () => { exitBuildMode(); startExploreTour(true); });
+  tourRow.appendChild(tourBtn);
+  controlsPanelEl.appendChild(tourRow);
 
   for (const group of CONTROL_GROUPS) {
     const divider = document.createElement('div');
@@ -1364,7 +1373,7 @@ function openBlockPopup(kind, c, r, screenX, screenY) {
 }
 
 // The popup is centered horizontally and anchored above (screenX, screenY)
-// purely via CSS transform, with no awareness of viewport edges — tapping a
+// purely via CSS transform, with no awareness of viewport edges - tapping a
 // machine near a screen edge (common on a small phone viewport, but also
 // reachable on desktop with a narrow window) can render it partly or fully
 // off-screen. Nudges it back on-screen using its actual rendered size,
@@ -1389,7 +1398,7 @@ function closeBlockPopup() {
   if (blockPopupEl) blockPopupEl.classList.add('hidden');
 }
 
-// E-key entry point while hovering a tile — toggles closed if already open
+// E-key entry point while hovering a tile - toggles closed if already open
 // on the same tile/kind, otherwise opens anchored at the cursor.
 function toggleBlockPopupAtMouse(kind, c, r) {
   if (blockPopup.open && blockPopup.kind === kind && blockPopup.c === c && blockPopup.r === r) {
@@ -1474,7 +1483,7 @@ function upgradeSectionHTML(id, level, cost) {
   `;
 }
 
-// Wires the `.mp-buy` button rendered by upgradeSectionHTML — call after
+// Wires the `.mp-buy` button rendered by upgradeSectionHTML - call after
 // setting innerHTML so the listener attaches to the fresh DOM node.
 function wireUpgradeSection(c, r, cost) {
   const buyBtn = blockPopupEl.querySelector('.mp-buy');
@@ -1485,7 +1494,7 @@ function wireUpgradeSection(c, r, cost) {
   });
 }
 
-// Static per-machine processing stats — replaces the old per-fish "Washer +$x"
+// Static per-machine processing stats - replaces the old per-fish "Washer +$x"
 // toast spam with a fixed reference baked into the popup instead.
 function machineStatsHTML(id, level) {
   const def = machineDef(id);
@@ -1628,7 +1637,7 @@ function renderRecyclerPopupContent(c, r) {
 }
 
 // Teleporter settings: pick which other Teleporter on the map this one sends
-// fish to. The list is rebuilt fresh every render (cheap — the map is small
+// fish to. The list is rebuilt fresh every render (cheap - the map is small
 // and this only runs when the popup is opened or a button inside it is
 // clicked, never per-frame; see updateBlockPopupLive for the per-frame path).
 // Compass direction + distance from (fc,fr) to (tc,tr).
@@ -1738,7 +1747,7 @@ function renderCratePopupContent(c, r) {
 
 // Closes itself if the underlying block got sold/removed/changed out from
 // under it, and otherwise patches live bits *in place* rather than calling
-// renderBlockPopup() every frame — a full innerHTML rebuild on every tick
+// renderBlockPopup() every frame - a full innerHTML rebuild on every tick
 // would tear the close/buy/size buttons out of the DOM mid-click, which is
 // why none of them registered clicks before.
 function updateBlockPopupLive() {
@@ -1790,13 +1799,25 @@ function updateBlockPopupLive() {
 // Cheap per-frame refresh: patches progress text in place on the existing
 // Refresh affordability/levels each frame while the menu is open (cheap: only DOM attr toggles)
 let _upgradeBuyBtns = null; // cached node list, invalidated by renderUpgradesPanel
+let _upgradeSig = '';       // which upgrades were affordable when the panel was last rendered
+
+// One char per upgrade (in UPGRADES order): 1 = affordable now, 0 = not, x = maxed.
+function upgradeAffordSig() {
+  return UPGRADES.map(d => { const c = upgradeCost(d); return c == null ? 'x' : game.cash >= c ? '1' : '0'; }).join('');
+}
 
 function updateBuildMenuLive() {
   if (!buildMenuEl || buildMenuEl.classList.contains('hidden')) return;
   refreshBuildPanel();
+  // Something became (un)affordable: re-sort the list, but never while the
+  // mouse is over it, so a row can't jump away just as it's being clicked.
+  if (!upgradesPanelEl.classList.contains('hidden') && upgradeAffordSig() !== _upgradeSig && !upgradesPanelEl.matches(':hover')) {
+    renderUpgradesPanel();
+  }
   if (!_upgradeBuyBtns) _upgradeBuyBtns = Array.from(upgradesPanelEl.querySelectorAll('.upgrade-buy'));
   for (let i = 0; i < _upgradeBuyBtns.length; i++) {
-    const cost = upgradeCost(UPGRADES[i]);
+    const def = UPGRADES.find(u => u.id === _upgradeBuyBtns[i].dataset.upgradeId);
+    const cost = def ? upgradeCost(def) : null;
     if (cost != null) {
       const dis = game.cash < cost;
       if (_upgradeBuyBtns[i].disabled !== dis) _upgradeBuyBtns[i].disabled = dis;
@@ -1830,8 +1851,8 @@ function initBuildHud() {
 }
 
 // Called every frame from the game loop, independent of whether the big
-// build menu modal is open — this is the whole point of the HUD. Style writes
-// only land when the cash pill actually moved (text width change / resize) —
+// build menu modal is open - this is the whole point of the HUD. Style writes
+// only land when the cash pill actually moved (text width change / resize) -
 // unconditional per-frame left/top writes kept the style dirty every frame.
 let _machBtnLastRight = -1;
 let _machBtnLastMid   = -1;
@@ -2222,7 +2243,7 @@ function _buildFrogSlide(variantId, frogs) {
     acts.appendChild(h);
   }
 
-  // Sell button for unplaced frogs — mirrors axolotl sell so you don't have
+  // Sell button for unplaced frogs - mirrors axolotl sell so you don't have
   // to find the frog in the world just to sell it.
   if (unplaced.length) {
     const sellUid = unplaced[0].uid;

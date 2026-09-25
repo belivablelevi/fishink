@@ -1,4 +1,4 @@
-// Fish INK Factory — touch controls (joystick + action buttons + canvas
+// Fish INK Factory - touch controls (joystick + action buttons + canvas
 // passthrough).
 //
 // Entirely additive: when IS_TOUCH is false (desktop), this file creates
@@ -8,7 +8,7 @@
 // and fish-dropping need no new targeting logic.
 
 // `pointer: fine` = primary pointer is a mouse or trackpad (laptops with
-// touchscreens, ThinkPads, etc.) — don't treat those as mobile.
+// touchscreens, ThinkPads, etc.) - don't treat those as mobile.
 const IS_TOUCH = (('ontouchstart' in window) || navigator.maxTouchPoints > 0)
   && !window.matchMedia('(pointer: fine)').matches;
 
@@ -18,11 +18,11 @@ const IS_TOUCH = (('ontouchstart' in window) || navigator.maxTouchPoints > 0)
 let joystickVector = { x: 0, y: 0 };
 
 let joystickTouchId = null;
-const JOYSTICK_RADIUS = 55; // px — must match half of .touch-joystick-base's width/height
+const JOYSTICK_RADIUS = 55; // px - must match half of .touch-joystick-base's width/height
 let resetJoystickKnob = () => {}; // replaced by createJoystick(); a no-op before/without touch
 
 // CSS hides the joystick whenever the build menu opens (its bottom corners
-// would otherwise sit under it) — that hides the knob but doesn't fire
+// would otherwise sit under it) - that hides the knob but doesn't fire
 // touchend, so without this a finger still down on the joystick at that
 // moment would leave joystickVector stuck non-zero and the knob visually
 // off-center the next time the joystick reappears.
@@ -143,7 +143,7 @@ function createActionButtons() {
 }
 
 // The joystick and action buttons are sized/positioned for a wide, short
-// viewport — in portrait they'd crowd into a much smaller vertical band
+// viewport - in portrait they'd crowd into a much smaller vertical band
 // alongside the on-screen keyboard-less browser chrome, so instead of
 // cramming controls in, block play until the phone is rotated.
 function createRotateOverlay() {

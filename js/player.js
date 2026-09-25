@@ -1,4 +1,4 @@
-// Fish INK Factory — player movement, camera, interaction
+// Fish INK Factory - player movement, camera, interaction
 
 const PLAYER_SPEED = 120;
 const BOAT_SPEED   = 150; // slightly faster than walking on land
@@ -14,22 +14,22 @@ const ZOOM_MAX = 3.5;
 function minZoomForViewport() {
   return Math.max(CANVAS_W / (WORLD_COLS * TILE_SIZE), CANVAS_H / (WORLD_ROWS * TILE_SIZE));
 }
-// Camera starts shaking while walking once zoomed in past this — keeps
+// Camera starts shaking while walking once zoomed in past this - keeps
 // normal play stable and only kicks in when zoomed close enough to notice.
 const SHAKE_ZOOM_THRESHOLD = 2.6;
 
-// Machine "processing done" chimes only play once zoomed in this far — at
+// Machine "processing done" chimes only play once zoomed in this far - at
 // low zoom many machines are visible/finishing at once, so the chimes would
 // overlap into noise; up close they read as a satisfying per-machine cue.
 const MACHINE_SFX_ZOOM_THRESHOLD = 2.5;
 
 // Machine chimes fade out with distance from the player and go silent past
-// this range (in tiles) — machines right next to you read clearly, distant
+// this range (in tiles) - machines right next to you read clearly, distant
 // ones in another part of the factory don't clutter the mix.
 const MACHINE_SFX_RANGE = 9 * TILE_SIZE;
 
 // Same fade behavior for the coin sound when a fish actually sells (belt
-// sale, drone delivery, recycler) — a faraway seller shouldn't ring out as
+// sale, drone delivery, recycler) - a faraway seller shouldn't ring out as
 // loud as one right next to you.
 const SELL_SFX_RANGE = 9 * TILE_SIZE;
 
@@ -37,7 +37,7 @@ const player = {
   wx: (WORLD_COLS / 2) * TILE_SIZE,
   wy: 12 * TILE_SIZE,
   facing: 'down',
-  walkPhase: 0,  // continuous stride angle — advances only while moving
+  walkPhase: 0,  // continuous stride angle - advances only while moving
   walkAmp: 0,    // 0..1, eases toward 1 while moving / 0 while idle, so steps fade out smoothly instead of snapping
   moving: false,
   inBoat: false,          // true while player is sailing on water
@@ -45,7 +45,7 @@ const player = {
   boatTargetAngle: -Math.PI / 2, // where the boat wants to face
 };
 
-// Re-centers the player on the starter dock — call after buildWorld(), since
+// Re-centers the player on the starter dock - call after buildWorld(), since
 // STARTER_C/STARTER_R are only known once the map's been generated.
 function resetPlayerSpawn() {
   player.wx = (STARTER_C + 1.5) * TILE_SIZE;
@@ -55,7 +55,7 @@ function resetPlayerSpawn() {
 const cam = { x: 0, y: 0 };
 let CANVAS_W = 1280, CANVAS_H = 720;
 
-// Pet placement mode — entered when player clicks Place from the Pets tab.
+// Pet placement mode - entered when player clicks Place from the Pets tab.
 // While active the player clicks a water body or Tank tile to assign the pet.
 const petPlaceMode = { active: false, uid: null };
 let _placeCooldown = false; // one-frame guard prevents double-fire on touch
@@ -63,6 +63,7 @@ let _placeCooldown = false; // one-frame guard prevents double-fire on touch
 function enterPetPlaceMode(uid) {
   petPlaceMode.active = true;
   petPlaceMode.uid = uid;
+  exitFrogPlaceMode();
   exitBuildMode();
 }
 
@@ -71,13 +72,14 @@ function exitPetPlaceMode() {
   petPlaceMode.uid = null;
 }
 
-// Frog placement mode — entered when player clicks Place for a frog.
+// Frog placement mode - entered when player clicks Place for a frog.
 // While active the player clicks any land tile (T_EMPTY or T_SHORE, no block).
 const frogPlaceMode = { active: false, uid: null };
 
 function enterFrogPlaceMode(uid) {
   frogPlaceMode.active = true;
   frogPlaceMode.uid = uid;
+  exitPetPlaceMode();
   exitBuildMode();
 }
 
@@ -86,18 +88,18 @@ function exitFrogPlaceMode() {
   frogPlaceMode.uid = null;
 }
 
-// Build mode — `active` lets you place/cancel even with the menu hidden;
+// Build mode - `active` lets you place/cancel even with the menu hidden;
 // `menuOpen` only controls whether the DOM panel is shown.
 const buildMode = {
   active: false,
   menuOpen: false,
   selectedId: B_BELT,
-  beltDir: 0,      // index into BELT_DIRS — rotated with R before placing
-  boxMode: false,  // X toggles — drag a rectangle to bulk place/remove
+  beltDir: 0,      // index into BELT_DIRS - rotated with R before placing
+  boxMode: false,  // X toggles - drag a rectangle to bulk place/remove
   pendingMove: null, // { id, dir, level, config } set by movePickUpBlock(); free placement + state restore
 };
 
-// Per-block popup — opened by clicking a placed machine tile, or by pressing
+// Per-block popup - opened by clicking a placed machine tile, or by pressing
 // E near a Sorter/Crate (see openBlockPopup/closeBlockPopup in ui.js). `kind`
 // selects which content renderBlockPopup shows: 'machine' | 'sorter' | 'crate'.
 // Pinned at the screen position it was opened at rather than tracked live,
@@ -127,6 +129,7 @@ function toggleBoxMode() {
 }
 
 function rotateBeltDir() {
+  game.rotatedOnce = true;
   buildMode.beltDir = (buildMode.beltDir + 1) % BELT_DIRS.length;
 }
 
@@ -145,8 +148,8 @@ function triggerBuildToggle() {
   }
 }
 
-// Cancels everything build-related at once — box mode, any in-progress
-// blueprint select/paste, and the rotation preview — rather than requiring
+// Cancels everything build-related at once - box mode, any in-progress
+// blueprint select/paste, and the rotation preview - rather than requiring
 // several separate steps to fully back out. Shared by the Escape key, the
 // build menu's X button, and the mobile Exit button (which has no Escape
 // key to fall back on).
@@ -155,7 +158,7 @@ function exitBuildMode() {
   if (buildMode.pendingMove) {
     game.cash += BLOCK_COSTS[buildMode.pendingMove.id] || 0;
     cashGuard.grant(BLOCK_COSTS[buildMode.pendingMove.id] || 0);
-    queueToast('Move cancelled — refunded', '#e8a030');
+    queueToast('Move cancelled, refunded', '#e8a030');
     buildMode.pendingMove = null;
   }
   buildMode.active = false;
@@ -261,7 +264,7 @@ function updateCamera() {
   let camY = Math.max(minY, Math.min(player.wy - vh / 2, maxY));
 
   // Subtle handheld shake while walking, intensity scaling with how far past
-  // the threshold we're zoomed — barely noticeable just past it, more at max zoom.
+  // the threshold we're zoomed - barely noticeable just past it, more at max zoom.
   const shaking = player.moving && ZOOM > SHAKE_ZOOM_THRESHOLD;
   if (shaking) {
     const intensity = Math.min(0.6, (ZOOM - SHAKE_ZOOM_THRESHOLD) * 0.25);
@@ -271,7 +274,7 @@ function updateCamera() {
     camY = Math.max(minY, Math.min(camY + Math.cos(game.time * 31) * intensity, maxY));
   }
 
-  // Skip integer rounding while shaking — sub-pixel motion is what makes a
+  // Skip integer rounding while shaking - sub-pixel motion is what makes a
   // "small vibration" actually readable instead of snapping between pixels.
   cam.x = shaking ? camX : Math.round(camX);
   cam.y = shaking ? camY : Math.round(camY);
@@ -294,7 +297,7 @@ function playerCanMoveTo(wx, wy) {
     } else {
       if (!tileWalkable(t)) return false;
       // Can't walk through machines/sellers, but belts and the shore Fisher
-      // dock are walkable — the Drone Pad is solid equipment like any other.
+      // dock are walkable - the Drone Pad is solid equipment like any other.
       const b = blockAt(tc, tr);
       if (b !== B_NONE && !IS_TRANSPORT(b) && b !== B_FISHER) return false;
     }
@@ -317,7 +320,7 @@ function playerOccupiesTile(c, r) {
 // Interacts with whatever block hoverTile currently points at: opens its
 // popup (settings/upgrade), or drops held fish if hovering a belt. Popups
 // (including the per-instance upgrade buy) open from anywhere on the map,
-// no need to stand next to the block — only fish-dropping still requires
+// no need to stand next to the block - only fish-dropping still requires
 // being in reach, since that's physically handing fish to a belt. Falls
 // back to a small player-radius search for fish-dropping only, so you
 // don't need pixel-precise aim just to unload. Shared by the E key and the
@@ -333,7 +336,7 @@ function triggerInteract(fromKey = false) {
   const kind = interactionKindFor(hoveredId);
   const hoverTerrain = hoverTile ? tileAt(hoverTile.c, hoverTile.r) : null;
 
-  // Frog placement mode — intercept all interactions until the player clicks/E-keys a valid land tile
+  // Frog placement mode - intercept all interactions until the player clicks/E-keys a valid land tile
   if (frogPlaceMode.active) {
     if (!hoverTile) return;
     const t = tileAt(hoverTile.c, hoverTile.r);
@@ -350,7 +353,7 @@ function triggerInteract(fromKey = false) {
     return;
   }
 
-  // Pet placement mode — intercept all interactions until the player clicks a valid spot
+  // Pet placement mode - intercept all interactions until the player clicks a valid spot
   if (petPlaceMode.active) {
     if (!hoverTile) return;
     if (hoveredId === B_POND) {
@@ -378,7 +381,7 @@ function triggerInteract(fromKey = false) {
     return;
   }
 
-  // Nearby frog — open interaction popup (Pick Up / Sell)
+  // Nearby frog - open interaction popup (Pick Up / Sell)
   if (game.frogs && game.frogs.length) {
     const FROG_REACH = TILE_SIZE * 2;
     const nearFrog = game.frogs.find(frog => {
@@ -394,48 +397,69 @@ function triggerInteract(fromKey = false) {
     }
   }
 
-  // Chest interaction — non-worker offshore islands have a chest at their center
+  // Chest interaction - non-worker offshore islands have a chest at their center
   // Each island is gated by lifetime earnings; opening gives cash + permanent income bonus.
   const CHEST_EARN_GATES  = [5000, 25000, 100000];   // lifetime $ needed per island (index 0 = island 1)
-  const CHEST_CASH_RANGES = [[200, 500], [600, 1500], [2000, 5000]]; // [min, max] cash per island
+  // Cash scales with the current balance: a random share of it per island, never
+  // less than that island's flat minimum (so an empty wallet still pays something).
+  const CHEST_CASH_SHARE  = [[0.02, 0.04], [0.03, 0.06], [0.05, 0.09]]; // [min, max] fraction of balance
+  const CHEST_CASH_FLOOR  = [200, 600, 2000];
   const CHEST_INCOME_INC  = [0.005, 0.008, 0.012];   // income bonus per open per island
   const CHEST_INCOME_CAP  = 0.30;                     // total cap across all chests
   const CHEST_COOLDOWN    = 300;                      // 5 minutes between opens
-  if (offshoreIslands.length > 1) {
+  if (offshoreIslands.length > 1 && hoverTile) {
     for (let i = 1; i < offshoreIslands.length; i++) {
       const isl = offshoreIslands[i];
-      if (Math.hypot(pc - isl.cx, pr - isl.cy) < 3) {
+      // Cursor must be right on the chest's own tile (not just "somewhere
+      // on the island") - matches how every other single-tile interaction
+      // (machines, ponds, frogs) requires hovering the exact tile.
+      const ct = chestTile(isl);
+      if (hoverTile.c === ct.c && hoverTile.r === ct.r && inReach) {
         const idx = Math.min(i - 1, CHEST_EARN_GATES.length - 1);
         const gate = CHEST_EARN_GATES[idx];
         if ((game.lifetimeEarned || 0) < gate) {
-          queueToast(`Chest locked — earn $${gate.toLocaleString()} lifetime to open`, '#9aa0a8');
+          queueToast(`The pot is broken: earn $${gate.toLocaleString()} lifetime to mend it`, '#9aa0a8');
           return;
         }
         const key = `${isl.cx},${isl.cy}`;
         if (!game.islandChests) game.islandChests = {};
         const chest = game.islandChests[key];
         if (!chest || game.time >= chest.nextOpen) {
-          const [cMin, cMax] = CHEST_CASH_RANGES[idx];
-          const reward = Math.floor(cMin + Math.random() * (cMax - cMin));
-          awardCash(reward, `Chest! +$${reward.toLocaleString()}`, '#f0c030');
+          const [sMin, sMax] = CHEST_CASH_SHARE[idx];
+          const share = sMin + Math.random() * (sMax - sMin);
+          const reward = Math.max(CHEST_CASH_FLOOR[idx], Math.floor((game.cash || 0) * share));
+          awardCash(reward, `Pot smashed! +$${reward.toLocaleString()}`, '#f0c030');
+          smashPot(key);
+          spawnParticles((ct.c + 0.5) * TILE_SIZE, (ct.r + 0.5) * TILE_SIZE, 'sparkle', 16);
           if ((game.chestIncomeBonus || 0) < CHEST_INCOME_CAP) {
             const inc = CHEST_INCOME_INC[idx];
             game.chestIncomeBonus = Math.min(CHEST_INCOME_CAP, (game.chestIncomeBonus || 0) + inc);
             const pct = Math.round(game.chestIncomeBonus * 100);
             queueToast(`Income bonus now +${pct}%!`, '#f0c030');
           }
+          // First time this chest is opened it also holds a keepsake from its
+          // island's waters: that region's Rare species, added to the Fish Index.
+          if (!chest) {
+            const treasure = FISH.find(f => f.region === i && f.category === 'Rare');
+            if (treasure && !game.fishIndex.has(treasure.species)) {
+              game.fishIndex.add(treasure.species);
+              queueToast(`Treasure find: ${treasure.species}! Added to your Fish Index.`, '#f0c419');
+              maybeAwardFishIndexCategoryBonus(treasure.category);
+              if (typeof renderFishIndexPanel === 'function') renderFishIndexPanel();
+            }
+          }
           game.islandChests[key] = { nextOpen: game.time + CHEST_COOLDOWN };
         } else {
           const secs = Math.ceil(chest.nextOpen - game.time);
           const min = Math.floor(secs / 60), sec = secs % 60;
-          queueToast(`Chest refills in ${min > 0 ? `${min}m ` : ''}${sec}s`, '#9aa0a8');
+          queueToast(`The pot mends itself in ${min > 0 ? `${min}m ` : ''}${sec}s`, '#9aa0a8');
         }
         return;
       }
     }
   }
 
-  // Worker island interaction — first offshore island, press E near center.
+  // Worker island interaction - first offshore island, press E near center.
   // Skip if the player is hovering an interactable block so block popups take priority.
   if (offshoreIslands.length > 0 && !player.inBoat && !kind) {
     const wisl = offshoreIslands[0];
@@ -450,9 +474,19 @@ function triggerInteract(fromKey = false) {
   } else if (hoverTile && hoverTerrain === T_WATER && waterBodyAnchor(hoverTile.c, hoverTile.r)) {
     toggleBlockPopupAtMouse('water_pond', hoverTile.c, hoverTile.r);
   } else if (inReach && IS_TRANSPORT(hoveredId) && heldFish.length > 0) {
+    // A leftover popup from some earlier, unrelated interaction is a
+    // fixed-position DOM element that can still be sitting over this belt
+    // tile's screen position - close it so the drop isn't silently eaten.
+    // See the matching fix in handleClick() for the full explanation.
+    closeBlockPopup();
     dropHeldFishOnBelt(hoverTile.c, hoverTile.r);
   } else if (heldFish.length > 0) {
-    dropNearestBelt();
+    closeBlockPopup();
+    // Silent before - a first-time player pressing E away from the belt just
+    // saw nothing happen. Only nagged about during the tutorial.
+    if (!dropNearestBelt() && TUT.active) {
+      queueToast('Stand right next to a belt to drop fish, or just click the belt.', '#e8a030');
+    }
   }
 }
 
@@ -488,7 +522,7 @@ function updatePlayer(dt) {
     let diff = player.boatTargetAngle - player.boatAngle;
     while (diff >  Math.PI) diff -= Math.PI * 2;
     while (diff < -Math.PI) diff += Math.PI * 2;
-    const step = 6 * dt; // radians/sec — full 360° spin takes ~1 s
+    const step = 6 * dt; // radians/sec - full 360° spin takes ~1 s
     player.boatAngle += Math.abs(diff) < step ? diff : Math.sign(diff) * step;
   }
 
@@ -525,7 +559,7 @@ function updatePlayer(dt) {
 
   updateCamera();
 
-  // E key — first press: open popup or drop fish. While held: repeat fish-drop
+  // E key - first press: open popup or drop fish. While held: repeat fish-drop
   // at a fixed interval (hold-to-unload) without re-triggering popup opens.
   const eDown = !!(KEYS['e'] || KEYS['E']);
   if (!buildMode.active && !player.inBoat) {
@@ -544,7 +578,7 @@ function updatePlayer(dt) {
   }
   player._eWas = eDown;
 
-  // F key — embark / disembark the boat. T_SHORE is the embarkation zone in
+  // F key - embark / disembark the boat. T_SHORE is the embarkation zone in
   // both directions: walk to the beach to board, sail back to beach to land.
   const fDown = !!(KEYS['f'] || KEYS['F']);
   if (!buildMode.active && fDown && !player._fWas) {
@@ -554,12 +588,13 @@ function updatePlayer(dt) {
     if (!player.inBoat) {
       if (t === T_SHORE) {
         player.inBoat = true;
+        game.boatUsed = true;
         // Snap to tile center so all 4 corner probes land on T_SHORE, not the
-        // adjacent inland tile — otherwise the boat collision check immediately
+        // adjacent inland tile - otherwise the boat collision check immediately
         // fails and the player can't move.
         player.wx = (pc + 0.5) * TILE_SIZE;
         player.wy = (pr + 0.5) * TILE_SIZE;
-        queueToast('Boat — WASD to sail · F to land', '#7ec8e3');
+        queueToast('Boat: WASD to sail · F to land', '#7ec8e3');
       } else {
         queueToast('Walk to the beach (sandy edge) to board your boat', '#9aa0a8');
       }
@@ -572,7 +607,7 @@ function updatePlayer(dt) {
       if (t === T_SHORE || tileWalkable(t)) {
         player.inBoat = false;
         // Snap to tile center so no corners hang over water after switching to
-        // foot mode — tileWalkable(T_WATER) is false so a water corner freezes
+        // foot mode - tileWalkable(T_WATER) is false so a water corner freezes
         // the player.
         player.wx = (pc + 0.5) * TILE_SIZE;
         player.wy = (pr + 0.5) * TILE_SIZE;
@@ -635,10 +670,10 @@ function tileFromMouse(mx, my) {
 
 let isDragPlacing = false;
 let lastPaintedTile = null;
-let boxDragStart = null;  // { c, r } — set on mousedown while buildMode.boxMode is on
+let boxDragStart = null;  // { c, r } - set on mousedown while buildMode.boxMode is on
 let boxDragButton = null; // 0 (place) or 2 (remove), mirrors the button that started the drag
 
-// Hover-tooltip dwell tracking (D14) — reset whenever the hovered tile
+// Hover-tooltip dwell tracking (D14) - reset whenever the hovered tile
 // changes; render.js checks elapsed time against HOVER_TOOLTIP_DELAY.
 let hoverTile = null;
 let hoverStart = 0;
@@ -675,10 +710,21 @@ function handleClick(e) {
   if (e.button !== 0 && e.button !== 2) return;
   const { c, r } = tileFromMouse(mouseCanvas.x, mouseCanvas.y);
 
-  // Pet placement mode — left click places the pet; right click cancels
+  // Pet placement mode - left click places the pet; right click cancels
   if (petPlaceMode.active) {
     if (e.button === 0) triggerInteract();
     else { exitPetPlaceMode(); queueToast('Placement cancelled', '#9aa0a8'); }
+    return;
+  }
+
+  // Frog placement mode - same pattern as pets above. Without this branch,
+  // clicks/taps while placing a frog fell through into ordinary world-click
+  // handling (silent no-op on land, or an accidental fishing cast on water)
+  // and frogPlaceMode.active never cleared - the only way out was a page
+  // reload, since Escape (the sole other exit) doesn't exist on mobile.
+  if (frogPlaceMode.active) {
+    if (e.button === 0) triggerInteract();
+    else { exitFrogPlaceMode(); queueToast('Placement cancelled', '#9aa0a8'); }
     return;
   }
 
@@ -693,14 +739,23 @@ function handleClick(e) {
 
   if (!buildMode.active) {
     if (e.button === 0) {
+      // Machines/sorter/crate/etc. now open via hover + E, not a direct
+      // click - clicking elsewhere just dismisses an open popup, same as
+      // Escape. Must run before the fish-drop branch below (not just in the
+      // fallback path) - a leftover popup is a fixed-position DOM element
+      // that sits on top of the canvas and silently swallows clicks landing
+      // in its footprint, including on the very belt/Seller tile a player
+      // is trying to click to sell. Previously this only ran on clicks that
+      // fell through to the cast/dismiss branch, so a stale popup left open
+      // over a belt tile made selling by click look intermittently broken
+      // until something else (e.g. entering bulk-select mode, which closes
+      // it unconditionally) happened to clear it.
+      closeBlockPopup();
       // Drop held fish on clicked belt
       if (heldFish.length > 0 && IS_TRANSPORT(blockAt(c, r))) {
         dropHeldFishOnBelt(c, r);
         return;
       }
-      // Machines/sorter/crate/etc. now open via hover + E, not a direct
-      // click — clicking elsewhere just dismisses an open popup, same as Escape
-      closeBlockPopup();
       // Cast at water only (not shore), within rod range, not while boating
       const t = tileAt(c, r);
       if (t === T_WATER && !manualCast.active && !player.inBoat && heldFish.length < effectiveMaxHeld()) {
@@ -750,7 +805,7 @@ function handleClick(e) {
 }
 
 // Bulk-applies the box-mode drag over every tile in the rectangle between
-// `start` and `end` — button 0 places (skipping occupied tiles and stopping
+// `start` and `end` - button 0 places (skipping occupied tiles and stopping
 // quietly once cash runs out, same as paintBuildTile), button 2 sells/removes.
 function applyBoxAction(start, end, button) {
   const c0 = Math.min(start.c, end.c), c1 = Math.max(start.c, end.c);
@@ -769,7 +824,7 @@ function applyBoxAction(start, end, button) {
     }
   }
   endUndoBatch();
-  // Per-tile placement already plays sfxPlace()/sfxCoin() — a box drag can
+  // Per-tile placement already plays sfxPlace()/sfxCoin() - a box drag can
   // hit dozens of tiles in one mouseup, which would otherwise fire that
   // sound (and stack that many toasts) all in the same instant. One sound
   // and one summary toast for the whole drag instead.

@@ -2,18 +2,18 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make Fish INK Factory playable on touch devices — a virtual joystick for movement plus two action buttons (Interact, Build) — without altering any existing mouse/keyboard behavior.
+**Goal:** Make Fish INK Factory playable on touch devices - a virtual joystick for movement plus two action buttons (Interact, Build) - without altering any existing mouse/keyboard behavior.
 
 **Architecture:** A new `js/touch.js` is purely additive: it detects touch capability once, and (only on touch devices) creates a joystick that feeds the existing movement vector, synthesizes mouse events from canvas touches so all existing click/hover-based targeting (casting, fish-dropping, build-painting) works unmodified, and adds two buttons that call two small functions extracted from the existing E-key and B-key handlers in `js/player.js`.
 
-**Tech Stack:** Plain JS, no build step, no framework. No automated test harness exists in this codebase — verification is `node -c` syntax checks plus manual in-browser testing, matching the existing project convention (see recent leaderboard/start-screen work).
+**Tech Stack:** Plain JS, no build step, no framework. No automated test harness exists in this codebase - verification is `node -c` syntax checks plus manual in-browser testing, matching the existing project convention (see recent leaderboard/start-screen work).
 
 ## Global Constraints
 
-- No build step — plain `<script>` tags loaded in a fixed order in `index.html`.
-- Desktop mouse/keyboard behavior must be 100% unaffected — every new code path is gated behind `IS_TOUCH` or is a behavior-preserving refactor.
+- No build step - plain `<script>` tags loaded in a fixed order in `index.html`.
+- Desktop mouse/keyboard behavior must be 100% unaffected - every new code path is gated behind `IS_TOUCH` or is a behavior-preserving refactor.
 - Touch scope is movement + core actions only: no pinch-zoom, no two-finger gestures, no touch-specific rework of the existing DOM build menu (taps on `<button>` elements already work).
-- Reuse existing targeting logic (`handleMouseMove`, `handleClick`, `handleMouseUp`, `hoverTile`) via synthesized events — do not build a parallel touch-aim/targeting system.
+- Reuse existing targeting logic (`handleMouseMove`, `handleClick`, `handleMouseUp`, `hoverTile`) via synthesized events - do not build a parallel touch-aim/targeting system.
 - Match existing visual style: dark translucent panels using `var(--c-border)`, `rgba(10,18,16, 0.7–0.97)` backgrounds, `var(--font-ui)` font, consistent with `.sound-toggle-btn`/`.machines-panel` in `style.css`.
 - After each task: run `node -c` on every changed `.js` file, then do the manual browser check listed in that task.
 
@@ -21,25 +21,25 @@
 
 ## File Structure
 
-- **Modify `js/player.js`** — extract `triggerInteract()` and `triggerBuildToggle()` from inline key-handler blocks (Task 1); add the joystick fallback to `updatePlayer`'s movement vector (Task 2).
-- **Create `js/touch.js`** — `IS_TOUCH` detection, `joystickVector`, `initTouchControls(canvasEl)`, joystick creation/drag logic, action-button creation/wiring, canvas touch-event passthrough. Loaded after `js/ui.js` (needs `triggerInteract`/`triggerBuildToggle` and the mouse handlers from `player.js`, plus DOM helpers conceptually grouped with `ui.js`), before `js/undo.js`.
-- **Modify `index.html`** — add `<script src="js/touch.js"></script>`; no other markup changes (joystick/buttons are created at runtime by `touch.js`).
-- **Modify `js/main.js`** — call `initTouchControls(canvas);` in `init()`, right after `initMouseHandlers(canvas);`.
-- **Modify `style.css`** — `.touch-joystick-base`, `.touch-joystick-knob`, `.touch-action-btn` (+ per-button position rules), and `touch-action: none` on `#canvas`.
+- **Modify `js/player.js`** - extract `triggerInteract()` and `triggerBuildToggle()` from inline key-handler blocks (Task 1); add the joystick fallback to `updatePlayer`'s movement vector (Task 2).
+- **Create `js/touch.js`** - `IS_TOUCH` detection, `joystickVector`, `initTouchControls(canvasEl)`, joystick creation/drag logic, action-button creation/wiring, canvas touch-event passthrough. Loaded after `js/ui.js` (needs `triggerInteract`/`triggerBuildToggle` and the mouse handlers from `player.js`, plus DOM helpers conceptually grouped with `ui.js`), before `js/undo.js`.
+- **Modify `index.html`** - add `<script src="js/touch.js"></script>`; no other markup changes (joystick/buttons are created at runtime by `touch.js`).
+- **Modify `js/main.js`** - call `initTouchControls(canvas);` in `init()`, right after `initMouseHandlers(canvas);`.
+- **Modify `style.css`** - `.touch-joystick-base`, `.touch-joystick-knob`, `.touch-action-btn` (+ per-button position rules), and `touch-action: none` on `#canvas`.
 
 ---
 
 ### Task 1: Extract `triggerInteract()` and `triggerBuildToggle()` in player.js
 
-Pure refactor — moves two existing inline blocks into named functions called from their original call sites. No behavior change for keyboard play. This must land first so Task 5's buttons have something to call.
+Pure refactor - moves two existing inline blocks into named functions called from their original call sites. No behavior change for keyboard play. This must land first so Task 5's buttons have something to call.
 
 **Files:**
 - Modify: `C:\Users\Jacob\Documents\FishInk\factory\js\player.js:96-182` (`handleBuildKey`, the `'b'`/`'B'` branch at lines 123-134)
 - Modify: `C:\Users\Jacob\Documents\FishInk\factory\js\player.js:240-292` (`updatePlayer`, the E-key block at lines 276-291)
 
 **Interfaces:**
-- Produces: `triggerInteract()` — no params, no return. Runs the popup-open/fish-drop logic against the current `hoverTile`.
-- Produces: `triggerBuildToggle()` — no params, no return. Toggles `buildMode.active`/`buildMode.menuOpen` exactly like pressing B.
+- Produces: `triggerInteract()` - no params, no return. Runs the popup-open/fish-drop logic against the current `hoverTile`.
+- Produces: `triggerBuildToggle()` - no params, no return. Toggles `buildMode.active`/`buildMode.menuOpen` exactly like pressing B.
 
 - [ ] **Step 1: Extract the B-key block into `triggerBuildToggle()`**
 
@@ -48,7 +48,7 @@ In `js/player.js`, find this block inside `handleBuildKey` (currently lines 123-
 ```javascript
   if (e.key === 'b' || e.key === 'B') {
     // First press enters build mode and opens the menu. While still active,
-    // B just toggles the menu panel — placing stays usable with it closed.
+    // B just toggles the menu panel - placing stays usable with it closed.
     if (!buildMode.active) {
       buildMode.active = true;
       buildMode.menuOpen = true;
@@ -74,7 +74,7 @@ Then add the new function directly above `function handleBuildKey(e) {`:
 
 ```javascript
 // Enters build mode and opens the menu on first call; while build mode is
-// already active, just toggles the menu panel — placing stays usable with
+// already active, just toggles the menu panel - placing stays usable with
 // it closed. Shared by the B key and the mobile Build button.
 function triggerBuildToggle() {
   if (!buildMode.active) {
@@ -94,10 +94,10 @@ function triggerBuildToggle() {
 In `js/player.js`, find this block inside `updatePlayer` (currently lines 269-291):
 
 ```javascript
-  // E key — interacts with whatever block the mouse is hovering: opens its
+  // E key - interacts with whatever block the mouse is hovering: opens its
   // popup (settings/upgrade), or drops held fish if hovering a belt. Popups
   // (including the per-instance upgrade buy) open from anywhere on the map,
-  // no need to stand next to the block — only fish-dropping still requires
+  // no need to stand next to the block - only fish-dropping still requires
   // being in reach, since that's physically handing fish to a belt. Falls
   // back to a small player-radius search for fish-dropping only, so you
   // don't need pixel-precise aim just to unload.
@@ -122,7 +122,7 @@ In `js/player.js`, find this block inside `updatePlayer` (currently lines 269-29
 Replace it with:
 
 ```javascript
-  // E key — interacts with whatever block the mouse is hovering. See
+  // E key - interacts with whatever block the mouse is hovering. See
   // triggerInteract() for the full behavior; shared with the mobile
   // Interact button.
   const eDown = !!(KEYS['e'] || KEYS['E']);
@@ -138,7 +138,7 @@ Then add the new function directly above `function updatePlayer(dt) {`:
 // Interacts with whatever block hoverTile currently points at: opens its
 // popup (settings/upgrade), or drops held fish if hovering a belt. Popups
 // (including the per-instance upgrade buy) open from anywhere on the map,
-// no need to stand next to the block — only fish-dropping still requires
+// no need to stand next to the block - only fish-dropping still requires
 // being in reach, since that's physically handing fish to a belt. Falls
 // back to a small player-radius search for fish-dropping only, so you
 // don't need pixel-precise aim just to unload. Shared by the E key and the
@@ -168,9 +168,9 @@ Expected: no output (syntax OK).
 - [ ] **Step 4: Manual regression check in browser**
 
 Open `index.html` in a browser (or `npx serve .` and open the served URL).
-- Press `B` — build mode and menu open exactly as before; press `B` again — menu closes (build mode stays active, matching existing behavior); press `Escape` — fully exits build mode.
-- Hover a placed machine and press `E` — its popup opens exactly as before.
-- Hold fish, hover a belt, press `E` — fish drops onto the belt as before.
+- Press `B` - build mode and menu open exactly as before; press `B` again - menu closes (build mode stays active, matching existing behavior); press `Escape` - fully exits build mode.
+- Hover a placed machine and press `E` - its popup opens exactly as before.
+- Hold fish, hover a belt, press `E` - fish drops onto the belt as before.
 
 - [ ] **Step 5: Commit**
 
@@ -193,12 +193,12 @@ Adds `js/touch.js` with `IS_TOUCH` detection and `joystickVector`, wires the fil
 
 **Interfaces:**
 - Consumes: nothing new from earlier tasks.
-- Produces: `IS_TOUCH` (boolean), `joystickVector` (`{x: number, y: number}`, each in `[-1, 1]`), `initTouchControls(canvasEl)` — called once from `main.js`'s `init()`; no-ops entirely when `!IS_TOUCH`. Task 3 and Task 4 will extend `initTouchControls` and add more functions to this same file.
+- Produces: `IS_TOUCH` (boolean), `joystickVector` (`{x: number, y: number}`, each in `[-1, 1]`), `initTouchControls(canvasEl)` - called once from `main.js`'s `init()`; no-ops entirely when `!IS_TOUCH`. Task 3 and Task 4 will extend `initTouchControls` and add more functions to this same file.
 
 - [ ] **Step 1: Create `js/touch.js`**
 
 ```javascript
-// Fish INK Factory — touch controls (joystick + action buttons + canvas
+// Fish INK Factory - touch controls (joystick + action buttons + canvas
 // passthrough).
 //
 // Entirely additive: when IS_TOUCH is false (desktop), this file creates
@@ -302,7 +302,7 @@ Adds the visible joystick (only on touch devices) that drives `joystickVector` f
 - Modify: `C:\Users\Jacob\Documents\FishInk\factory\style.css`
 
 **Interfaces:**
-- Consumes: `joystickVector` (Task 2, read-write — this task writes to it), `IS_TOUCH` (Task 2).
+- Consumes: `joystickVector` (Task 2, read-write - this task writes to it), `IS_TOUCH` (Task 2).
 - Produces: `createJoystick()`, called from `initTouchControls`.
 
 - [ ] **Step 1: Add joystick styles to `style.css`**
@@ -342,7 +342,7 @@ Add to `js/touch.js`, above `initTouchControls`:
 
 ```javascript
 let joystickTouchId = null;
-const JOYSTICK_RADIUS = 55; // px — must match half of .touch-joystick-base's width/height
+const JOYSTICK_RADIUS = 55; // px - must match half of .touch-joystick-base's width/height
 
 function createJoystick() {
   const base = document.createElement('div');
@@ -547,10 +547,10 @@ Expected: no output.
 - [ ] **Step 5: Manual check using touch emulation**
 
 In Chrome DevTools device-mode (touch emulation enabled):
-- Tap a water tile within rod range (not in build mode) — the rod casts, identical to a desktop mouse click.
-- Tap a water tile out of range — the "Too far to cast!" toast appears, identical to desktop.
-- Catch a fish, then tap a belt tile — the fish drops onto the belt.
-- Enter build mode (still via keyboard `B`, or DevTools-injected click on the existing build button — the mobile Build button itself is Task 5), then tap-and-drag across several tiles — each tile gets the selected block placed, identical to mouse drag-painting.
+- Tap a water tile within rod range (not in build mode) - the rod casts, identical to a desktop mouse click.
+- Tap a water tile out of range - the "Too far to cast!" toast appears, identical to desktop.
+- Catch a fish, then tap a belt tile - the fish drops onto the belt.
+- Enter build mode (still via keyboard `B`, or DevTools-injected click on the existing build button - the mobile Build button itself is Task 5), then tap-and-drag across several tiles - each tile gets the selected block placed, identical to mouse drag-painting.
 - Confirm the page does not scroll/zoom while tapping/dragging on the canvas.
 - Switch off device emulation (plain desktop) and confirm mouse clicking/casting/dragging all still work exactly as before.
 
@@ -573,7 +573,7 @@ Adds the two on-screen buttons and wires them to the functions extracted in Task
 
 **Interfaces:**
 - Consumes: `triggerInteract()`, `triggerBuildToggle()` (both `js/player.js`, Task 1), `IS_TOUCH` (Task 2).
-- Produces: `createActionButtons()`, called from `initTouchControls`. This is the final piece of the feature — no later task depends on it.
+- Produces: `createActionButtons()`, called from `initTouchControls`. This is the final piece of the feature - no later task depends on it.
 
 - [ ] **Step 1: Add action-button styles to `style.css`**
 
@@ -659,9 +659,9 @@ Expected: no output.
 
 In Chrome DevTools device-mode (touch emulation enabled):
 - Two round buttons ("Interact", "Build") appear bottom-right, stacked, not overlapping the joystick or each other.
-- Tap a machine tile (sets `hoverTile` via the Task 4 passthrough), then tap the Interact button — its popup opens, identical to hover+E on desktop.
-- Tap the Build button — build mode and its menu open, identical to pressing B; tap it again — the menu closes (build mode stays active), matching existing B-key behavior.
-- Tapping either button does not also trigger a canvas tap underneath it (the buttons sit outside the canvas in the DOM, so this should already hold — confirm visually that nothing gets placed/cast at the button's screen position).
+- Tap a machine tile (sets `hoverTile` via the Task 4 passthrough), then tap the Interact button - its popup opens, identical to hover+E on desktop.
+- Tap the Build button - build mode and its menu open, identical to pressing B; tap it again - the menu closes (build mode stays active), matching existing B-key behavior.
+- Tapping either button does not also trigger a canvas tap underneath it (the buttons sit outside the canvas in the DOM, so this should already hold - confirm visually that nothing gets placed/cast at the button's screen position).
 - Switch off device emulation and confirm the buttons do not appear on desktop, and keyboard E/B still work exactly as before.
 
 - [ ] **Step 6: Commit**

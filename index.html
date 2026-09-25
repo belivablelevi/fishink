@@ -3,7 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fish INK</title>
+  <title>Fish INK: Free Browser Fishing Factory Idle Game</title>
+  <meta name="description" content="Fish INK: a free, no-download browser idle game. Start as a lone fisherman on a tiny dock and grow into an automated fish-processing factory empire, with belts, sorters, smokers, and drones included.">
+  <link rel="canonical" href="https://belivablelevi.github.io/fishink/">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Fish INK - Free Browser Fishing Factory Idle Game">
+  <meta property="og:description" content="Start as a lone fisherman, end up running an automated fish-processing empire. Free to play, right in your browser, no download or account required.">
+  <meta property="og:url" content="https://belivablelevi.github.io/fishink/">
+  <meta property="og:site_name" content="Fish INK">
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Fish INK - Free Browser Fishing Factory Idle Game">
+  <meta name="twitter:description" content="Start as a lone fisherman, end up running an automated fish-processing empire. Free to play, right in your browser.">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "VideoGame",
+    "name": "Fish INK",
+    "url": "https://belivablelevi.github.io/fishink/",
+    "description": "A free, no-download browser idle game. Start as a lone fisherman and grow into an automated fish-processing factory empire.",
+    "genre": ["Idle game", "Incremental game", "Tycoon"],
+    "gamePlatform": "Web browser",
+    "applicationCategory": "Game",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+  }
+  </script>
+
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>%F0%9F%90%9F</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -60,6 +87,14 @@
   <div id="machinesPanel" class="machines-panel hidden"></div>
 
   <button id="leaderboardToggleBtn" class="leaderboard-toggle-btn" title="Leaderboard">&#127942;</button>
+  <button id="howToBtn" class="howto-toggle-btn" title="How to play" onclick="toggleHowTo()">?</button>
+  <div id="howToPanel" class="howto-panel hidden">
+    <div class="menu-header">
+      <div class="menu-title">HOW <span>TO PLAY</span></div>
+      <button class="menu-close" id="howToCloseBtn" title="Close" onclick="toggleHowTo(false)">&times;</button>
+    </div>
+    <div class="howto-content" id="howToContent"></div>
+  </div>
   <div id="leaderboardPanel" class="leaderboard-panel hidden">
     <div class="menu-header">
       <div class="menu-title">FISH INK <span>LEADERBOARD</span></div>
@@ -69,10 +104,23 @@
   </div>
 
   <div id="tutorialOverlay" class="tutorial-overlay hidden">
-    <div class="tutorial-step-count" id="tutorialStepCount"></div>
+    <div class="tutorial-progress"><div class="tutorial-progress-fill" id="tutorialProgressFill"></div></div>
+    <div class="tutorial-head">
+      <button class="tutorial-nav" id="tutorialBackBtn" onclick="tutorialBack()" title="Previous step">&#8249;</button>
+      <div class="tutorial-badge" id="tutorialBadge">1</div>
+      <div class="tutorial-step-count" id="tutorialStepCount"></div>
+      <button class="tutorial-nav" id="tutorialFwdBtn" onclick="tutorialForward()" title="Next step">&#8250;</button>
+    </div>
     <div class="tutorial-step-text" id="tutorialStepText"></div>
-    <button class="tutorial-skip-btn" onclick="skipTutorial()">Skip tutorial</button>
+    <div class="tutorial-step-why" id="tutorialStepWhy"></div>
+    <div class="tutorial-step-hint" id="tutorialStepHint"></div>
+    <div class="tutorial-btn-row">
+      <button class="tutorial-next-btn hidden" id="tutorialNextBtn" onclick="tutorialNext()">Got it</button>
+      <button class="tutorial-skip-btn" id="tutorialSkipBtn" onclick="skipTutorial()">Skip tutorial</button>
+    </div>
+    <div class="tutorial-skip-choice hidden" id="tutorialSkipChoice"></div>
   </div>
+  <div id="tutorialUiArrow" class="tutorial-ui-arrow hidden">▼</div>
 
   <div id="cashHud" class="cash-hud">
     <img id="cashHudIcon" class="cash-hud-icon" src="img/icon-money.png" alt="">
@@ -105,6 +153,7 @@
       <button class="tab" data-tab="prestige">Prestige</button>
       <button class="tab" data-tab="pets">🦎 Pets</button>
       <a href="https://discord.gg/XTun36fUcb" target="_blank" rel="noopener" class="tab-discord" title="Join the Discord"><img src="img/icon-discord.png" alt="Discord"></a>
+      <a href="https://playtestyour.games/v/FSGK3SY2Z6" target="_blank" rel="noopener" class="tab-discord tab-playtest" title="Leave playtest feedback">Playtest</a>
       <div class="tab-hint">Tab to switch &middot; Esc to close</div>
     </div>
     <div class="panel">
@@ -115,7 +164,6 @@
       <div class="tab-panel hidden" data-panel="controls" id="controlsPanel"></div>
       <div class="tab-panel hidden" data-panel="research" id="researchPanel"></div>
       <div class="tab-panel hidden" data-panel="prestige" id="prestigePanel"></div>
-      <div class="tab-panel hidden" data-panel="blueprints" id="blueprintsPanel"></div>
       <div class="tab-panel hidden" data-panel="pets" id="petsPanel"></div>
     </div>
   </div>
@@ -169,6 +217,7 @@
   <script src="js/cashguard.js"></script>
   <script src="js/save.js"></script>
   <script src="js/leaderboard.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
   <script src="js/cloud.js"></script>
   <script src="js/startscreen.js"></script>
   <script src="js/tutorial.js"></script>

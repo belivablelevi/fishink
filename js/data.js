@@ -1,4 +1,4 @@
-// Fish INK Factory — static data
+// Fish INK Factory - static data
 
 // sprite: column/row in fishes.png (32×32 per cell, 12×12 grid)
 // sx = (species_number - 1) % 12,  sy = floor((species_number - 1) / 12)
@@ -141,9 +141,33 @@ const FISH = [
   { species: 'Atlantic Giant Squid', category: 'Legendary', value: 1000.0, rarityWeight: 0.08, color: '#7020a0', sx:  2, sy: 9 },
   { species: 'Coelacanth', category: 'Legendary', value: 1200.0, rarityWeight: 0.05, color: '#204880', sx:  5, sy: 5 },
   { species: 'Blue Sea Dragon', category: 'Legendary', value: 1500.0, rarityWeight: 0.05, color: '#3070e0', sx:  9, sy: 10 },
+  // ── Regional ────────────────────────────────────────────────────
+  // Only caught in the waters around one offshore island (see regionAt in
+  // grid.js). `region` is the offshore island's index in offshoreIslands.
+  // Island 0 (Kelp Forest)
+  { species: 'Pale Sea Pig', category: 'Uncommon', value: 5.0, rarityWeight: 30, color: '#e8e8e0', sx: 1, sy: 11, region: 0 },
+  { species: 'Lettuce Sea Slug', category: 'Uncommon', value: 6.0, rarityWeight: 28, color: '#40c040', sx: 2, sy: 11, region: 0 },
+  { species: 'Leaf Sheep', category: 'Rare', value: 55.0, rarityWeight: 5, color: '#60b860', sx: 3, sy: 11, region: 0 },
+  // Island 1 (Tide Pools)
+  { species: 'Beach Hopper', category: 'Uncommon', value: 4.5, rarityWeight: 32, color: '#d8a878', sx: 5, sy: 11, region: 1 },
+  { species: 'Egg Cowrie', category: 'Rare', value: 60.0, rarityWeight: 5, color: '#e8e4d8', sx: 4, sy: 11, region: 1 },
+  // Island 2 (Coral Rubble)
+  { species: 'Snapping Shrimp', category: 'Uncommon', value: 6.5, rarityWeight: 28, color: '#c08070', sx: 6, sy: 11, region: 2 },
+  { species: 'Cone Snail', category: 'Rare', value: 62.0, rarityWeight: 5, color: '#805040', sx: 7, sy: 11, region: 2 },
+  { species: 'Bearded Fireworm', category: 'Epic', value: 175.0, rarityWeight: 1.2, color: '#c02020', sx: 8, sy: 11, region: 2 },
+  // Island 3 (Murky Deep)
+  { species: 'Sea Squirt', category: 'Uncommon', value: 5.5, rarityWeight: 30, color: '#506050', sx: 9, sy: 11, region: 3 },
+  { species: 'Bootlace Worm', category: 'Rare', value: 58.0, rarityWeight: 5, color: '#604838', sx: 10, sy: 11, region: 3 },
+  { species: 'Black Leather Chiton', category: 'Epic', value: 190.0, rarityWeight: 1.2, color: '#403838', sx: 11, sy: 11, region: 3 },
 ];
 
-// Display preferences — kept in their own localStorage key, separate from
+// Names for the regions above, indexed by offshoreIslands index. Regions past
+// the last name (islands added by ocean expansion) simply have no regional fish.
+const REGION_NAMES = ['Kelp Forest', 'Tide Pools', 'Coral Rubble', 'Murky Deep'];
+const REGION_RADIUS = 13;        // tiles from an island's centre that count as its waters
+const REGION_WEIGHT_BOOST = 25;  // regional species are far more likely inside their region
+
+// Display preferences - kept in their own localStorage key, separate from
 // the save-game data in js/save.js, since these are UI settings rather than
 // gameplay state and shouldn't be wiped by Restart.
 const SETTINGS_KEY = 'fishink_settings';
@@ -169,7 +193,7 @@ function toggleIndividualSellToasts() {
   saveSettings();
 }
 
-// Compact cash formatting — plain comma-separated digits below a million,
+// Compact cash formatting - plain comma-separated digits below a million,
 // then short-scale suffixes (M/B/T/Qd/Qn/...) so totals that run for hours
 // (top-bar cash, lifetime earnings) don't render as a wall of digits.
 // settings.fullNumbers lets the player opt out and always see plain digits.
@@ -197,7 +221,7 @@ const SIZES = [
   { name: 'Huge',   mult: 2.5, weight: 4  },
 ];
 
-// Each machine is only really good at certain fish categories (goodMult) —
+// Each machine is only really good at certain fish categories (goodMult) -
 // run the wrong category through it and it still works, just barely (badMult).
 const MACHINE_DEFS = {
   WASHER:  { label: 'Washer',  processTime: 2.0, cost: 400,
@@ -225,17 +249,32 @@ function weightedRandom(pool, weightKey) {
 }
 
 // luckMult > 1 boosts the weight of every non-Common species (a leveled-up
-// Fisher's effect — see fisherLuckMult in upgrades.js), leaving Common's odds
+// Fisher's effect - see fisherLuckMult in upgrades.js), leaving Common's odds
 // as the fixed baseline so the bias is purely "rarer fish come up more often"
 // rather than uniformly rescaling the whole pool.
-function randomFish(luckMult = 1) {
-  const pool = luckMult === 1 ? FISH : FISH.map(f => ({
+//
+// `loc` ({ c, r } in tiles) is where the catch happens. Regional species are
+// only in the pool inside their own region (see regionAt in grid.js), where
+// they are also boosted; catches with no location, or in home waters, use the
+// ordinary species only.
+const _regionPools = {};
+function _basePool(region) {
+  if (_regionPools[region]) return _regionPools[region];
+  return (_regionPools[region] = FISH
+    .filter(f => f.region === undefined || f.region === region)
+    .map(f => f.region === undefined ? f : { ...f, rarityWeight: f.rarityWeight * REGION_WEIGHT_BOOST }));
+}
+
+function randomFish(luckMult = 1, loc = null) {
+  const region = loc && typeof regionAt === 'function' ? regionAt(loc.c, loc.r) : -1;
+  const base = _basePool(region);
+  const pool = luckMult === 1 ? base : base.map(f => ({
     ...f, rarityWeight: f.category === 'Common' ? f.rarityWeight : f.rarityWeight * luckMult,
   }));
   const spec = weightedRandom(pool, 'rarityWeight');
   const size  = weightedRandom(SIZES, 'weight');
   const value = Math.round(spec.value * size.mult * 10) / 10;
-  // first catch of a species unlocks it in the Fish Index tab — only species
+  // first catch of a species unlocks it in the Fish Index tab - only species
   // discoveries can ever complete a category, so only bother checking then,
   // instead of re-scanning the whole category on every single catch.
   const wasNew = !game.fishIndex.has(spec.species);
@@ -243,11 +282,12 @@ function randomFish(luckMult = 1) {
   if (wasNew) maybeAwardFishIndexCategoryBonus(spec.category);
   return { species: spec.species, category: spec.category, size: size.name,
            value, color: spec.color, sx: spec.sx, sy: spec.sy, mults: [],
+           region: spec.region,
            wigglePhase: Math.random() * Math.PI * 2 };
 }
 
 // Pays out once, the moment every species in a category has been caught at
-// least once — only ever called right after a NEW species is added to fishIndex.
+// least once - only ever called right after a NEW species is added to fishIndex.
 function maybeAwardFishIndexCategoryBonus(category) {
   if (game.fishIndexBonuses.has(category)) return;
   const catSpecies = FISH.filter(f => f.category === category);
@@ -257,7 +297,7 @@ function maybeAwardFishIndexCategoryBonus(category) {
   awardCash(bonus, `Fish Index complete: ${category}! +$${bonus}`, CATEGORY_COLOR[category]);
 }
 
-// Quality Sorter's routing rule — fish at or above `threshold` (a SIZES index,
+// Quality Sorter's routing rule - fish at or above `threshold` (a SIZES index,
 // player-configurable per-instance via the Sorter's E-key settings menu) count
 // as "big" and exit toward st.dir; smaller fish exit the opposite side.
 function isBigFish(fish, threshold = 2) {

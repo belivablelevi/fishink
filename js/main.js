@@ -1,6 +1,6 @@
-// Fish INK Factory — game loop
+// Fish INK Factory - game loop
 
-const GAME_VERSION = '1.7.0';
+const GAME_VERSION = '1.12.5';
 
 let canvas, ctx;
 let lastTime = 0;
@@ -40,6 +40,7 @@ function loadImages(cb, onProgress) {
     sorter2: 'img/sorter-2.png', sorter3: 'img/sorter-3.png',
     sorter4: 'img/sorter-4.png', sorter5: 'img/sorter-5.png',
     iconMoney: 'img/icon-money.png', rod: 'img/rod.png',
+    pots: 'img/pots.png', // treasure pots: 4 colours x (intact, mid-smash, broken), 32px cells
     boatSheet: 'img/boat0001-sheet.png',
     // Axolotl pet spritesheets
     axo_pink:         'img/axolotl/pink.png',
@@ -88,7 +89,7 @@ function startLoadingAnimation() {
   };
 }
 
-// Real asset loading finishes almost instantly off disk — hold the screen
+// Real asset loading finishes almost instantly off disk - hold the screen
 // open just long enough to avoid a jarring instant flash.
 const MIN_LOADING_MS = 350;
 
@@ -123,9 +124,76 @@ function init() {
     // overwrite the intentionally fresh local start.
     const skipCloud = localStorage.getItem('fishink_skip_cloud');
     localStorage.removeItem('fishink_skip_cloud');
-    if (!skipCloud && typeof cloudLoadSave === 'function' && cloudUsername() && isLeaderboardConfigured()) {
+
+    // If this device just came back from an OAuth redirect that was started
+    // by an EXISTING recovery-code player linking their account (rather than
+    // a fresh sign-up/sign-in), handle that first - it must not fall into the
+    // fresh-signup lookup below, which would treat it as a brand-new identity.
+    let existingAccountAuthLinked = false;
+    const linkPending = localStorage.getItem(GOOGLE_LINK_PENDING_KEY);
+    if (linkPending) {
+      localStorage.removeItem(GOOGLE_LINK_PENDING_KEY);
+      if (typeof cloudGetGoogleSession === 'function') {
+        try {
+          const session = await cloudGetGoogleSession();
+          if (session) {
+            const linkResult = await cloudLinkGoogleAccount(session);
+            existingAccountAuthLinked = !!linkResult.ok;
+            if (linkResult.ok) {
+              if (typeof queueToast === 'function') queueToast('Google account linked!', '#4dca7c');
+            } else {
+              console.warn('Google account link failed', linkResult.error);
+              if (typeof queueToast === 'function') queueToast(`Google link failed: ${linkResult.error || 'unknown error'}`, '#e85d4a');
+            }
+          }
+        } catch (e) { console.warn('Google link resolution failed', e); }
+      }
+      // Falls through to the normal cloud pull below - this is still the
+      // same existing account, its save still needs loading as usual.
+    }
+
+    // Resolve a Google OAuth session (set after the redirect back from
+    // cloudSignInWithGoogle()) before the legacy username/recovery-code cloud
+    // pull below, and before runStartScreens decides which start screen to show.
+    //
+    // This must run on EVERY boot where a session might exist, not just when
+    // getLeaderboardName() is empty - cloudGetGoogleSession() is also what
+    // populates the module-level _googleSession cache that cloudLoadSave()
+    // needs below to authenticate as this player. Without it, a returning
+    // Google-linked player's row is invisible to the plain anon-key query
+    // (RLS only permits `authenticated` requests matching auth.uid()), so
+    // cloudLoadSave() finds nothing and the player looks unlinked again.
+    let resolvedViaGoogle = false;
+    if (!linkPending && !skipCloud && typeof cloudGetGoogleSession === 'function' && isLeaderboardConfigured()) {
+      try {
+        const session = await cloudGetGoogleSession();
+        if (session && !getLeaderboardName()) {
+          const existing = await cloudFindPlayerByAuthId(session.user.id, session);
+          if (existing) {
+            localStorage.setItem(LEADERBOARD_ID_KEY,  existing.client_id);
+            localStorage.setItem(LEADERBOARD_NAME_KEY, existing.username);
+            if (existing.save_data && Object.keys(existing.save_data).length > 0) {
+              try {
+                const data = existing.save_data;
+                for (let v = (data.version || 1); v < SAVE_VERSION; v++) SAVE_MIGRATIONS[v]?.(data);
+                deserializeGame(data);
+                localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+              } catch (e) { console.warn('Failed to apply Google-linked save', e); }
+            }
+            resolvedViaGoogle = true;
+          } else {
+            // First time this Google identity has signed in - the googleName
+            // start screen (startscreen.js) will pick this up and create the row.
+            _pendingGoogleSession = session;
+          }
+        }
+      } catch (e) { /* offline - fall through to the normal account-setup screen */ }
+    }
+
+    if (!resolvedViaGoogle && !skipCloud && typeof cloudLoadSave === 'function' && cloudUsername() && isLeaderboardConfigured()) {
       try {
         const cloud = await cloudLoadSave();
+        if (cloud) existingAccountAuthLinked = existingAccountAuthLinked || !!cloud.auth_user_id;
         if (cloud?.save_data && Object.keys(cloud.save_data).length > 0) {
           try {
             const localRaw  = localStorage.getItem(SAVE_KEY);
@@ -138,11 +206,15 @@ function init() {
               deserializeGame(data);
               localStorage.setItem(SAVE_KEY, JSON.stringify(data));
             }
-            // Local is newer or equal — cloud will catch up on next push
+            // Local is newer or equal - cloud will catch up on next push
           } catch (e) { console.warn('Cloud save apply failed', e); }
         }
-      } catch (e) { /* offline — local save already loaded */ }
+      } catch (e) { /* offline - local save already loaded */ }
     }
+
+    // Read by the linkGooglePrompt start screen (startscreen.js) to decide
+    // whether to nudge an existing recovery-code player to link Google.
+    _existingAccountAuthLinked = existingAccountAuthLinked;
 
     checkForUpdate();
 
@@ -161,7 +233,7 @@ function init() {
   };
 
   // Build menu's swatches snapshot drawBlock() into <canvas> previews, so it
-  // must init after images load — otherwise the washer/smoker previews would
+  // must init after images load - otherwise the washer/smoker previews would
   // freeze on the procedural fallback drawn before the sprites were ready.
   loadImages(() => {
     const elapsed = performance.now() - loadStart;
@@ -173,12 +245,6 @@ function init() {
     // remainder of the artificial minimum-duration wait.
     loadingAnim.setProgress(Math.min(loaded / total, 0.92));
   });
-
-  window._dbg = {
-    place: (id, c, r)  => placeBlock(id, c, r),
-    procBelt: (on = true) => { DEBUG_FORCE_PROC_BELT = on; },
-    resetLifetime: () => { game.lifetimeEarned = 0; saveGame(); submitLeaderboardScore(); console.log('lifetimeEarned reset and submitted'); },
-  };
 }
 
 function resizeCanvas() {
@@ -187,7 +253,7 @@ function resizeCanvas() {
   CANVAS_W = canvas.width;
   CANVAS_H = canvas.height;
   // A bigger window raises the minimum zoom needed to keep the view inside
-  // the map — re-clamp immediately so a resize while already zoomed out
+  // the map - re-clamp immediately so a resize while already zoomed out
   // doesn't leave you past the new, stricter limit until the next scroll.
   ZOOM = Math.min(ZOOM_MAX, Math.max(minZoomForViewport(), ZOOM));
 }
@@ -197,7 +263,7 @@ function loop(ts) {
   const dt = Math.min((ts - lastTime) / 1000, 0.1);
   lastTime = ts;
 
-  // A thrown error inside any one frame must not kill the rAF chain — that
+  // A thrown error inside any one frame must not kill the rAF chain - that
   // would permanently freeze updatePlayer/simUpdate too (e.g. stuck mid-cast
   // with movement locked out), not just stop rendering.
   try {
@@ -233,10 +299,12 @@ async function checkForUpdate() {
     const { version } = await res.json();
     if (version && version !== GAME_VERSION) {
       saveGame();
-      if (typeof cloudPushSaveImmediate === 'function') cloudPushSaveImmediate();
+      // Awaited - same keepalive:false-vs-immediate-reload race as
+      // restartGame() in save.js; this function is already async.
+      if (typeof cloudPushSaveImmediate === 'function') await cloudPushSaveImmediate();
       location.reload(true);
     }
-  } catch (e) { /* offline — skip silently */ }
+  } catch (e) { /* offline - skip silently */ }
 }
 
 window.addEventListener('load', init);

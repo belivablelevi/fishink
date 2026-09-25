@@ -1,71 +1,282 @@
-// Fish INK Factory — two-phase tutorial
+// Fish INK Factory - two-phase tutorial
 //
-// Phase 1 (5 steps): manual fishing loop — move, cast, catch, drop, sell.
-// Phase 2 (5 steps): automation tutorial — fires automatically after Phase 1,
-//   only for players who have never placed a block (game.blocksPlaced === 0),
-//   so returning/mid-game players aren't re-tutorialed.
+// Phase 1 (6 steps): manual fishing loop - intro, move, cast, catch, drop, sell.
+// Phase 2 (7 steps): automation - earn the cash, open Build Mode, place a
+//   Fisher, lay concrete, lay belts to the Seller, exit, wrap-up. Fires
+//   automatically after Phase 1, only for players who have never placed a
+//   block (game.blocksPlaced === 0), so returning players aren't re-tutorialed.
 //
-// Arrow targets are locked once at phase start (nearestTileMatching calls), not
-// recomputed per frame, so they don't jump around as the player walks.
+// A step is { id, text, why?, hint?, hintHtml?, targets?, ui?, manual?, dwell?,
+// advance?, onEnter? }. `text`/`why`/`manual` may be strings/values or functions.
+// `dwell` (ms) is the minimum time a step stays on screen before an event or
+// predicate is allowed to replace it, so text never flashes by unread. Steps driven by a game
+// event advance through tutorialNotify(id); steps with an `advance` predicate
+// are polled from tutorialTick() every frame (funding, path built, ...).
+// `targets` returns [{tile, label}] for the world arrow; `ui` is a CSS
+// selector (or array) for a DOM element to ring + point at.
+
+// Phones have no keyboard or right-click: the same steps say "tap" and point at
+// the on-screen joystick/Interact/Build/Rotate/Exit buttons instead.
+const onTouch = () => typeof IS_TOUCH !== 'undefined' && IS_TOUCH;
+const keyBadge = k => `<span class="tutorial-key">${k}</span>`;
+
+const GLYPH = ['→', '↓', '←', '↑'];
+// Canvas label chips use a small sans font where the arrow glyphs render as
+// unreadable slivers ("Belt |"), so spell the direction out there.
+const DIR_WORD = ['RIGHT', 'DOWN', 'LEFT', 'UP'];
 
 const TUTORIAL_PHASE1_STEPS = [
   {
+    id: 'intro',
+    manual: true,
+    nextLabel: "Let's go",
+    ui: '#cashHud',
+    text: 'Welcome to <strong>Fish INK</strong>! You\'ll catch fish, sell them for cash, then build a factory that fishes for you.',
+    why: 'This takes about two minutes. Your cash is shown bottom-left. It\'s what you\'ll spend on machines.',
+  },
+  {
     id: 'move',
-    text: 'Use <span class="tutorial-key">WASD</span> or Arrow Keys to walk around the dock.',
-    target: () => TUT.sandTile,
+    text: () => onTouch()
+      ? 'Drag the <strong>joystick</strong> (bottom-left) to walk around.'
+      : 'Use ' + keyBadge('WASD') + ' or the Arrow Keys to walk around.',
+    why: 'The dark floor is your dock. The belt on it carries fish to the <strong>SELL</strong> box at its end.',
+    targets: () => TUT.sandTile ? [{ tile: TUT.sandTile, label: 'Walk here' }] : [],
+    onEnter() {
+      TUT.startWx = player.wx; TUT.startWy = player.wy;
+      TUT.sandTile = tileNear(player, (c, r) => tileAt(c, r) === T_SHORE, 3);
+    },
   },
   {
     id: 'cast',
-    text: 'Left-click on the water within range to cast your line.',
-    target: () => TUT.fishingTile,
+    text: () => (onTouch() ? 'Tap' : 'Left-click') + ' a <strong>water</strong> tile to cast your line.',
+    why: 'You can only cast about 6 tiles from where you stand. If you see "Too far to cast!", walk closer to the water first.',
+    hint: () => {
+      const t = TUT.fishingTile;
+      if (!t) return '';
+      const d = Math.hypot((t.c + 0.5) * TILE_SIZE - player.wx, (t.r + 0.5) * TILE_SIZE - player.wy);
+      return d > FISHING_ROD_RANGE ? 'A bit too far. Walk toward the arrow.' : (onTouch() ? 'In range. Tap the water!' : 'In range. Click the water!');
+    },
+    targets: () => TUT.fishingTile ? [{ tile: TUT.fishingTile, label: onTouch() ? 'Tap here' : 'Click here' }] : [],
+    onEnter() { TUT.fishingTile = tileNear(player, (c, r) => tileAt(c, r) === T_WATER, 0); },
   },
   {
     id: 'catch',
-    text: 'Wait for it… you\'ll automatically reel in a fish!',
-    target: () => null,
+    dwell: 3500,
+    text: 'Wait for it… you\'ll reel in a fish automatically!',
+    why: () => `Casting takes a few seconds. Fish you catch are held in your hands (up to ${effectiveMaxHeld()}) until you drop them on a belt.`,
   },
   {
     id: 'drop',
-    text: 'Hover the conveyor belt and press <span class="tutorial-key">E</span> — or click it — to drop your fish on.',
-    target: () => TUT.beltTile,
+    text: () => onTouch()
+      ? 'Tap the belt to drop your fish on it.'
+      : 'Walk to the belt, then press ' + keyBadge('E') + ' (or just click the belt) to drop your fish on it.',
+    why: () => onTouch()
+      ? 'Tapping the belt works from anywhere. (Or stand right next to it, tap it, then press <strong>Interact</strong>.)'
+      : 'For <strong>E</strong> to work you must be standing right next to the belt (hover it with your mouse). Clicking the belt works from anywhere.',
+    targets: () => TUT.beltTile ? [{ tile: TUT.beltTile, label: 'Belt' }] : [],
+    onEnter() { TUT.beltTile = tileNear(player, (c, r) => IS_TRANSPORT(blockAt(c, r)), 0); },
   },
   {
     id: 'sell',
-    text: 'Watch your fish ride the belt to the Seller and cash in!',
-    target: () => TUT.sellerTile,
+    dwell: 6500, // this card explains the Seller; the fish selling used to replace it within 1-2 seconds
+    ui: '#cashHud',
+    text: 'Watch your fish ride the belt to the <strong>Seller</strong> and turn into cash!',
+    why: 'The Seller buys any fish that reaches it. Bigger and rarer fish sell for more. Watch your cash (bottom-left) go up.',
+    targets: () => TUT.sellerTile ? [{ tile: TUT.sellerTile, label: 'Seller' }] : [],
+    onEnter() { TUT.sellerTile = tileNear(player, (c, r) => blockAt(c, r) === B_SELLER, 0); },
   },
 ];
 
 const TUTORIAL_PHASE2_STEPS = [
   {
-    id: 'build_open',
-    text: 'Nice work! Now let\'s automate. Press <span class="tutorial-key">B</span> to open Build Mode.',
-    target: () => null,
+    id: 'fund',
+    ui: '#cashHud',
+    text: 'Now let\'s <strong>automate</strong>! A <strong>Fisher</strong> catches fish for you, but first you need some cash.',
+    why: () => {
+      const p = TUT.plan;
+      const tiles = p ? p.path.length : 0;
+      return `You'll need about <strong>$${TUT.needed}</strong>: $${BLOCK_COSTS[B_FISHER]} for the Fisher, plus $5 per concrete tile and $10 per belt (${tiles} tile${tiles === 1 ? '' : 's'} to reach the Seller). Fish average about $${_avgFishValue().toFixed(1)} each, and achievements pay bonus cash along the way. Keep fishing by hand: cast, drop the fish on the belt, sell.`;
+    },
+    hintHtml: () => {
+      const need = TUT.needed || 1, have = Math.floor(game.cash);
+      const pct = Math.max(0, Math.min(100, Math.round((game.cash / need) * 100)));
+      const more = Math.max(0, Math.ceil((need - game.cash) / _avgFishValue()));
+      return `Cash $${have} / $${need}<span class="tut-meter"><i style="width:${pct}%"></i></span>${more > 0 ? 'about ' + more + ' more fish' : 'ready!'}`;
+    },
+    targets: () => heldFish.length > 0
+      ? (TUT.beltTile ? [{ tile: TUT.beltTile, label: 'Drop fish here' }] : [])
+      : (TUT.fishingTile ? [{ tile: TUT.fishingTile, label: 'Cast here' }] : []),
+    advance: () => fisherExists() || game.cash >= TUT.needed,
+    onEnter() {
+      TUT.fishingTile = tileNear(player, (c, r) => tileAt(c, r) === T_WATER, 0);
+      TUT.beltTile    = tileNear(player, (c, r) => IS_TRANSPORT(blockAt(c, r)), 0);
+    },
   },
   {
-    id: 'place_concrete',
-    text: 'Select <strong>Concrete</strong> (Floor &amp; Belts tab), then click any land tile to lay a foundation. <em>Right-click removes buildings.</em>',
-    target: () => TUT.landTile,
+    id: 'build_open',
+    ui: '#buildHint',
+    text: () => 'You can afford it! ' + (onTouch() ? 'Tap the <strong>Build</strong> button' : 'Press ' + keyBadge('B')) + ' to open Build Mode.',
+    why: () => 'Build Mode is where you place machines. Everything you place costs cash' + (onTouch() ? '.' : ', and right-click removes things (you get half back).'),
+    advance: () => fisherExists(),
   },
   {
     id: 'place_fisher',
-    text: 'Select <strong>Fisher</strong> (Fishing tab) and place it on a shore tile next to water. It\'ll catch fish automatically.',
-    target: () => TUT.shoreTile,
+    ui: () => cardSelector(B_FISHER),
+    text: () => (onTouch() ? 'Tap' : 'Click') + ' the <strong>Fisher</strong> card, then ' + (onTouch() ? 'tap' : 'click') + ' the glowing <strong>shore</strong> tile.',
+    why: () => 'Fishers only work on shore tiles (sand next to water). It catches fish forever and pushes them onto any belt beside it.'
+      + (onTouch() ? '' : ' Tip: with the menu closed, press ' + keyBadge('1') + ' Concrete, ' + keyBadge('2') + ' Fisher, ' + keyBadge('3') + ' Belt.'),
+    targets: () => TUT.plan ? [{ tile: TUT.plan.fisher, label: 'Place Fisher' }] : [],
+    advance: () => fisherExists(),
+  },
+  {
+    id: 'place_concrete',
+    ui: () => cardSelector(B_CONCRETE),
+    text: 'Now lay <strong>Concrete</strong> on the glowing tiles to make a path.',
+    why: () => 'Belts can only be built on concrete floor ($5 a tile). Select Concrete (' + (onTouch() ? 'open <strong>Build</strong> and tap its card' : keyBadge('1') + ' or its card') + ') and ' + (onTouch() ? 'tap' : 'click') + ' each glowing tile.',
+    hint: () => {
+      const p = TUT.plan;
+      if (!p) return '';
+      const done = p.path.filter(t => tileAt(t.c, t.r) === T_CONCRETE).length;
+      return shortCashNote() + `Concrete laid: ${done} / ${p.path.length}`;
+    },
+    targets: () => planTargets('concrete'),
+    advance: () => floorReady(),
   },
   {
     id: 'place_belt',
-    text: 'Select <strong>Belt</strong> and place it next to your Fisher, pointing toward the Seller. Rotate with <span class="tutorial-key">R</span>.',
-    target: () => TUT.sellerTile,
-  },
-  {
-    id: 'link_seller',
-    text: 'Keep laying Belts to build a complete path to the <strong>Seller</strong> — the arrow shows where! Each belt must point in the right direction.',
-    target: () => TUT.sellerTile,
+    ui: () => (buildMode.active && _nextBeltNeedsRotate()) ? ['#hudRotateBtn', cardSelector(B_BELT)] : cardSelector(B_BELT),
+    text: 'Place <strong>Belts</strong> on those same tiles, each one facing the way fish should travel.',
+    why: () => `Belts carry fish the way their arrows point. Select Belt (${onTouch() ? 'its card in Build' : keyBadge('3')}) and ${onTouch() ? 'tap <strong>Rotate</strong>' : 'press ' + keyBadge('R')} to turn it before placing. The last belt should point into the ${TUT.plan ? TUT.plan.goalName : 'Seller'}.`,
+    hint: () => beltHint(),
+    targets: () => planTargets('belt'),
+    advance: () => pathConnected().ok,
   },
   {
     id: 'close_build',
-    text: 'Path connected! Exit Build Mode to watch fish sell automatically — press <span class="tutorial-key">B</span> or <span class="tutorial-key">Esc</span>, or tap the ✕ button.',
-    target: () => null,
+    dwell: 3000,
+    ui: ['#hudExitBtn', '#menuCloseBtn'], // the palette is closed here, so the HUD's Exit button is the visible one
+    text: () => 'Path connected! ' + (onTouch() ? 'Tap <strong>Exit</strong>' : 'Press ' + keyBadge('B') + ' or ' + keyBadge('Esc')) + ' to leave Build Mode and watch it work.',
+    why: 'Your Fisher now catches fish on its own and the belt carries every one to the Seller.',
+  },
+  {
+    id: 'upgrade',
+    // Can't afford the $75 upgrade yet (a starter Fisher earns slowly)? Let the
+    // player move on instead of stalling the tutorial.
+    manual: () => game.cash < machineUpgradeCost(B_FISHER, 0),
+    nextLabel: 'Later',
+    text: () => onTouch()
+      ? 'Tap your <strong>Fisher</strong>, then press <strong>Interact</strong> to upgrade it.'
+      : 'Point at your <strong>Fisher</strong> and press ' + keyBadge('E') + ' to upgrade it.',
+    why: () => `You don't need to walk up to a machine. Just point at it${onTouch() ? '' : ' with your mouse'}. Upgrades make it catch faster and luckier. This one costs <strong>$${machineUpgradeCost(B_FISHER, 0)}</strong>.`,
+    hint: () => {
+      const cost = machineUpgradeCost(B_FISHER, 0);
+      return game.cash >= cost ? 'You can afford it now!' : `You have $${Math.floor(game.cash)} of $${cost}. Tap Later to save up.`;
+    },
+    targets: () => TUT.fisher ? [{ tile: TUT.fisher, label: onTouch() ? 'Tap + Interact' : 'Point + E' }] : [],
+    advance: () => { const f = findFisher(); return !!f && (stateAt(f.c, f.r).level || 0) >= 1; },
+  },
+  {
+    id: 'wrap',
+    manual: true,
+    nextLabel: 'Finish',
+    text: 'Your factory is running! Fish sell automatically now.',
+    why: 'Next: check the <strong>Upgrades</strong> and <strong>Research</strong> tabs in the Build menu, and add more Fishers as your cash grows. Press the <strong>?</strong> button (top-left) any time to re-read this tutorial.',
+    targets: () => TUT.fisher ? [{ tile: TUT.fisher, label: 'Your Fisher' }] : [],
+  },
+];
+
+// Phase 3: an optional island tour, offered once when the automation tutorial
+// ends (and any time from the Controls tab). Everything it points at already
+// exists in the game; it just was never explained: the boat (F at a beach),
+// other islands with regional fish and treasure chests, and Ocean Expansion.
+const _CHEST_GATES = [5000, 25000, 100000];
+function _chestGate(i) { return _CHEST_GATES[Math.min(Math.max(i, 1) - 1, _CHEST_GATES.length - 1)]; }
+
+function pickExploreIsland() {
+  const pc = player.wx / TILE_SIZE, pr = player.wy / TILE_SIZE;
+  let best = -1, bd = Infinity;
+  for (let i = 0; i < offshoreIslands.length; i++) {
+    const isl = offshoreIslands[i];
+    // Prefer islands with a treasure chest (index 1+) over the worker island.
+    const d = Math.hypot(pc - isl.cx, pr - isl.cy) + (i >= 1 ? 0 : 6);
+    if (d < bd) { bd = d; best = i; }
+  }
+  TUT.exIsland = best;
+}
+function exploreIslandTile() {
+  const isl = offshoreIslands[TUT.exIsland];
+  if (!isl) return null;
+  return TUT.exIsland >= 1 ? chestTile(isl) : { c: Math.floor(isl.cx), r: Math.floor(isl.cy) };
+}
+function nearExploreIsland(dist) {
+  const isl = offshoreIslands[TUT.exIsland];
+  if (!isl) return true;
+  return Math.hypot(player.wx / TILE_SIZE - isl.cx, player.wy / TILE_SIZE - isl.cy) < dist;
+}
+function _regionalFound() {
+  const reg = FISH.filter(f => f.region !== undefined);
+  return { found: reg.filter(f => game.fishIndex.has(f.species)).length, total: reg.length };
+}
+
+const TUTORIAL_EXPLORE_STEPS = [
+  {
+    id: 'x_offer',
+    manual: true,
+    nextLabel: 'Show me',
+    text: 'Want a quick tour of the islands?',
+    why: 'There is more out there than your dock: other islands with treasure pots, fish that only live around them, and a way to grow the whole map. It takes about a minute.',
+  },
+  {
+    id: 'x_beach',
+    text: 'Walk to a <strong>beach</strong> (the sand at the water\'s edge) and press ' + keyBadge('F') + ' to board your boat.',
+    why: 'Your boat is waiting at any beach. Once aboard you sail with <strong>WASD</strong>, and pressing <strong>F</strong> at a beach again lets you step out.',
+    targets: () => TUT.exBeach ? [{ tile: TUT.exBeach, label: 'Board here (F)' }] : [],
+    advance: () => player.inBoat,
+    onEnter() { pickExploreIsland(); TUT.exBeach = tileNear(player, (c, r) => tileAt(c, r) === T_SHORE, 0); },
+  },
+  {
+    id: 'x_sail',
+    text: 'Sail to the marked <strong>island</strong> with ' + keyBadge('WASD') + '.',
+    why: 'Follow the arrow across the water. Islands are dotted around the ocean, and each one is different.',
+    targets: () => { const t = exploreIslandTile(); return t ? [{ tile: t, label: 'Island' }] : []; },
+    advance: () => nearExploreIsland(9),
+  },
+  {
+    id: 'x_land',
+    text: 'Steer up to the island\'s beach and press ' + keyBadge('F') + ' to land.',
+    why: 'You can only step out on sand. If it says "Sail to shore to disembark", nudge closer to the beach.',
+    targets: () => { const t = exploreIslandTile(); return t ? [{ tile: t, label: 'Land nearby' }] : []; },
+    advance: () => !player.inBoat && nearExploreIsland(10),
+  },
+  {
+    id: 'x_fish',
+    manual: true,
+    nextLabel: 'Got it',
+    dwell: 1500,
+    text: 'Cast a line from the island shore.',
+    why: 'The waters around each island hold <strong>fish you cannot catch at home</strong>. Every island has its own kinds, and Fishers you build on the island catch them too. Check the <strong>Fish Index</strong> to see what you have found.',
+    hint: () => { const r = _regionalFound(); return `Island species found: ${r.found} / ${r.total}`; },
+  },
+  {
+    id: 'x_chest',
+    manual: true,
+    nextLabel: 'Got it',
+    dwell: 1500,
+    text: () => TUT.exIsland >= 1
+      ? 'See the <strong>treasure pot</strong>? It lies broken until you have earned $' + _chestGate(TUT.exIsland).toLocaleString() + ' in total, then it mends itself.'
+      : 'This is the <strong>Worker Island</strong>. Point at its depot and press ' + keyBadge('E') + ' to hire fishermen.',
+    why: () => TUT.exIsland >= 1
+      ? 'Once it is whole again, point at it and press <strong>E</strong> to smash it open. It pays a share of your cash, adds a permanent income bonus, mends itself every few minutes, and the first time it also holds a rare keepsake fish.'
+      : 'Hired fishermen catch fish for you on their own and bring them back to your dock.',
+    targets: () => { const t = exploreIslandTile(); return t ? [{ tile: t, label: TUT.exIsland >= 1 ? 'Treasure pot' : 'Worker depot' }] : []; },
+  },
+  {
+    id: 'x_expand',
+    manual: true,
+    nextLabel: 'Done',
+    ui: '#gameMenuToggleBtn',
+    text: 'One more thing: open the <strong>cog menu</strong> to expand the ocean.',
+    why: () => `<strong>Expand Island</strong> grows the map and adds new islands to explore. The first ring costs <strong>$${islandExpandCost().toLocaleString()}</strong>.`,
   },
 ];
 
@@ -73,26 +284,267 @@ const TUT = {
   active: false,
   phase: 1,       // 1 = manual fishing, 2 = automation
   stepIndex: 0,
-  // Phase 1 targets (locked at startTutorial)
+  skipAsk: false, // showing the "skip what?" choice
   sandTile: null, fishingTile: null, beltTile: null, sellerTile: null,
-  // Phase 2 targets (locked at startPhase2Tutorial)
-  landTile: null, shoreTile: null,
+  plan: null,     // { fisher, path:[{c,r}], dirs:[0-3], goalName, cost }
+  needed: 0,      // cash needed to finish phase 2 without grinding mid-build
+  fisher: null,   // { c, r } of the player's placed Fisher
+  startWx: 0, startWy: 0,
+  shownAt: 0,     // performance.now() when the current step appeared (for dwell)
+  exIsland: -1,   // offshoreIslands index the island tour is heading for
+  exBeach: null,  // beach tile the tour points the player at
+  advanceQueued: false, // a step finished before its dwell time elapsed
+  review: null,   // index into allSteps() being re-read (null = showing the live step)
 };
 
-function startTutorial() {
-  TUT.active    = true;
-  TUT.phase     = 1;
-  TUT.stepIndex = 0;
-  TUT.startWx   = player.wx;
-  TUT.startWy   = player.wy;
+function currentSteps() { return TUT.phase === 3 ? TUTORIAL_EXPLORE_STEPS : TUT.phase === 2 ? TUTORIAL_PHASE2_STEPS : TUTORIAL_PHASE1_STEPS; }
+function currentStep()  { return currentSteps()[TUT.stepIndex]; }
+const _val = v => (typeof v === 'function' ? v() : v);
 
-  TUT.sandTile    = nearestTileMatching((c, r) => tileAt(c, r) === T_SHORE, 20);
-  TUT.fishingTile = nearestTileMatching((c, r) => tileAt(c, r) === T_WATER, 20);
-  TUT.beltTile    = nearestTileMatching((c, r) => IS_TRANSPORT(blockAt(c, r)), 20);
-  TUT.sellerTile  = nearestTileMatching((c, r) => blockAt(c, r) === B_SELLER, 20);
+// Every step in order across phases, for review and the How to play panel.
+function allSteps() { return [...TUTORIAL_PHASE1_STEPS, ...TUTORIAL_PHASE2_STEPS, ...TUTORIAL_EXPLORE_STEPS]; }
+function liveFlatIndex() {
+  const base = TUT.phase === 3 ? TUTORIAL_PHASE1_STEPS.length + TUTORIAL_PHASE2_STEPS.length
+             : TUT.phase === 2 ? TUTORIAL_PHASE1_STEPS.length : 0;
+  return base + TUT.stepIndex;
+}
 
+// Average sale value of one home-waters catch, from the real fish tables.
+function _avgFishValue() {
+  const pool = FISH.filter(f => f.region === undefined);
+  const w = pool.reduce((sum, f) => sum + f.rarityWeight, 0) || 1;
+  const v = pool.reduce((sum, f) => sum + f.value * f.rarityWeight, 0) / w;
+  const sw = SIZES.reduce((sum, z) => sum + z.weight, 0) || 1;
+  const m = SIZES.reduce((sum, z) => sum + z.mult * z.weight, 0) / sw;
+  return Math.max(0.1, v * m);
+}
+
+// True when the next belt the plan still needs faces a different way than the
+// belt currently selected in Build Mode, i.e. the player must rotate it.
+function _nextBeltNeedsRotate() {
+  const p = TUT.plan;
+  if (!p || !IS_TRANSPORT(buildMode.selectedId)) return false;
+  for (let i = 0; i < p.path.length; i++) {
+    const t = p.path[i];
+    const ok = IS_TRANSPORT(blockAt(t.c, t.r)) && (stateAt(t.c, t.r).dir || 0) === p.dirs[i];
+    if (!ok) return (buildMode.beltDir % 4) !== p.dirs[i];
+  }
+  return false;
+}
+
+function cardSelector(id) { return `#buildPanel .item-card[data-id="${id}"]`; }
+
+// ─── Tile helpers ────────────────────────────────────────────────────────────
+// Nearest tile matching pred, searching outward from `from` (an object with
+// wx/wy). minDist skips tiles closer than that many tiles.
+function tileNear(from, pred, minDist) {
+  const pc = Math.floor(from.wx / TILE_SIZE), pr = Math.floor(from.wy / TILE_SIZE);
+  for (let radius = minDist; radius <= 30; radius++) {
+    for (let dr = -radius; dr <= radius; dr++) {
+      for (let dc = -radius; dc <= radius; dc++) {
+        if (Math.max(Math.abs(dr), Math.abs(dc)) !== radius) continue;
+        const c = pc + dc, r = pr + dr;
+        if (pred(c, r)) return { c, r };
+      }
+    }
+  }
+  return null;
+}
+function findFisher() {
+  if (TUT.fisher && blockAt(TUT.fisher.c, TUT.fisher.r) === B_FISHER) return TUT.fisher;
+  TUT.fisher = null;
+  for (let r = 0; r < WORLD_ROWS; r++)
+    for (let c = 0; c < WORLD_COLS; c++)
+      if (blocks[r][c] === B_FISHER) return (TUT.fisher = { c, r });
+  return null;
+}
+function fisherExists() { return !!findFisher(); }
+
+// ─── Route planning ──────────────────────────────────────────────────────────
+// Follows belts from (c,r) the way the sim does. ok=true once the chain ends
+// in a Seller; otherwise says where it stopped and why.
+function traceToSeller(c, r) {
+  const seen = new Set();
+  for (let i = 0; i < 300; i++) {
+    const key = c + ',' + r;
+    if (seen.has(key)) return { ok: false, reason: 'loop', c, r };
+    seen.add(key);
+    const d = BELT_DIRS[stateAt(c, r).dir || 0];
+    const nc = c + d.dx, nr = r + d.dy, nb = blockAt(nc, nr);
+    if (nb === B_SELLER) return { ok: true };
+    if (IS_TRANSPORT(nb)) { c = nc; r = nr; continue; }
+    return { ok: false, reason: nb === B_NONE ? 'empty' : 'blocked', c, r, nc, nr };
+  }
+  return { ok: false, reason: 'loop', c, r };
+}
+
+function pathConnected() {
+  const f = findFisher();
+  if (!f) return { ok: false, reason: 'nofisher' };
+  let best = { ok: false, reason: 'nobelt' };
+  for (const { dc, dr } of FISHER_DIRS) {
+    const nc = f.c + dc, nr = f.r + dr;
+    if (!IS_TRANSPORT(blockAt(nc, nr))) continue;
+    const res = traceToSeller(nc, nr);
+    if (res.ok) return res;
+    best = res;
+  }
+  return best;
+}
+
+const _N4 = [{ dc: 1, dr: 0 }, { dc: 0, dr: 1 }, { dc: -1, dr: 0 }, { dc: 0, dr: -1 }];
+const _dirIdx = (dc, dr) => _N4.findIndex(d => d.dc === dc && d.dr === dr);
+const _routable = (c, r) => (tileAt(c, r) === T_EMPTY || tileAt(c, r) === T_CONCRETE) && blockAt(c, r) === B_NONE;
+
+// Cheapest-by-steps route from a Fisher spot to the Seller (or to any existing
+// belt that already leads there). Returns { fisher, path, dirs, goalName, cost }
+// or null. If `fixed` is given the Fisher is already placed there.
+function planRoute(fixed) {
+  // Goal tiles: the Seller, and existing belts that already reach it.
+  const goal = new Map(); // "c,r" -> name
+  for (let r = 0; r < WORLD_ROWS; r++) {
+    for (let c = 0; c < WORLD_COLS; c++) {
+      const id = blocks[r][c];
+      if (id === B_SELLER) goal.set(c + ',' + r, 'Seller');
+      else if (IS_TRANSPORT(id) && traceToSeller(c, r).ok) goal.set(c + ',' + r, 'belt to the Seller');
+    }
+  }
+  // Reverse BFS out from the goal through routable tiles; parent points toward the goal.
+  const dist = new Map(), parent = new Map(), queue = [];
+  for (const key of goal.keys()) {
+    const [gc, gr] = key.split(',').map(Number);
+    for (const { dc, dr } of _N4) {
+      const c = gc + dc, r = gr + dr, k = c + ',' + r;
+      if (_routable(c, r) && !dist.has(k)) { dist.set(k, 1); parent.set(k, { goalKey: key }); queue.push({ c, r }); }
+    }
+  }
+  for (let i = 0; i < queue.length; i++) {
+    const { c, r } = queue[i], d = dist.get(c + ',' + r);
+    for (const { dc, dr } of _N4) {
+      const nc = c + dc, nr = r + dr, k = nc + ',' + nr;
+      if (_routable(nc, nr) && !dist.has(k)) { dist.set(k, d + 1); parent.set(k, { c, r }); queue.push({ c: nc, r: nr }); }
+    }
+  }
+  // Pick the Fisher spot with the shortest route.
+  let bestSpot = null, bestStart = null, bestLen = Infinity;
+  const spots = fixed ? [fixed] : [];
+  if (!fixed) {
+    for (let r = 0; r < WORLD_ROWS; r++)
+      for (let c = 0; c < WORLD_COLS; c++)
+        if (tileAt(c, r) === T_SHORE && canPlaceBlock(B_FISHER, c, r, 0)) spots.push({ c, r });
+  }
+  for (const s of spots) {
+    let len = Infinity, start = null, touchesGoal = false;
+    for (const { dc, dr } of _N4) {
+      const k = (s.c + dc) + ',' + (s.r + dr);
+      if (goal.has(k)) touchesGoal = true;
+      if (dist.has(k) && dist.get(k) < len) { len = dist.get(k); start = { c: s.c + dc, r: s.r + dr }; }
+    }
+    if (touchesGoal) { len = 0; start = null; }
+    if (len < bestLen || (len === bestLen && bestSpot && Math.hypot(s.c * TILE_SIZE - player.wx, s.r * TILE_SIZE - player.wy) < Math.hypot(bestSpot.c * TILE_SIZE - player.wx, bestSpot.r * TILE_SIZE - player.wy))) {
+      bestLen = len; bestSpot = s; bestStart = start;
+    }
+  }
+  if (!bestSpot || bestLen === Infinity) return null;
+  const path = [], dirs = [];
+  let goalName = 'Seller';
+  if (bestStart) {
+    let cur = bestStart;
+    for (;;) {
+      path.push({ c: cur.c, r: cur.r });
+      const p = parent.get(cur.c + ',' + cur.r);
+      if (p.goalKey) {
+        const [gc, gr] = p.goalKey.split(',').map(Number);
+        dirs.push(_dirIdx(gc - cur.c, gr - cur.r));
+        goalName = goal.get(p.goalKey);
+        break;
+      }
+      dirs.push(_dirIdx(p.c - cur.c, p.r - cur.r));
+      cur = { c: p.c, r: p.r };
+    }
+  }
+  const cost = path.reduce((sum, t) => sum + BLOCK_COSTS[B_BELT] + (tileAt(t.c, t.r) === T_EMPTY ? BLOCK_COSTS[B_CONCRETE] : 0), 0);
+  return { fisher: bestSpot, path, dirs, goalName, cost };
+}
+
+function replan(fixed) {
+  TUT.plan = planRoute(fixed);
+  TUT.needed = BLOCK_COSTS[B_FISHER] + (TUT.plan ? TUT.plan.cost : 60);
+}
+
+function floorReady() {
+  if (!TUT.plan) return pathConnected().ok;
+  return TUT.plan.path.every(t => tileAt(t.c, t.r) === T_CONCRETE) || pathConnected().ok;
+}
+
+// Glowing tiles for the concrete / belt steps: the next couple still missing.
+function planTargets(kind) {
+  const p = TUT.plan;
+  if (!p) return [];
+  const out = [];
+  for (let i = 0; i < p.path.length && out.length < 3; i++) {
+    const t = p.path[i];
+    if (kind === 'concrete') {
+      if (tileAt(t.c, t.r) !== T_CONCRETE) out.push({ tile: t, label: out.length === 0 ? 'Concrete' : '' });
+    } else {
+      const ok = IS_TRANSPORT(blockAt(t.c, t.r)) && (stateAt(t.c, t.r).dir || 0) === p.dirs[i];
+      // Only the first pending tile gets a chip - stacked chips overlap.
+      if (!ok) out.push({ tile: t, label: out.length === 0 ? `Belt: face ${DIR_WORD[p.dirs[i]]}` : '' });
+    }
+  }
+  return out;
+}
+
+// Cash still needed for whatever part of the planned path isn't built yet.
+// Placing with too little cash only ever produced a "Not enough cash!" toast.
+function shortCashNote() {
+  const p = TUT.plan;
+  if (!p) return '';
+  let need = 0;
+  for (const t of p.path) {
+    if (!IS_TRANSPORT(blockAt(t.c, t.r))) need += BLOCK_COSTS[B_BELT];
+    if (tileAt(t.c, t.r) !== T_CONCRETE) need += BLOCK_COSTS[B_CONCRETE];
+  }
+  return game.cash < need ? `Not enough cash: you need $${Math.ceil(need - game.cash)} more. Keep fishing by hand. ` : '';
+}
+
+function beltHint() {
+  const p = TUT.plan;
+  if (!p) return '';
+  const short = shortCashNote();
+  if (short) return short;
+  let placed = 0, wrong = null, next = null;
+  for (let i = 0; i < p.path.length; i++) {
+    const t = p.path[i];
+    if (IS_TRANSPORT(blockAt(t.c, t.r))) {
+      if ((stateAt(t.c, t.r).dir || 0) === p.dirs[i]) placed++; else if (!wrong) wrong = i;
+    } else if (next === null) next = i;
+  }
+  if (wrong !== null) return `A belt is facing the wrong way. The glowing tile needs ${GLYPH[p.dirs[wrong]]}. Right-click it and place it again.`;
+  if (next !== null) {
+    const rot = (buildMode.beltDir % 4) === p.dirs[next] ? ' (facing is right!)' : (onTouch() ? ' (tap Rotate)' : ' (press R to rotate)');
+    return `Belts placed: ${placed} / ${p.path.length} · next belt should face ${GLYPH[p.dirs[next]]}${rot}`;
+  }
+  const res = pathConnected();
+  return res.ok ? '' : 'Almost there. Make sure every belt faces along the path.';
+}
+
+// ─── Lifecycle ───────────────────────────────────────────────────────────────
+function enterStep() {
+  TUT.shownAt = performance.now();
+  TUT.advanceQueued = false;
+  const step = currentStep();
+  if (step && step.onEnter) step.onEnter();
   renderTutorialOverlay();
   updateBuildHintUI();
+}
+
+function startTutorial() {
+  TUT.active = true;
+  TUT.phase = 1;
+  TUT.stepIndex = 0;
+  TUT.skipAsk = false;
+  enterStep();
 }
 
 function startPhase2Tutorial() {
@@ -103,33 +555,181 @@ function startPhase2Tutorial() {
     saveGame();
     return;
   }
-  TUT.active    = true;
-  TUT.phase     = 2;
+  TUT.active = true;
+  TUT.phase = 2;
   TUT.stepIndex = 0;
-  TUT.landTile  = nearestTileMatching((c, r) => tileAt(c, r) === T_EMPTY, 20);
-  TUT.shoreTile = nearestTileMatching((c, r) => tileAt(c, r) === T_SHORE, 20);
-
-  renderTutorialOverlay();
-  updateBuildHintUI();
+  TUT.skipAsk = false;
+  TUT.fisher = null;
+  replan(null);
+  enterStep();
 }
 
-// Single integration point — cheap no-op unless we're waiting on this action.
-function tutorialNotify(actionType) {
-  if (!TUT.active) return;
-  const steps = TUT.phase === 2 ? TUTORIAL_PHASE2_STEPS : TUTORIAL_PHASE1_STEPS;
-  const step  = steps[TUT.stepIndex];
-  if (!step || step.id !== actionType) return;
+function replayTutorial() {
+  if (buildMode.active) exitBuildMode();
+  game.tutorialDone = false;
+  game.automationTutorialDone = true; // replay covers the manual basics only
+  startTutorial();
+}
+
+// A small "you did it" beat when a step completes: a chime, sparkles over the
+// player, and a green pulse on the card (which then swaps to the next step).
+function tutorialCelebrate(big) {
+  if (typeof sfxTutorialStep === 'function') sfxTutorialStep();
+  if (typeof spawnParticles === 'function') spawnParticles(player.wx, player.wy - 22, 'sparkle', big ? 22 : 9);
+  const el = document.getElementById('tutorialOverlay');
+  const badge = document.getElementById('tutorialBadge');
+  if (!el || el.classList.contains('hidden')) return;
+  el.classList.add('tut-done');
+  if (badge) { badge.classList.add('done'); badge.textContent = '✓'; }
+  clearTimeout(tutorialCelebrate._t);
+  tutorialCelebrate._t = setTimeout(() => el.classList.remove('tut-done'), 420);
+}
+
+function advanceStep() {
+  const steps = currentSteps();
+  if (currentStep() && currentStep().id === 'upgrade') {
+    const f = findFisher();
+    if (f && (stateAt(f.c, f.r).level || 0) >= 1) game.upgradeTipDone = true;
+  }
+  // The very first "Let's go" is just a greeting, not an accomplishment.
+  if (!(TUT.phase === 1 && TUT.stepIndex === 0)) tutorialCelebrate(TUT.stepIndex >= steps.length - 1);
   if (TUT.stepIndex >= steps.length - 1) {
-    TUT.phase === 2 ? finishPhase2Tutorial() : finishTutorial();
+    TUT.phase === 3 ? finishExploreTour() : TUT.phase === 2 ? finishPhase2Tutorial() : finishTutorial();
   } else {
     TUT.stepIndex++;
-    renderTutorialOverlay();
-    updateBuildHintUI();
+    enterStep();
   }
+}
+
+// Milliseconds left before the current step is allowed to be replaced.
+function _dwellLeft() {
+  const step = currentStep();
+  return Math.max(0, TUT.shownAt + ((step && step.dwell) || 0) - performance.now());
+}
+
+// A step's goal was reached. If it has only just appeared, hold the advance
+// until its dwell time has passed (tutorialTick finishes it) so the text can
+// actually be read.
+function requestAdvance() {
+  if (_dwellLeft() > 0) { TUT.advanceQueued = true; return; }
+  advanceStep();
+}
+
+// Event-driven steps (cast/catch/drop/sell/close_build/...) advance here.
+function tutorialNotify(actionType) {
+  if (!TUT.active) return;
+  const step = currentStep();
+  if (!step || step.id !== actionType) return;
+  requestAdvance();
+}
+
+// "Got it" button / Enter key for manual steps; also leaves review mode.
+function tutorialNext() {
+  if (!TUT.active) return;
+  if (TUT.review !== null) { TUT.review = null; renderTutorialOverlay(); return; }
+  const step = currentStep();
+  if (step && _val(step.manual)) advanceStep();
+}
+
+// Re-read earlier steps without undoing anything: Back / Forward move a
+// read-only view; the live step (and its arrows) carries on underneath.
+function tutorialBack() {
+  if (!TUT.active) return;
+  const cur = TUT.review !== null ? TUT.review : liveFlatIndex();
+  if (cur <= 0) return;
+  TUT.review = cur - 1;
+  renderTutorialOverlay();
+}
+function tutorialForward() {
+  if (!TUT.active || TUT.review === null) return;
+  TUT.review = TUT.review + 1 >= liveFlatIndex() ? null : TUT.review + 1;
+  renderTutorialOverlay();
+}
+window.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || !TUT.active || TUT.skipAsk) return;
+  if (document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  tutorialNext();
+});
+
+// Called by buyAndPlace after every placement.
+function tutorialOnPlaced(id, c, r) {
+  if (!TUT.active || TUT.phase !== 2) return;
+  if (id === B_FISHER) { TUT.fisher = { c, r }; replan({ c, r }); }
+  tutorialTick();
+}
+
+// Phones have no right-click, so a wrongly-faced belt in the planned path
+// couldn't be removed and re-placed - the touch player would be stuck. Turn it
+// for them instead.
+function fixWrongBelts() {
+  const p = TUT.plan;
+  if (!p) return;
+  for (let i = 0; i < p.path.length; i++) {
+    const t = p.path[i];
+    if (!IS_TRANSPORT(blockAt(t.c, t.r))) continue;
+    const st = stateAt(t.c, t.r);
+    if ((st.dir || 0) === p.dirs[i]) continue;
+    st.dir = p.dirs[i];
+    st.routeLockedFor = null;
+    queueToast('Turned that belt to face the right way.', '#4dca7c');
+  }
+}
+
+// Polled every sim frame: advance predicate steps, refresh hint text and the
+// DOM pointer.
+let _lastHint = null;
+function tutorialTick() {
+  checkExplorationHints();
+  if (!TUT.active) { _syncUiPointer(null); return; }
+  if (onTouch() && TUT.phase === 2 && currentStep()?.id === 'place_belt') fixWrongBelts();
+  for (let guard = 0; guard < 8; guard++) {
+    const s = currentStep();
+    if (!TUT.active || !s) break;
+    if (!(TUT.advanceQueued || (s.advance && s.advance()))) break;
+    if (_dwellLeft() > 0) { TUT.advanceQueued = true; break; }
+    advanceStep();
+  }
+  if (!TUT.active) { _syncUiPointer(null); return; }
+  const step = currentStep();
+  if (TUT.review === null) {
+    const html = step && step.hintHtml ? step.hintHtml() : null;
+    const hint = html !== null ? html : (step && step.hint ? step.hint() : '');
+    if (hint !== _lastHint) {
+      _lastHint = hint;
+      const el = document.getElementById('tutorialStepHint');
+      if (el) { if (html !== null) el.innerHTML = hint; else el.textContent = hint; }
+    }
+    // Steps whose "Got it" button appears conditionally (e.g. can't afford yet).
+    const nextBtn = document.getElementById('tutorialNextBtn');
+    if (nextBtn && step && typeof step.manual === 'function') nextBtn.classList.toggle('hidden', !step.manual());
+  }
+  _syncUiPointer(step && !UPGRADE_TIP.active ? step.ui : null);
 }
 
 function skipTutorial() {
   if (UPGRADE_TIP.active) { dismissUpgradeTip(); return; }
+  if (TUT.phase === 3) { finishExploreTour(); return; }
+  // In phase 1, skipping used to silently skip the automation lessons too -
+  // ask which one the player means.
+  if (TUT.phase === 1 && !TUT.skipAsk) {
+    TUT.skipAsk = true;
+    renderTutorialOverlay();
+    return;
+  }
+  skipTutorialChoice('all');
+}
+
+function skipTutorialChoice(which) {
+  TUT.skipAsk = false;
+  if (which === 'keep') { renderTutorialOverlay(); return; }
+  if (which === 'fishing') {
+    game.tutorialDone = true;
+    TUT.active = false;
+    renderTutorialOverlay();
+    startPhase2Tutorial(); // still teaches building if they haven't built yet
+    saveGame();
+    return;
+  }
   TUT.active = false;
   if (TUT.phase === 2) {
     game.automationTutorialDone = true;
@@ -159,6 +759,53 @@ function finishPhase2Tutorial() {
   renderTutorialOverlay();
   updateBuildHintUI();
   queueToast('Factory is running! Fish sell automatically now.', '#4dca7c');
+  maybeOfferExplore();
+}
+
+// Starts the island tour. `skipOffer` jumps past the "want a tour?" card (used
+// when the player asked for it from the Controls tab).
+function startExploreTour(skipOffer) {
+  if (!offshoreIslands || offshoreIslands.length === 0) { queueToast('There are no islands to explore yet.', '#9aa0a8'); return; }
+  if (onTouch()) { queueToast('The boat needs a keyboard (F to sail).', '#9aa0a8'); return; }
+  if (buildMode.active) exitBuildMode();
+  TUT.active = true;
+  TUT.phase = 3;
+  TUT.stepIndex = skipOffer ? 1 : 0;
+  TUT.skipAsk = false;
+  TUT.review = null;
+  enterStep();
+}
+
+// Offered once, right after the automation tutorial. Skipped on touch (the boat
+// is keyboard-only) and when the world has no islands.
+function maybeOfferExplore() {
+  if (game.exploreOffered || onTouch() || !offshoreIslands || offshoreIslands.length === 0) return;
+  game.exploreOffered = true;
+  saveGame();
+  startExploreTour(false);
+}
+
+function finishExploreTour() {
+  TUT.active = false;
+  TUT.phase = 1;
+  game.exploreOffered = true;
+  saveGame();
+  renderTutorialOverlay();
+  updateBuildHintUI();
+}
+
+// One-time nudges toward features nothing else points at. Cheap enough to run
+// every frame; each fires at most once per save. (Not a milestone system.)
+function checkExplorationHints() {
+  if (!offshoreIslands || offshoreIslands.length === 0) return;
+  if (!game.chestToastShown && offshoreIslands.length > 1 && game.lifetimeEarned >= _CHEST_GATES[0]) {
+    game.chestToastShown = true;
+    queueToast('The treasure pots on the islands are now mended! Walk to a beach and press F to sail.', '#f0c419');
+  }
+  if (!game.oceanToastShown && game.cash >= islandExpandCost()) {
+    game.oceanToastShown = true;
+    queueToast('You can afford Ocean Expansion: open the cog menu to add new islands.', '#7ec8e3');
+  }
 }
 
 // ─── Upgrade tip ─────────────────────────────────────────────────────────────
@@ -182,69 +829,178 @@ function dismissUpgradeTip() {
 }
 
 // ─── Overlay rendering ───────────────────────────────────────────────────────
+function _setOverlayParts(count, text, why, showNext, nextLabel) {
+  document.getElementById('tutorialStepCount').textContent = count;
+  document.getElementById('tutorialStepText').innerHTML = text;
+  document.getElementById('tutorialStepWhy').innerHTML = why || '';
+  const next = document.getElementById('tutorialNextBtn');
+  next.classList.toggle('hidden', !showNext);
+  next.textContent = nextLabel || 'Got it';
+}
+
+let _lastStepKey = null;
 function renderTutorialOverlay() {
   const el = document.getElementById('tutorialOverlay');
   if (!el) return;
+  _lastHint = null;
+  const hintEl = document.getElementById('tutorialStepHint');
+  if (hintEl) hintEl.textContent = '';
+  const choice = document.getElementById('tutorialSkipChoice');
+  if (choice) choice.classList.add('hidden');
+  document.getElementById('tutorialSkipBtn').classList.remove('hidden');
 
   if (UPGRADE_TIP.active) {
     el.classList.remove('hidden');
-    document.getElementById('tutorialStepCount').textContent = 'Tip';
-    document.getElementById('tutorialStepText').innerHTML =
-      'You can afford to upgrade your Fisher! Hover it and press <span class="tutorial-key">E</span>, then click Upgrade.';
+    _setOverlayParts('Tip',
+      onTouch()
+        ? 'You can afford to upgrade your Fisher! Tap it, press <strong>Interact</strong>, then tap Upgrade.'
+        : 'You can afford to upgrade your Fisher! Hover it and press <span class="tutorial-key">E</span>, then click Upgrade.',
+      'Upgrades make a machine catch or process faster and worth more.', false);
+    document.getElementById('tutorialSkipBtn').textContent = 'Got it';
     return;
   }
 
-  if (!TUT.active) { el.classList.add('hidden'); return; }
+  if (!TUT.active) { el.classList.add('hidden'); _syncUiPointer(null); return; }
+  document.getElementById('tutorialSkipBtn').textContent = TUT.phase === 3 ? 'Not now' : 'Skip tutorial';
 
-  const steps     = TUT.phase === 2 ? TUTORIAL_PHASE2_STEPS : TUTORIAL_PHASE1_STEPS;
-  const step      = steps[TUT.stepIndex];
-  const phaseLabel = TUT.phase === 2 ? 'Automation Tutorial' : 'Fishing Tutorial';
+  const steps      = currentSteps();
+  const step       = steps[TUT.stepIndex];
+  const phaseLabel = TUT.phase === 3 ? 'Island Tour' : TUT.phase === 2 ? 'Automation Tutorial' : 'Fishing Tutorial';
 
   el.classList.remove('hidden');
-  document.getElementById('tutorialStepCount').textContent =
-    `${phaseLabel} — Step ${TUT.stepIndex + 1} of ${steps.length}`;
-  document.getElementById('tutorialStepText').innerHTML = step.text;
+  const reviewing = TUT.review !== null;
+  el.classList.toggle('reviewing', reviewing);
+  if (reviewing) {
+    const past = allSteps()[TUT.review];
+    _setOverlayParts(`Reviewing · Step ${TUT.review + 1} of ${allSteps().length}`, _val(past.text), _val(past.why), true, 'Back to where I was');
+    const badge0 = document.getElementById('tutorialBadge');
+    if (badge0) { badge0.classList.remove('done'); badge0.textContent = String(TUT.review + 1); }
+    document.getElementById('tutorialSkipBtn').classList.add('hidden');
+    _updateNavButtons();
+    return;
+  }
+  _setOverlayParts(`${phaseLabel} · Step ${TUT.stepIndex + 1} of ${steps.length}`,
+    _val(step.text), _val(step.why), !!_val(step.manual), step.nextLabel);
+  _updateNavButtons();
+
+  // Progress across the whole tutorial (both phases), and the step badge.
+  const total = TUT.phase === 3 ? TUTORIAL_EXPLORE_STEPS.length : TUTORIAL_PHASE1_STEPS.length + TUTORIAL_PHASE2_STEPS.length;
+  const doneCount = TUT.phase === 3 ? TUT.stepIndex : (TUT.phase === 2 ? TUTORIAL_PHASE1_STEPS.length : 0) + TUT.stepIndex;
+  const fill = document.getElementById('tutorialProgressFill');
+  if (fill) fill.style.width = Math.round((doneCount / total) * 100) + '%';
+  const badge = document.getElementById('tutorialBadge');
+  if (badge) { badge.classList.remove('done'); badge.textContent = String(TUT.stepIndex + 1); }
+
+  // Slide the card in whenever the step actually changed (not on re-renders
+  // for the skip prompt etc.).
+  const key = TUT.phase + ':' + TUT.stepIndex;
+  if (key !== _lastStepKey) {
+    _lastStepKey = key;
+    el.classList.remove('tut-enter');
+    void el.offsetWidth; // restart the CSS animation
+    el.classList.add('tut-enter');
+  }
+
+  if (TUT.skipAsk && choice) {
+    document.getElementById('tutorialSkipBtn').classList.add('hidden');
+    document.getElementById('tutorialNextBtn').classList.add('hidden');
+    choice.classList.remove('hidden');
+    choice.innerHTML = `
+      <div class="tutorial-skip-q">Skip which part?</div>
+      <button class="tutorial-skip-btn" onclick="skipTutorialChoice('fishing')">Just the fishing lessons</button>
+      <button class="tutorial-skip-btn" onclick="skipTutorialChoice('all')">Everything</button>
+      <button class="tutorial-next-btn" onclick="skipTutorialChoice('keep')">Keep going</button>`;
+  }
+  tutorialTick();
+}
+
+function _updateNavButtons() {
+  const back = document.getElementById('tutorialBackBtn');
+  const fwd  = document.getElementById('tutorialFwdBtn');
+  if (!back || !fwd) return;
+  const cur = TUT.review !== null ? TUT.review : liveFlatIndex();
+  back.disabled = !TUT.active || cur <= 0;
+  fwd.disabled  = !TUT.active || TUT.review === null;
+}
+
+// ─── How to play (always-available reference of every tutorial step) ─────────
+function renderHowTo() {
+  const box = document.getElementById('howToContent');
+  if (!box) return;
+  if (!TUT.plan) { try { replan(null); } catch (e) { /* world not ready */ } }
+  if (offshoreIslands && offshoreIslands.length && TUT.exIsland < 0) pickExploreIsland();
+  const groups = [
+    { name: 'Fishing basics', steps: TUTORIAL_PHASE1_STEPS },
+    { name: 'Building your factory', steps: TUTORIAL_PHASE2_STEPS },
+    { name: 'Exploring the islands', steps: TUTORIAL_EXPLORE_STEPS.filter(st => st.id !== 'x_offer') },
+  ];
+  let n = 0;
+  box.innerHTML = groups.map(g => `<div class="howto-group">${g.name}</div>` + g.steps.map(st => {
+    n++;
+    let text = '', why = '';
+    try { text = _val(st.text) || ''; why = _val(st.why) || ''; } catch (e) { /* step needs live state */ }
+    return `<div class="howto-step"><div class="howto-num">${n}</div><div><div class="howto-step-text">${text}</div>${why ? `<div class="howto-step-why">${why}</div>` : ''}</div></div>`;
+  }).join('')).join('') +
+    `<div class="howto-replay-row"><button class="upgrade-buy" onclick="toggleHowTo(false); replayTutorial();">Replay the fishing tutorial</button><button class="upgrade-buy" onclick="toggleHowTo(false); startExploreTour(true);">Take the island tour</button></div>`;
+}
+
+function toggleHowTo(force) {
+  const panel = document.getElementById('howToPanel');
+  if (!panel) return;
+  const open = typeof force === 'boolean' ? force : panel.classList.contains('hidden');
+  panel.classList.toggle('hidden', !open);
+  if (open) renderHowTo();
 }
 
 // ─── Build hint button ───────────────────────────────────────────────────────
-// A persistent "B — Build" button visible when not in build mode. Pulses
+// A persistent "B - Build" button visible when not in build mode. Pulses
 // during the build_open tutorial step so players know exactly what to press.
 function updateBuildHintUI() {
   const el = document.getElementById('buildHint');
   if (!el) return;
   el.classList.toggle('hidden', buildMode.active);
-  const waitingForB = TUT.active && TUT.phase === 2 &&
-    TUTORIAL_PHASE2_STEPS[TUT.stepIndex]?.id === 'build_open';
+  const waitingForB = TUT.active && TUT.phase === 2 && currentStep()?.id === 'build_open';
   el.classList.toggle('build-hint-pulse', waitingForB);
 }
 
-// ─── Arrow target ────────────────────────────────────────────────────────────
-// World-pixel center of the current step's arrow target, or null if the step
-// doesn't point at a world tile (e.g. "wait for catch", "press Escape").
-function tutorialTargetWorldPos() {
-  if (!TUT.active) return null;
-  const steps = TUT.phase === 2 ? TUTORIAL_PHASE2_STEPS : TUTORIAL_PHASE1_STEPS;
-  const step  = steps[TUT.stepIndex];
-  if (!step) return null;
-  const tile = step.target();
-  if (!tile) return null;
-  return { wx: (tile.c + 0.5) * TILE_SIZE, wy: (tile.r + 0.5) * TILE_SIZE };
+// ─── DOM pointer ─────────────────────────────────────────────────────────────
+// Rings the element(s) a step points at and floats a bobbing arrow over the
+// first visible one. Re-applied every tick because the build panel rebuilds
+// its cards (dropping any class we added).
+const _ringed = new Set();
+function _syncUiPointer(spec) {
+  const arrow = document.getElementById('tutorialUiArrow');
+  const sels = spec ? [].concat(_val(spec)) : [];
+  const want = new Set();
+  let first = null;
+  for (const sel of sels) {
+    const node = document.querySelector(sel);
+    if (!node) continue;
+    const rect = node.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) continue;
+    want.add(node);
+    if (!first) first = rect;
+  }
+  for (const node of _ringed) if (!want.has(node)) { node.classList.remove('tutorial-ui-highlight'); _ringed.delete(node); }
+  for (const node of want) if (!_ringed.has(node) || !node.classList.contains('tutorial-ui-highlight')) { node.classList.add('tutorial-ui-highlight'); _ringed.add(node); }
+  if (!arrow) return;
+  if (!first) { arrow.classList.add('hidden'); return; }
+  const below = first.top < 44;
+  arrow.textContent = below ? '▲' : '▼';
+  arrow.style.left = (first.left + first.width / 2) + 'px';
+  arrow.style.top  = (below ? first.bottom + 4 : first.top - 30) + 'px';
+  arrow.classList.remove('hidden');
 }
 
-// ─── Nearest tile search ─────────────────────────────────────────────────────
-// Outward ring search from the player's spawn tile — called once at phase
-// start, not per frame (see file-header comment).
-function nearestTileMatching(pred, maxRadius) {
-  const pc = Math.floor(player.wx / TILE_SIZE);
-  const pr = Math.floor(player.wy / TILE_SIZE);
-  for (let radius = 0; radius <= maxRadius; radius++) {
-    for (let dr = -radius; dr <= radius; dr++) {
-      for (let dc = -radius; dc <= radius; dc++) {
-        if (Math.max(Math.abs(dr), Math.abs(dc)) !== radius) continue;
-        const c = pc + dc, r = pr + dr;
-        if (pred(c, r)) return { c, r };
-      }
-    }
+// ─── World arrows ────────────────────────────────────────────────────────────
+// [{ wx, wy, label }] for the current step's world targets.
+function tutorialTargets() {
+  if (UPGRADE_TIP.active) {
+    const f = findFisher();
+    return f ? [{ wx: (f.c + 0.5) * TILE_SIZE, wy: (f.r + 0.5) * TILE_SIZE, label: onTouch() ? 'Tap + Interact' : 'Hover + E' }] : [];
   }
-  return null;
+  if (!TUT.active) return [];
+  const step = currentStep();
+  if (!step || !step.targets) return [];
+  return step.targets().map(t => ({ wx: (t.tile.c + 0.5) * TILE_SIZE, wy: (t.tile.r + 0.5) * TILE_SIZE, label: t.label || '' }));
 }

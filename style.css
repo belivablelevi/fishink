@@ -35,7 +35,7 @@ html, body {
   touch-action: none;
 }
 
-/* ─── Build / upgrades menu — Godot-style left-aligned top tabs ───────────── */
+/* ─── Build / upgrades menu - Godot-style left-aligned top tabs ───────────── */
 
 .build-menu {
   position: fixed;
@@ -139,6 +139,12 @@ html, body {
 .tab-discord:hover { background: rgba(10,18,16,0.88); transform: translateY(0); }
 .tab-discord img { width: 24px; height: 24px; display: block; opacity: 0.65; transition: opacity 0.15s; }
 .tab-discord:hover img { opacity: 1; }
+.tab-playtest {
+  margin-left: 4px; padding: 9px 14px;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  font-family: var(--font-ui); color: var(--c-muted);
+}
+.tab-playtest:hover { color: var(--c-text); }
 .tab.active {
   color: #fff;
   background: rgba(10,18,16,0.96);
@@ -182,7 +188,7 @@ html, body {
 }
 .cat-nav-btn:hover { background: rgba(255,255,255,0.16); }
 
-/* Build tab — category-grouped item grid */
+/* Build tab - category-grouped item grid */
 .item-grid { display: flex; flex-direction: column; gap: 4px; padding-bottom: 84px; }
 
 .cat-divider {
@@ -269,7 +275,7 @@ html, body {
 .item-card.locked .cost { color: var(--c-muted); font-size: 9px; }
 .fish-card.disabled .swatch { filter: grayscale(1) brightness(0.6); }
 
-/* Build tab — bottom status bar showing the currently selected item, sticky
+/* Build tab - bottom status bar showing the currently selected item, sticky
    within the scrolling panel so it stays visible while the grid scrolls */
 .action-bar {
   position: sticky;
@@ -285,8 +291,8 @@ html, body {
 }
 .action-preview .swatch { width: 40px; height: 40px; border-radius: 6px; }
 .action-info { flex: 1; min-width: 0; }
-.action-name { font-size: 13px; font-weight: 700; }
-.action-desc { font-size: 11px; color: var(--c-muted); margin-top: 2px; }
+.action-name { font-size: 14px; font-weight: 700; }
+.action-desc { font-size: 12.5px; line-height: 1.45; color: #d3ddd8; margin-top: 3px; max-width: 640px; }
 .action-cost {
   font-family: var(--font-mono);
   font-size: 14px;
@@ -296,7 +302,7 @@ html, body {
 }
 .action-cost.afford { color: var(--c-mint); }
 
-/* ─── Bottom-right build HUD — live state while the big menu is closed ───── */
+/* ─── Bottom-right build HUD - live state while the big menu is closed ───── */
 .build-hud {
   position: fixed;
   right: 18px;
@@ -315,13 +321,13 @@ html, body {
 }
 .build-hud.hidden { display: none; }
 /* The build HUD and the touch action buttons both anchor to the bottom-right
-   corner — on touch devices the buttons (stacked up to 160px tall) would sit
+   corner - on touch devices the buttons (stacked up to 160px tall) would sit
    directly on top of the HUD's button rows, including Exit. Lift the HUD
    clear of them instead. */
 body.touch-active .build-hud { bottom: 170px; }
 
 /* The full-screen build menu (92vw x 90vh, ~5vh margin) leaves only a thin
-   strip clear at the bottom corners on a phone — the joystick and Interact
+   strip clear at the bottom corners on a phone - the joystick and Interact
    button would otherwise float on top of it and steal taps meant for the
    menu's bottom-most content. Build stays visible/in place: it's the only
    way to close the menu panel while remaining in placement mode (mobile's
@@ -367,7 +373,7 @@ body.touch-active .machines-panel { bottom: 144px; }
 
 .hud-bp-status { font-size: 10px; color: var(--c-muted); }
 
-/* Controls tab — keybind cheat-sheet */
+/* Controls tab - keybind cheat-sheet */
 .control-row {
   display: flex;
   align-items: center;
@@ -410,7 +416,7 @@ body.touch-active .machines-panel { bottom: 144px; }
   line-height: 1.4;
 }
 
-/* Upgrades tab — stat rows */
+/* Upgrades tab - stat rows */
 .upgrade-row {
   display: flex;
   align-items: center;
@@ -478,22 +484,6 @@ body.touch-active .machines-panel { bottom: 144px; }
   cursor: not-allowed;
 }
 
-.bp-name-input {
-  appearance: none;
-  border: none;
-  border-radius: 4px;
-  padding: 3px 6px;
-  font-size: 12px;
-  font-weight: 700;
-  font-family: inherit;
-  color: var(--c-text);
-  background: rgba(255,255,255,0.10);
-  width: 140px;
-}
-.bp-name-input:focus { outline: 1px solid var(--c-accent); }
-.bp-delete-btn { background: rgba(232,90,74,0.85); color: #fff; }
-.bp-delete-btn:hover { filter: brightness(1.1); }
-
 .lb-row .lb-score {
   font-family: var(--font-mono);
   font-weight: 700;
@@ -507,7 +497,7 @@ body.touch-active .machines-panel { bottom: 144px; }
   outline: 1px solid var(--c-accent);
 }
 
-/* ─── Per-block popup — pinned at the clicked tile/player's screen pos ─────── */
+/* ─── Per-block popup - pinned at the clicked tile/player's screen pos ─────── */
 .block-popup {
   position: fixed;
   z-index: 30;
@@ -524,6 +514,18 @@ body.touch-active .machines-panel { bottom: 144px; }
   margin-top: -14px;
   transition: opacity 0.1s ease, scale 0.1s ease;
   scale: 1;
+  /* The popup stays open (and thus keeps this fixed-position box on screen)
+     until explicitly dismissed, but the player can walk/scroll the camera
+     anywhere in the meantime - so its footprint frequently ends up sitting
+     over a completely unrelated belt/Seller tile. Every real control inside
+     is a <button>; the rest (padding, labels, dividers) is inert, so letting
+     clicks on the inert parts fall through to the canvas beneath fixes
+     "can't sell" clicks silently swallowed by a leftover popup, without
+     touching the buttons themselves (re-enabled below). */
+  pointer-events: none;
+}
+.block-popup button {
+  pointer-events: auto;
 }
 .block-popup.hidden {
   display: none;
@@ -594,7 +596,7 @@ body.touch-active .machines-panel { bottom: 144px; }
   cursor: not-allowed;
 }
 
-/* Cash HUD — DOM pill so it sits above the tutorial overlay (z-index 30 > 25) */
+/* Cash HUD - DOM pill so it sits above the tutorial overlay (z-index 30 > 25) */
 .cash-hud {
   position: fixed;
   bottom: 6px;
@@ -617,7 +619,7 @@ body.touch-active .machines-panel { bottom: 144px; }
 .cash-hud-icon { width: 36px; height: 36px; image-rendering: pixelated; flex-shrink: 0; }
 body.touch-active .cash-hud { bottom: 20px; left: 90px; }
 
-/* Move button — appears at the bottom of every block popup */
+/* Move button - appears at the bottom of every block popup */
 .block-popup .mp-move {
   display: block;
   width: 100%;
@@ -635,7 +637,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
 }
 .block-popup .mp-move:hover { background: rgba(126,200,227,0.22); }
 
-/* Sorter settings — size threshold pills */
+/* Sorter settings - size threshold pills */
 .block-popup .mp-size-row {
   display: flex;
   gap: 4px;
@@ -661,7 +663,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   color: var(--c-accent);
 }
 
-/* Crate contents — grouped fish list */
+/* Crate contents - grouped fish list */
 .block-popup .mp-crate-list {
   display: flex;
   flex-direction: column;
@@ -694,7 +696,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
 .block-popup .mp-crate-count { color: var(--c-muted); }
 .block-popup .mp-crate-value { color: var(--c-mint); font-weight: 700; }
 
-/* Teleporter settings — destination picker list */
+/* Teleporter settings - destination picker list */
 .block-popup .mp-target-list {
   display: flex;
   flex-direction: column;
@@ -730,7 +732,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   padding: 6px 2px;
 }
 
-/* ─── Sound settings menu — fixed speaker icon, top-right ──────────────────── */
+/* ─── Sound settings menu - fixed speaker icon, top-right ──────────────────── */
 .sound-toggle-btn,
 .game-menu-toggle-btn {
   display: flex;
@@ -787,7 +789,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
 }
 .sound-panel .sound-row input { cursor: pointer; }
 
-/* ─── Game menu — save/restart, fixed gear icon next to the sound button ──── */
+/* ─── Game menu - save/restart, fixed gear icon next to the sound button ──── */
 .game-menu-toggle-btn {
   position: fixed;
   top: 14px;
@@ -866,7 +868,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   margin: 12px 0;
 }
 
-/* ─── Machines overview — icon button docked beside the cash pill HUD ──────── */
+/* ─── Machines overview - icon button docked beside the cash pill HUD ──────── */
 /* top/left here are just an initial fallback before the first frame's JS
    positioning (updateMachinesBtnPos in ui.js) docks it beside the cash pill. */
 .machines-toggle-btn {
@@ -944,7 +946,7 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
 .machines-dropdown:focus { border-color: rgba(255,255,255,0.3); }
 .machines-dropdown option { background: #0e1a18; color: #e8e8e8; }
 
-/* ─── Leaderboard — fixed icon button, top-left (machines button moves away
+/* ─── Leaderboard - fixed icon button, top-left (machines button moves away
    from this initial 106px slot every frame, so it's free for permanent use) */
 .leaderboard-toggle-btn {
   position: fixed;
@@ -988,27 +990,74 @@ body.touch-active .cash-hud { bottom: 20px; left: 90px; }
   padding: 22px;
 }
 
-/* ─── First-time tutorial overlay — bottom-center, clear of other UI ───────── */
+/* ─── First-time tutorial overlay - bottom-center, clear of other UI ───────── */
 .tutorial-overlay {
   position: fixed;
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 25;
-  width: min(92vw, 460px);
+  width: min(92vw, 540px);
   font-family: var(--font-ui);
-  background: rgba(10,18,16,0.97);
-  border: 1px solid var(--c-border);
-  border-radius: 10px;
-  box-shadow: 0 14px 32px rgba(0,0,0,0.5);
-  padding: 14px 18px;
+  background: linear-gradient(180deg, rgba(18,30,26,0.98), rgba(9,16,14,0.98));
+  border: 1px solid rgba(232,196,63,0.35);
+  border-radius: 12px;
+  box-shadow: 0 14px 32px rgba(0,0,0,0.55), 0 0 0 1px rgba(0,0,0,0.4), 0 0 22px rgba(232,196,63,0.10);
+  padding: 16px 20px 14px;
   text-align: center;
+  overflow: hidden;
+  transition: border-color 0.25s, box-shadow 0.25s;
 }
 .tutorial-overlay.hidden { display: none; }
+/* Slides up + fades in each time the step changes (retriggered from JS). */
+.tutorial-overlay.tut-enter { animation: tutEnter 0.32s cubic-bezier(.2,.9,.3,1.15); }
+@keyframes tutEnter {
+  from { opacity: 0; translate: 0 16px; }
+  to   { opacity: 1; translate: 0 0; }
+}
+/* Brief green pulse when a step is completed. */
+.tutorial-overlay.tut-done {
+  border-color: rgba(77,202,124,0.9);
+  box-shadow: 0 14px 32px rgba(0,0,0,0.55), 0 0 30px rgba(77,202,124,0.45);
+}
+
+/* Thin bar across the top of the card: how far through the whole tutorial. */
+.tutorial-progress { position: absolute; left: 0; right: 0; top: 0; height: 3px; background: rgba(255,255,255,0.07); }
+.tutorial-progress-fill {
+  height: 100%; width: 0;
+  background: linear-gradient(90deg, #e8a030, #f0d060);
+  box-shadow: 0 0 8px rgba(240,208,96,0.7);
+  transition: width 0.5s cubic-bezier(.3,.8,.3,1);
+}
+.tutorial-head { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 7px; }
+.tutorial-badge {
+  width: 20px; height: 20px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--c-accent); color: #1a1208;
+  font-size: 11px; font-weight: 800; line-height: 1;
+  box-shadow: 0 0 0 3px rgba(232,160,48,0.22);
+  flex: none;
+}
+.tutorial-badge.done { background: var(--c-mint); box-shadow: 0 0 0 3px rgba(77,202,124,0.25); }
 /* The joystick (110px tall) and action buttons (60px tall, stacked) sit in
-   the same bottom corners on touch devices — lift the tutorial box clear of
+   the same bottom corners on touch devices - lift the tutorial box clear of
    both instead of letting it sit underneath them. */
 body.touch-active .tutorial-overlay { bottom: 180px; }
+/* Phone landscape is only ~360-400px tall. The taller tutorial card (why-line,
+   live hint, buttons) plus a 180px lift would cover most of the screen, so on
+   touch it goes compact at the top-centre, clear of the joystick/buttons
+   (bottom corners), the icon row (top-left) and the stats box (top-right). */
+body.touch-active .tutorial-overlay {
+  top: 6px; bottom: auto;
+  width: min(50vw, 400px);
+  padding: 6px 12px 8px;
+}
+body.touch-active .tutorial-head       { margin-bottom: 3px; }
+body.touch-active .tutorial-badge      { width: 16px; height: 16px; font-size: 9.5px; }
+body.touch-active .tutorial-step-count { font-size: 9.5px; }
+body.touch-active .tutorial-step-text  { font-size: 12px; margin-bottom: 4px; }
+body.touch-active .tutorial-step-why   { font-size: 10.5px; line-height: 1.35; margin: -2px 0 5px; }
+body.touch-active .tutorial-step-hint  { font-size: 10.5px; margin: 0 0 5px; }
 
 .rotate-overlay {
   position: fixed;
@@ -1034,14 +1083,84 @@ body.touch-active .tutorial-overlay { bottom: 180px; }
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--c-accent);
-  margin-bottom: 6px;
 }
 .tutorial-step-text {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--c-text);
-  margin-bottom: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #fff;
+  margin-bottom: 8px;
 }
+
+/* Back / forward through earlier steps (read-only review). */
+.tutorial-nav {
+  appearance: none; flex: none;
+  width: 22px; height: 22px; padding: 0;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.07);
+  color: var(--c-text);
+  border-radius: 6px;
+  font-size: 16px; line-height: 1; font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+.tutorial-nav:hover:not(:disabled) { background: rgba(255,255,255,0.18); }
+.tutorial-nav:disabled { opacity: 0.25; cursor: default; }
+.tutorial-overlay.reviewing { border-color: rgba(126,200,227,0.7); }
+.tutorial-overlay.reviewing .tutorial-badge { background: var(--c-sky); box-shadow: 0 0 0 3px rgba(126,200,227,0.25); }
+.tutorial-overlay.reviewing .tutorial-step-count { color: var(--c-sky); }
+
+/* Cash meter inside the live hint pill (the "fund" step). */
+.tut-meter { display: inline-block; width: 90px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.14); vertical-align: middle; margin: 0 8px; overflow: hidden; }
+.tut-meter > i { display: block; height: 100%; background: linear-gradient(90deg, #4dca7c, #a8f0c0); border-radius: 3px; transition: width 0.3s; }
+
+/* "?" button + How to play reference panel */
+.howto-toggle-btn {
+  position: fixed;
+  top: 14px;
+  left: 152px;
+  z-index: 25;
+  width: 38px; height: 38px;
+  appearance: none;
+  border: 1px solid var(--c-border);
+  background: rgba(10,18,16,0.85);
+  color: var(--c-text);
+  border-radius: 8px;
+  font-family: var(--font-ui);
+  font-size: 18px; font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.howto-toggle-btn:hover { background: rgba(255,255,255,0.16); }
+.howto-panel {
+  position: fixed;
+  top: 5vh;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  width: min(92vw, 640px);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-ui);
+}
+.howto-panel.hidden { display: none; }
+.howto-content {
+  background: rgba(10,18,16,0.97);
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  overflow-y: auto;
+  box-shadow: 0 14px 32px rgba(0,0,0,0.5);
+  padding: 8px 20px 18px;
+}
+.howto-group { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--c-accent); margin: 16px 0 6px; }
+.howto-step { display: flex; gap: 12px; padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.07); }
+.howto-step:first-of-type { border-top: none; }
+.howto-num { flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--c-accent); color: #1a1208; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+.howto-step-text { font-size: 13.5px; font-weight: 700; color: #fff; line-height: 1.4; }
+.howto-step-why  { font-size: 12.5px; color: #d3ddd8; line-height: 1.5; margin-top: 3px; }
+.howto-step-why strong { color: #fff; }
+.howto-replay-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
 .tutorial-skip-btn {
   appearance: none;
   border: 1px solid rgba(255,255,255,0.18);
@@ -1057,12 +1176,86 @@ body.touch-active .tutorial-overlay { bottom: 180px; }
 }
 .tutorial-skip-btn:hover { background: rgba(255,255,255,0.16); color: var(--c-text); }
 
-/* Inline key badge — used inside tutorial step text for hotkey callouts */
+.tutorial-step-why {
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: #d3ddd8; /* near-white with a slight green tint; was the dim muted grey */
+  margin: -4px 0 10px;
+}
+.tutorial-step-why strong { color: #fff; }
+.tutorial-step-hint {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--c-mint);
+  background: rgba(77,202,124,0.10);
+  border: 1px solid rgba(77,202,124,0.28);
+  border-radius: 999px;
+  padding: 3px 12px;
+  margin: 0 0 10px;
+}
+.tutorial-step-why:empty, .tutorial-step-hint:empty { display: none; }
+.tutorial-btn-row { display: flex; gap: 8px; justify-content: center; }
+.tutorial-next-btn {
+  appearance: none;
+  border: none;
+  background: linear-gradient(180deg, #f0b040, #d98f22);
+  color: #1a1208;
+  border-radius: 7px;
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  font-weight: 800;
+  padding: 7px 20px;
+  cursor: pointer;
+  box-shadow: 0 2px 0 #8a5a10, 0 4px 10px rgba(0,0,0,0.35);
+  transition: transform 0.1s, filter 0.15s;
+  animation: tutNextPulse 1.6s ease-in-out infinite;
+}
+.tutorial-next-btn:hover { filter: brightness(1.1); }
+.tutorial-next-btn:active { transform: translateY(2px); box-shadow: 0 0 0 #8a5a10, 0 2px 6px rgba(0,0,0,0.35); }
+@keyframes tutNextPulse {
+  0%, 100% { box-shadow: 0 2px 0 #8a5a10, 0 4px 10px rgba(0,0,0,0.35), 0 0 0 0 rgba(240,176,64,0.5); }
+  50%      { box-shadow: 0 2px 0 #8a5a10, 0 4px 10px rgba(0,0,0,0.35), 0 0 0 7px rgba(240,176,64,0); }
+}
+.tutorial-next-btn.hidden, .tutorial-skip-choice.hidden, .tutorial-skip-btn.hidden { display: none; }
+.tutorial-skip-choice { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; }
+.tutorial-skip-q { width: 100%; font-size: 12px; font-weight: 700; color: var(--c-text); }
+
+/* Pulsing ring on the DOM element a step points at, plus a bobbing arrow
+   (positioned by tutorial.js) so a first-time player can see where to click. */
+.tutorial-ui-highlight {
+  outline: 2px solid #e8c43f !important;
+  outline-offset: 2px;
+  animation: tutUiPulse 1.1s ease-in-out infinite;
+}
+@keyframes tutUiPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(232,196,63,0.6); }
+  50%      { box-shadow: 0 0 0 9px rgba(232,196,63,0); }
+}
+.tutorial-ui-arrow {
+  position: fixed;
+  z-index: 60;
+  transform: translateX(-50%);
+  color: #e8c43f;
+  font-size: 22px;
+  line-height: 1;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.7);
+  pointer-events: none;
+  animation: tutUiBob 0.7s ease-in-out infinite alternate;
+}
+.tutorial-ui-arrow.hidden { display: none; }
+@keyframes tutUiBob { from { margin-top: 0; } to { margin-top: 6px; } }
+
+/* Inline key badge - used inside tutorial step text for hotkey callouts */
 .tutorial-key {
   display: inline-block;
-  background: var(--c-accent);
-  color: #07080f;
-  border-radius: 4px;
+  min-width: 20px;
+  text-align: center;
+  background: linear-gradient(180deg, #f6c060, #e09a2a);
+  color: #1a1208;
+  border-radius: 5px;
+  border-bottom: 2px solid #8a5a10; /* keycap look */
   padding: 1px 6px;
   font-size: 11px;
   font-weight: 800;
@@ -1070,10 +1263,11 @@ body.touch-active .tutorial-overlay { bottom: 180px; }
   vertical-align: middle;
   margin: 0 2px;
   font-style: normal;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.4);
 }
 
 /* ─── Build hint button ─────────────────────────────────────────────────────── */
-/* Persistent "B — Build" shortcut shown in the lower-right when not in
+/* Persistent "B - Build" shortcut shown in the lower-right when not in
    build mode. Pulses during the tutorial's build_open step. */
 .bottom-right-group {
   position: fixed;
@@ -1405,7 +1599,7 @@ body.touch-active .bottom-right-group { right: 90px; bottom: 20px; }
 .bs-btn-apply:hover { filter: brightness(1.1); }
 .bs-btn-apply:active { transform: scale(0.98); }
 
-/* ─── Loading screen — covers the blank canvas while images/world load ──────── */
+/* ─── Loading screen - covers the blank canvas while images/world load ──────── */
 .loading-screen {
   position: fixed;
   inset: 0;
@@ -1445,7 +1639,7 @@ body.touch-active .bottom-right-group { right: 90px; bottom: 20px; }
   transition: width 0.25s ease-out;
 }
 
-/* ─── Start-screen queue — one-time screens shown before gameplay begins ──── */
+/* ─── Start-screen queue - one-time screens shown before gameplay begins ──── */
 .start-screen-overlay {
   position: fixed;
   inset: 0;
@@ -1457,6 +1651,8 @@ body.touch-active .bottom-right-group { right: 90px; bottom: 20px; }
 }
 .start-screen-overlay.hidden { display: none; }
 .start-screen-card {
+  max-height: 96vh;
+  overflow-y: auto; /* phone landscape is ~360px tall - the taller cards (Sign In) must scroll instead of clipping */
   width: 320px;
   display: flex;
   flex-direction: column;
@@ -1550,6 +1746,13 @@ body.touch-active .bottom-right-group { right: 90px; bottom: 20px; }
   letter-spacing: 0.02em;
 }
 .start-screen-btn-ghost:hover { background: rgba(255,255,255,0.13); border-color: rgba(255,255,255,0.38); }
+
+.start-screen-btn-small {
+  width: 78%;
+  align-self: center;
+  padding: 7px 12px;
+  font-size: 11.5px;
+}
 
 .start-screen-divider {
   width: 100%;
@@ -1816,7 +2019,7 @@ body.touch-active .bottom-right-group { right: 90px; bottom: 20px; }
 }
 .pets-autosell-price { color: var(--c-muted); font-size: 10px; }
 
-/* Sell button — muted red-toned style */
+/* Sell button - muted red-toned style */
 .pet-sell-btn { background: rgba(220,60,60,0.18) !important; color: #e87070 !important; }
 .pet-sell-btn:hover { background: rgba(220,60,60,0.32) !important; }
 
@@ -1854,13 +2057,13 @@ body.touch-active .bottom-right-group { right: 90px; bottom: 20px; }
   transition-duration: 0.06s;
 }
 
-/* Tab press — squish down toward the panel */
+/* Tab press - squish down toward the panel */
 .tab:active:not(.active) {
   transform: translateY(2px);
   transition-duration: 0.06s;
 }
 
-/* ─── Block popup upgrade button — add transform to existing transition ────── */
+/* ─── Block popup upgrade button - add transform to existing transition ────── */
 .block-popup .upgrade-buy {
   transition-property: background, color, border-color, transform;
 }
@@ -1876,3 +2079,27 @@ body.touch-active .bottom-right-group { right: 90px; bottom: 20px; }
 .cash-hud-pulse {
   animation: cashPulse 0.5s ease-out forwards !important;
 }
+
+
+/* ─── Build item hover card (replaces the native single-line title tooltip) ─── */
+.item-tip {
+  position: fixed;
+  z-index: 60;
+  width: 260px;
+  padding: 13px 15px 14px;
+  font-family: var(--font-ui);
+  background: linear-gradient(180deg, rgba(18,30,26,0.98), rgba(9,16,14,0.98));
+  border: 1px solid rgba(240,208,96,0.4);
+  border-radius: 10px;
+  box-shadow: 0 14px 30px rgba(0,0,0,0.55);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.12s, transform 0.12s;
+}
+.item-tip.show { opacity: 1; transform: none; }
+.item-tip .it-name { font-size: 15px; font-weight: 700; color: #f0d060; }
+.item-tip .it-cost { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--c-mint); margin-top: 2px; }
+.item-tip .it-cost.locked { color: #e8a030; }
+.item-tip .it-desc { font-size: 13px; line-height: 1.5; color: #e6efe9; margin-top: 8px; }
+.item-tip .it-stat { font-size: 12px; font-weight: 700; color: #9fdcc0; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); }

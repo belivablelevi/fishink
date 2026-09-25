@@ -1,4 +1,4 @@
-// Fish INK Factory — world grid and block system
+// Fish INK Factory - world grid and block system
 
 const TILE_SIZE = 32;
 let WORLD_COLS = 64;
@@ -15,12 +15,12 @@ const T_EMPTY    = 0;
 const T_WATER    = 1;
 const T_SHORE    = 2;
 const T_WALL     = 3;
-const T_CONCRETE = 4; // paved floor — required before placing any equipment
+const T_CONCRETE = 4; // paved floor - required before placing any equipment
 
 // Placeable block IDs (stored in blocks[][] layer)
 const B_NONE     = 0;
 const B_FISHER   = 1;
-const B_BELT     = 2; // single belt block — direction lives in cellState.dir, set via R to rotate
+const B_BELT     = 2; // single belt block - direction lives in cellState.dir, set via R to rotate
 const B_WASHER   = 3;
 const B_SMOKER   = 4;
 const B_ICER     = 5;
@@ -48,7 +48,7 @@ const BLOCK_NAMES = ['', 'Fisher', 'Belt',
 const BLOCK_COSTS = [0, 150, 10, 400, 1200, 600, 3000, 200, 5, 1000, 900,
                      60, 80, 250, 150, 700, 120, 2500, 800];
 
-// Category id per block (index-aligned with BLOCK_NAMES/COSTS) — drives the
+// Category id per block (index-aligned with BLOCK_NAMES/COSTS) - drives the
 // grouped headers in the build menu.
 const BLOCK_CATS = ['', 'fishing', 'floor',
                     'processing', 'processing', 'processing', 'processing',
@@ -85,12 +85,12 @@ const IS_CRATE       = id => id === B_CRATE || id === B_FISH_DEPOT;
 const IS_PACKER      = id => id === B_PACKER;
 
 // Every block type with a per-instance level (click/E to buy, see upgrades.js
-// buyMachineUpgrade) — the processing machines plus the other production/sink
+// buyMachineUpgrade) - the processing machines plus the other production/sink
 // blocks that benefit from a per-instance speed or value boost.
 const IS_UPGRADABLE = id => IS_MACHINE(id) || id === B_FISHER || id === B_DRONE_FISHER ||
                              id === B_RECYCLER || id === B_PACKER || id === B_DRONE_DELIVERY;
 
-// Unlock gates — null for everything except the two blocks the player must
+// Unlock gates - null for everything except the two blocks the player must
 // earn access to. Checked by canPlaceBlock/buyAndPlace; nothing else cares.
 const BLOCK_UNLOCK_REQ = [];
 BLOCK_UNLOCK_REQ[B_STAMPER]        = { type: 'lifetimeEarned', amount: 5000,  label: '$5,000 lifetime earnings' };
@@ -108,7 +108,7 @@ function isBlockUnlocked(id) {
 // ── Active-block registry ─────────────────────────────────────────────────────
 // Coordinates of placed blocks, bucketed by sim role, so per-frame loops visit
 // only real blocks instead of scanning all WORLD_ROWS×WORLD_COLS tiles. Keys
-// pack (c, r) into one small int: (r << 7) | c — valid because WORLD_COLS_MAX
+// pack (c, r) into one small int: (r << 7) | c - valid because WORLD_COLS_MAX
 // is 128, and sorting keys ascending is exactly row-major order.
 const REG_SHIFT = 7;
 const REG_MASK  = 127;
@@ -119,15 +119,15 @@ const blockIndex = {
   machines:     new Set(),  // IS_MACHINE
   transports:   new Set(),  // IS_TRANSPORT
   packers:      new Set(),  // IS_PACKER
-  outputs:      new Set(),  // machines + crates/depots + packers — tickMachineOutput's scan set
+  outputs:      new Set(),  // machines + crates/depots + packers - tickMachineOutput's scan set
   teleporters:  new Set(),
 };
 
-// Bumped whenever teleporter membership changes — lets render.js cache the
+// Bumped whenever teleporter membership changes - lets render.js cache the
 // row-major display numbering instead of recomputing it per teleporter drawn.
 let teleporterRev = 0;
 // Tells sim.js the drone→water-tile crowd counts need a rebuild (see
-// dronesSharingWater) — set on any drone-fisher add/remove/retarget.
+// dronesSharingWater) - set on any drone-fisher add/remove/retarget.
 let droneWaterDirty = true;
 
 function _indexAdd(id, c, r) {
@@ -151,7 +151,7 @@ function _indexRemove(id, c, r) {
   if (id === B_DRONE_FISHER) droneWaterDirty = true;
 }
 
-// Full rescan — required after any bulk write to blocks[][] that bypasses
+// Full rescan - required after any bulk write to blocks[][] that bypasses
 // placeBlock/removeBlock: buildWorld's starter belts, ensureWorkerIslandDepot,
 // growWorld (every coordinate shifts), and save deserialization.
 function rebuildBlockIndex() {
@@ -163,7 +163,7 @@ function rebuildBlockIndex() {
   droneWaterDirty = true;
 }
 
-// All placed Teleporter tiles except the one at (excludeC, excludeR) — backs
+// All placed Teleporter tiles except the one at (excludeC, excludeR) - backs
 // the destination picker in the Teleporter's settings popup (ui.js). Sorted
 // row-major to match the on-tile "T1/T2" numbering (teleporterDisplayNum).
 function teleporterTiles(excludeC, excludeR) {
@@ -177,7 +177,7 @@ function teleporterTiles(excludeC, excludeR) {
 }
 
 const CRATE_CAPACITY = 20;
-const DEPOT_CAPACITY = 50; // larger than crate — workers keep depositing
+const DEPOT_CAPACITY = 50; // larger than crate - workers keep depositing
 
 // Rotation order for belts (clockwise), indexed by cellState.dir
 const BELT_DIRS = [
@@ -193,12 +193,12 @@ const DRONE_FISHING = 'fishing'; // hovering over water, filling its batch
 const DRONE_BACK    = 'back';    // flying from water back to the pad
 const DRONE_UNLOAD  = 'unload';  // dropping its catch onto an adjacent belt/machine
 
-const DRONE_SPEED      = 3.5; // tiles/second, base flight speed (Drone Fisher gameplay timing) — slowed from 5 so the drone is actually visible mid-flight, at the cost of a modest throughput dip
+const DRONE_SPEED      = 3.5; // tiles/second, base flight speed (Drone Fisher gameplay timing) - slowed from 5 so the drone is actually visible mid-flight, at the cost of a modest throughput dip
 const DRONE_FISH_TIME  = 1.4; // seconds hovering over water per trip
 const DRONE_BATCH      = 3;   // fish collected per round trip
 
-// Delivery flight (the cosmetic Drone Delivery → boat hop) is purely visual —
-// the sale already happened by the time it launches — so it gets its own,
+// Delivery flight (the cosmetic Drone Delivery → boat hop) is purely visual -
+// the sale already happened by the time it launches - so it gets its own,
 // much slower speed instead of reusing DRONE_SPEED, which stayed fast
 // because slowing it down would also nerf Drone Fisher's real throughput.
 const DELIVERY_FLIGHT_SPEED = 2; // tiles/second
@@ -214,13 +214,13 @@ let autoFisherCount = 0;
 const IS_AUTO_FISHER = id => id === B_FISHER || id === B_DRONE_FISHER;
 function countAutoFishers() { return autoFisherCount; }
 
-// Recomputed by buildWorld() each run — where the proc-gen landed the starter
+// Recomputed by buildWorld() each run - where the proc-gen landed the starter
 // dock. STARTER_C is the platform's center column.
 let STARTER_C = 30;
 let STARTER_R = 10;
 
 // Fixed shipping-boat dock. Guaranteed clear of land by a post-generation
-// force-clear in buildWorld() — no terrain pass may leave land here.
+// force-clear in buildWorld() - no terrain pass may leave land here.
 // These are let so growWorld() can shift them when the world expands in all directions.
 let BOAT_C = WORLD_COLS - 6;  // col 58
 let BOAT_R = 6;
@@ -228,13 +228,13 @@ const BOAT_CLEAR = 5; // tiles radius kept as open ocean around the boat
 
 const ISLAND_EDGE_MARGIN = 3; // tiles of guaranteed ocean kept around the world border
 
-// Offshore islands discovered by buildWorld() — each entry has cx/cy (island
+// Offshore islands discovered by buildWorld() - each entry has cx/cy (island
 // centre) and depotC/depotR (tile where B_FISH_DEPOT is placed). Persisted in save.
 let offshoreIslands = [];
 
 function randRange(min, max) { return min + Math.random() * (max - min); }
 
-// Random-walking union of circles — each step nudges the center and resizes
+// Random-walking union of circles - each step nudges the center and resizes
 // the radius a bit before painting, so the result is one connected but
 // irregular landmass instead of a neat ellipse.
 function carveIslandBlob() {
@@ -262,7 +262,7 @@ function carveIslandBlob() {
   }
 }
 
-// Carves one pond fully inside existing land — retries a handful of random
+// Carves one pond fully inside existing land - retries a handful of random
 // spots/sizes and silently gives up if none fit, so a crowded map just ends
 // up with fewer ponds rather than biting into the coastline.
 //
@@ -362,7 +362,7 @@ function carveOffshoreIsland(cx, cy, maxR) {
 }
 
 
-// Any land tile touching water becomes sand — covers the coastline and every
+// Any land tile touching water becomes sand - covers the coastline and every
 // pond bank in one pass, so Fisher placement (T_SHORE adjacent to T_WATER)
 // works the same everywhere.
 function applyShorePass() {
@@ -378,7 +378,7 @@ function applyShorePass() {
 }
 
 // Finds the dry w×h rectangle closest to the map center for the starter
-// dock — adapts to whatever shape carveIslandBlob() produced instead of
+// dock - adapts to whatever shape carveIslandBlob() produced instead of
 // assuming a fixed layout. `ponds` (and minPondDist, in tiles from the pond's
 // edge) keeps the dock from landing right next to an interior pond; if no
 // spot clears that buffer, retries without it rather than failing outright.
@@ -433,7 +433,7 @@ function buildWorld() {
     if (p) ponds.push(p);
   }
 
-  // Offshore islands — small landmasses dotted around the ocean, reserved for
+  // Offshore islands - small landmasses dotted around the ocean, reserved for
   // the future boat-travel system. The NE corner is intentionally omitted: the
   // cargo ship docks there (BOAT_C/BOAT_R) and needs clear water. Each slot
   // gets up to 4 placement attempts with jitter; unsuccessful ones are skipped.
@@ -458,7 +458,7 @@ function buildWorld() {
   // ── Boat dock guarantee ───────────────────────────────────────────────────
   // Belt-and-suspenders: regardless of what any terrain pass produced, force
   // the zone around the cargo-ship dock back to open water. This is the single
-  // source of truth — if BOAT_C/BOAT_R ever moves, update BOAT_CLEAR too.
+  // source of truth - if BOAT_C/BOAT_R ever moves, update BOAT_CLEAR too.
   for (let r = BOAT_R - BOAT_CLEAR; r <= BOAT_R + BOAT_CLEAR; r++)
     for (let c = BOAT_C - BOAT_CLEAR; c <= BOAT_C + BOAT_CLEAR; c++)
       if (r >= 0 && r < WORLD_ROWS && c >= 0 && c < WORLD_COLS)
@@ -466,7 +466,7 @@ function buildWorld() {
 
   // ── Starter concrete platform ──────────────────────────────────────────────
   // A 3-row × 8-col pad, placed on whichever dry patch landed closest to the
-  // map center this generation — kept a buffer away from any pond so the
+  // map center this generation - kept a buffer away from any pond so the
   // dock never opens right onto one.
   const spot = findFlatLandSpot(8, 3, ponds, 6) || findFlatLandSpot(8, 3) ||
     { r0: Math.floor(WORLD_ROWS / 2) - 1, c0: Math.floor(WORLD_COLS / 2) - 4 };
@@ -477,7 +477,7 @@ function buildWorld() {
     for (let c = STARTER_C - 2; c <= STARTER_C + 5; c++)
       terrain[r][c] = T_CONCRETE;
 
-  // Pre-built belt chain + seller on the platform — player places the Fisher
+  // Pre-built belt chain + seller on the platform - player places the Fisher
   blocks[STARTER_R][STARTER_C]     = B_BELT;
   blocks[STARTER_R][STARTER_C + 1] = B_BELT;
   blocks[STARTER_R][STARTER_C + 2] = B_BELT;
@@ -486,6 +486,43 @@ function buildWorld() {
 
   ensureWorkerIslandDepot();
   rebuildBlockIndex();
+}
+
+// Which offshore island's waters a tile belongs to (its index in
+// offshoreIslands), or -1 for home waters. Used to pick regional fish.
+function regionAt(c, r) {
+  let best = -1, bestD = REGION_RADIUS;
+  for (let i = 0; i < offshoreIslands.length && i < REGION_NAMES.length; i++) {
+    const isl = offshoreIslands[i];
+    const d = Math.hypot(c - isl.cx, r - isl.cy);
+    if (d <= bestD) { bestD = d; best = i; }
+  }
+  return best;
+}
+
+// The tile an offshore island's treasure chest sits on. Nominally the island's
+// centre, but the starter dock is placed on whichever dry patch is nearest the
+// map centre - which can be an offshore island - leaving the chest under the
+// dock's belts (pressing E on that belt then opened the chest instead of
+// dropping fish). Picks the nearest free land tile once and caches it on the
+// island (islands are saved with the game, so it stays put).
+function chestTile(isl) {
+  if (isl.chestC !== undefined) return { c: isl.chestC, r: isl.chestR };
+  const bc = Math.floor(isl.cx), br = Math.floor(isl.cy);
+  let pick = null;
+  for (let radius = 0; radius <= 4 && !pick; radius++) {
+    for (let dr = -radius; dr <= radius && !pick; dr++) {
+      for (let dc = -radius; dc <= radius; dc++) {
+        if (Math.max(Math.abs(dr), Math.abs(dc)) !== radius) continue;
+        const c = bc + dc, r = br + dr, t = tileAt(c, r);
+        if ((t === T_EMPTY || t === T_SHORE) && blockAt(c, r) === B_NONE) { pick = { c, r }; break; }
+      }
+    }
+  }
+  if (!pick) pick = { c: bc, r: br };
+  isl.chestC = pick.c;
+  isl.chestR = pick.r;
+  return pick;
 }
 
 // Places B_FISH_DEPOT at the center of the worker island if it isn't already there.
@@ -515,22 +552,22 @@ function makeCellState() {
     inputItem: null,
     timer: 0,
     processing: false,
-    dir: 0, // IS_TRANSPORT only — index into BELT_DIRS, rotated with R before placing
-    flashAnim: 0, // drone blocks only — game.time value the visual pulse ends at
-    dronePhase: DRONE_OUT, // B_DRONE_FISHER only — current flight phase
+    dir: 0, // IS_TRANSPORT only - index into BELT_DIRS, rotated with R before placing
+    flashAnim: 0, // drone blocks only - game.time value the visual pulse ends at
+    dronePhase: DRONE_OUT, // B_DRONE_FISHER only - current flight phase
     droneT: 0,             // 0..1 progress through the current phase
-    waterC: null,          // B_DRONE_FISHER only — cached nearest-water target
+    waterC: null,          // B_DRONE_FISHER only - cached nearest-water target
     waterR: null,
     carrying: [],          // B_DRONE_FISHER (drop-off queue) or B_CRATE (FIFO buffer)
-    altOut: false,         // B_SPLITTER only — which of the two output sides is next
-    level: 0,              // IS_MACHINE only — per-instance upgrade level, click to buy
-    sortMode: 'size',       // B_SORTER only — 'size' or 'rarity'
-    sortThreshold: 2,      // B_SORTER only — SIZES index that splits "big" from "small"
-    sortCategory: 'Rare',   // B_SORTER only — CATEGORY_NAMES entry routed to st.dir in rarity mode
-    recycleRarities: [],   // B_RECYCLER only — CATEGORY_NAMES entries that get salvaged on sight
-    packTarget: 5,          // B_PACKER only — fish count that triggers a bundle
-    teleportTarget: null,   // B_TELEPORTER only — { c, r } of the linked destination, or null if unset/broken
-    pondPets: [],           // B_POND only — array of pet uid numbers assigned to swim here
+    altOut: false,         // B_SPLITTER only - which of the two output sides is next
+    level: 0,              // IS_MACHINE only - per-instance upgrade level, click to buy
+    sortMode: 'size',       // B_SORTER only - 'size' or 'rarity'
+    sortThreshold: 2,      // B_SORTER only - SIZES index that splits "big" from "small"
+    sortCategory: 'Rare',   // B_SORTER only - CATEGORY_NAMES entry routed to st.dir in rarity mode
+    recycleRarities: [],   // B_RECYCLER only - CATEGORY_NAMES entries that get salvaged on sight
+    packTarget: 5,          // B_PACKER only - fish count that triggers a bundle
+    teleportTarget: null,   // B_TELEPORTER only - { c, r } of the linked destination, or null if unset/broken
+    pondPets: [],           // B_POND only - array of pet uid numbers assigned to swim here
   };
 }
 
@@ -589,6 +626,8 @@ function growWorld() {
     isl.cy += addTop;
     if (isl.depotC !== undefined) isl.depotC += addLeft;
     if (isl.depotR !== undefined) isl.depotR += addTop;
+    if (isl.chestC !== undefined) isl.chestC += addLeft;
+    if (isl.chestR !== undefined) isl.chestR += addTop;
   }
 
   // Shift teleporter links and drone water-target cache.
@@ -632,7 +671,7 @@ function growWorld() {
     Object.assign(obj, moved);
   };
 
-  // Water-body flood-fill caches are pure functions of the old layout — flush.
+  // Water-body flood-fill caches are pure functions of the old layout - flush.
   for (const k of Object.keys(_wbAnchorCache)) delete _wbAnchorCache[k];
   for (const k of Object.keys(_wbTileCache))   delete _wbTileCache[k];
 
@@ -698,7 +737,7 @@ function growWorld() {
 
   applyShorePass();
   ensureWorkerIslandDepot();
-  // Every stored coordinate just shifted — rebuild the block registry and
+  // Every stored coordinate just shifted - rebuild the block registry and
   // repaint the cached terrain layer from scratch.
   rebuildBlockIndex();
   invalidateTerrainCache();
@@ -726,7 +765,7 @@ function tileWalkable(t) {
 
 // Returns a stable string key "c,r" for the top-left tile of the connected
 // T_WATER body containing (startC, startR). Used as the natural-pond identity.
-// Ocean (water body touching map boundary) returns null — excluded from ponds.
+// Ocean (water body touching map boundary) returns null - excluded from ponds.
 const _wbAnchorCache = {};  // tile key → anchor string or null (ocean)
 const _wbTileCache   = {};  // anchor key → [{c, r}] list of all tiles in body
 
@@ -791,12 +830,12 @@ function canPlaceBlock(id, c, r, dir) {
   }
 
   if (id === B_POND) {
-    // Can go on any solid ground — dirt or concrete, no existing block
+    // Can go on any solid ground - dirt or concrete, no existing block
     return b === B_NONE && (t === T_EMPTY || t === T_CONCRETE);
   }
 
   // All other equipment (including the Fishing Drone, which flies to water
-  // on its own — see findNearestWaterTile) requires concrete floor and no
+  // on its own - see findNearestWaterTile) requires concrete floor and no
   // existing block
   return canPlaceEquipmentCell(id, c, r);
 }
@@ -806,7 +845,7 @@ function placeBlock(id, c, r, dir) {
   if (id === B_CONCRETE) {
     terrain[r][c] = T_CONCRETE;
     repaintTerrainTile(c, r); // keep the cached terrain layer in sync
-    // Concrete is terrain, not a block — nothing stored in blocks[][]
+    // Concrete is terrain, not a block - nothing stored in blocks[][]
     return true;
   }
 
@@ -843,7 +882,7 @@ function isAdjacentToWater(c, r) {
          tileAt(c-1, r) === T_WATER || tileAt(c+1, r) === T_WATER;
 }
 
-// Breadth-first search outward from (c, r) for the nearest water tile —
+// Breadth-first search outward from (c, r) for the nearest water tile -
 // lets a Fishing Drone pad placed anywhere find a target to fly to.
 function findNearestWaterTile(c, r) {
   const seen = new Set([`${c},${r}`]);
